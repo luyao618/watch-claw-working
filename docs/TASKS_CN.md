@@ -3,7 +3,7 @@
 > **Version**: 0.1.0 (Draft)
 > **Date**: 2026-03-22
 > **粒度**：每个任务约半天
-> **预估总任务数**：6 个阶段共 19 个任务
+> **预估总任务数**：6 个阶段共 20 个任务
 
 ---
 
@@ -13,14 +13,14 @@
 
 ### 阶段总结
 
-| 阶段 | 名称                 | 任务数 | 范围                                        |
-| ---- | -------------------- | ------ | ------------------------------------------- |
-| P0   | Project Bootstrap    | 2      | 脚手架、工具链、开发环境                    |
-| P1   | Connection Layer     | 4      | WebSocket client、event 解析、mock provider |
-| P2   | Engine Foundation    | 3      | Game loop、isometric renderer、camera       |
-| P3   | World Building       | 3      | Tile map、rooms、furniture                  |
-| P4   | Character System     | 4      | Sprites、FSM、pathfinding、emotions         |
-| P5   | Integration & Polish | 3      | 端到端串联、dashboard、打磨                 |
+| 阶段 | 名称                 | 任务数 | 范围                                     |
+| ---- | -------------------- | ------ | ---------------------------------------- |
+| P0   | Project Bootstrap    | 3      | 脚手架、工具链、开发环境、架构适配       |
+| P1   | Connection Layer     | 4      | Bridge client、event 解析、mock provider |
+| P2   | Engine Foundation    | 3      | Game loop、isometric renderer、camera    |
+| P3   | World Building       | 3      | Tile map、rooms、furniture               |
+| P4   | Character System     | 4      | Sprites、FSM、pathfinding、emotions      |
+| P5   | Integration & Polish | 3      | 端到端串联、dashboard、打磨              |
 
 ---
 
@@ -80,9 +80,9 @@
 - 创建 `src/utils/constants.ts`，包含初始常量：
   ```
   TILE_WIDTH = 64, TILE_HEIGHT = 32,
-  WS_URL = 'ws://127.0.0.1:18789',
-  WS_RECONNECT_BASE_MS = 1000,
-  WS_RECONNECT_MAX_MS = 30000,
+  BRIDGE_WS_URL = 'ws://127.0.0.1:18790',
+  BRIDGE_RECONNECT_BASE_MS = 1000,
+  BRIDGE_RECONNECT_MAX_MS = 30000,
   CHARACTER_SPEED = 2,
   ANIMATION_FPS = 8,
   DASHBOARD_UPDATE_INTERVAL_MS = 250,
@@ -110,49 +110,98 @@
 
 ---
 
-## Phase 1: Connection Layer
+### T0.3 — Session Log 架构适配
 
-### T1.1 — Gateway WebSocket Client
-
-> 实现连接 OpenClaw Gateway 的 WebSocket client，支持自动重连。
+> 适配已完成的 T0.1/T0.2 工作，添加 Bridge Server 和 Session Log 监控所需的目录与配置。
 
 **依赖**：T0.2
 
 **工作项**：
 
-- 创建 `src/connection/types.ts`：
-  - `ConnectionState` 类型（`disconnected` | `connecting` | `handshaking` | `connected` | `reconnecting`）
-  - `GatewayFrame` 接口（原始 WebSocket 消息信封）
-  - `ServerEvent`、`ClientRequest`、`ServerResponse` 接口
-  - `GatewayClientOptions` 接口（url、reconnect 设置）
-- 创建 `src/connection/gateway.ts`：
-  - `GatewayClient` 类，实现连接状态机（见 TECHNICAL.md 第 4.1 节）
-  - `connect(url)` —— 打开 WebSocket、发送 handshake、在状态间过渡
-  - `disconnect()` —— 干净关闭
-  - 指数退避自动重连（1s → 2s → 4s → ... → 30s 最大）
-  - Heartbeat 监控（每次收到 `tick` event 重置超时）
-  - `onEvent(handler)` —— 注册事件监听器，返回取消订阅函数
-  - `onStateChange(handler)` —— 注册状态变化监听器
-  - `request(method, params)` —— 发送 RPC 请求，返回 Promise
-  - 适当的清理：disconnect 时关闭 WebSocket、清除计时器
-- 编写单元测试：
-  - 测试状态转换（connect → handshake → connected）
-  - 测试重连退避时间
-  - 测试事件回调注册和注销
-  - 测试 heartbeat 超时检测
+- 在项目中创建 `bridge/` 目录：
+  - `bridge/server.ts` — Bridge Server 入口（~50-80 行 Node.js 脚本）
+  - `bridge/README.md` — Bridge Server 用途说明
+- 实现 Bridge Server（`bridge/server.ts`）：
+  - 读取 `~/.openclaw/agents/main/sessions/sessions.json`，找到最近活跃的 session（按 `updatedAt` 排序）
+  - 使用 `fs.watch` 监控该 session 的 JSONL 文件（`~/.openclaw/agents/main/sessions/<session-id>.jsonl`）
+  - 启动 WebSocket server 监听 `ws://127.0.0.1:18790`
+  - 当 JSONL 文件追加新行时，解析新行并广播给所有已连接的 WebSocket clients
+  - 定期重新读取 `sessions.json`（每 5s），检测 session 切换
+  - Session 切换时：停止监控旧文件，开始监控新文件，通知 clients
+- 更新 `src/utils/constants.ts`：
+  - `WS_URL` → `BRIDGE_WS_URL = 'ws://127.0.0.1:18790'`
+  - `WS_RECONNECT_BASE_MS` → `BRIDGE_RECONNECT_BASE_MS`
+  - `WS_RECONNECT_MAX_MS` → `BRIDGE_RECONNECT_MAX_MS`
+- 安装 `concurrently` 依赖，更新 `package.json` 的 `dev` script：
+  - `"dev": "concurrently \"vite\" \"tsx bridge/server.ts\""` —— 同时启动 Vite 和 Bridge Server
+- 在 T0.1 创建的目录结构中添加 `src/connection/` 下的类型基础文件（如需要）
 
 **产出**：
 
-- `GatewayClient` 类，可连接任何 WebSocket 端点
+- `bridge/` 目录及 Bridge Server 实现
+- `pnpm dev` 同时启动 Vite dev server 和 Bridge Server
+- `constants.ts` 已更新为 Bridge 相关常量
+
+**验收标准**：
+
+- [ ] `pnpm dev` 同时启动 Vite 和 Bridge Server
+- [ ] Bridge Server 在 `ws://127.0.0.1:18790` 监听连接
+- [ ] Bridge Server 找到最近活跃的 session 并监控其 JSONL 文件
+- [ ] 新的 JSONL 行被正确解析并广播
+- [ ] Session 切换时自动跟踪新 session
+- [ ] `constants.ts` 中的常量名已更新
+
+---
+
+## Phase 1: Connection Layer
+
+### T1.1 — Bridge WebSocket Client
+
+> 实现连接 Bridge Server 的 WebSocket client，支持自动重连。
+
+**依赖**：T0.3
+
+**工作项**：
+
+- 创建 `src/connection/types.ts`：
+  - `ConnectionState` 类型（`disconnected` | `connecting` | `connected` | `reconnecting`）—— 无需 `handshaking` 状态
+  - `SessionLogEvent` 接口（session log JSONL 行的结构）：
+    - `id: string`、`parentId?: string`、`timestamp: string`（ISO 8601）
+    - `type: 'session' | 'message' | 'model_change' | 'thinking_level_change' | 'custom'`
+    - `message?:`（用于 `type: 'message'` 事件）：
+      - `role: 'user' | 'assistant' | 'toolResult'`
+      - `content: string | ContentItem[]`（用户消息为 string，assistant/toolResult 为数组）
+      - `usage?: { input, output, cacheRead, cacheWrite, totalTokens, cost }`（仅 assistant）
+      - `stopReason?: 'toolUse' | 'stop'`（仅 assistant）
+  - `BridgeClientOptions` 接口（url、reconnect 设置）
+- 创建 `src/connection/bridgeClient.ts`：
+  - `BridgeClient` 类，实现连接状态机（见 TECHNICAL.md 第 4.1 节）
+  - 4 状态机（无 handshaking）：`disconnected` → `connecting` → `connected`（或 `reconnecting`）
+  - `connect(url)` —— 打开 WebSocket，连接成功后直接进入 `connected` 状态
+  - `disconnect()` —— 干净关闭
+  - 指数退避自动重连（1s → 2s → 4s → ... → 30s 最大）
+  - 无 heartbeat/tick 机制（Bridge Server 无需心跳协议）
+  - `onEvent(handler)` —— 注册事件监听器，接收 `SessionLogEvent`，返回取消订阅函数
+  - `onStateChange(handler)` —— 注册状态变化监听器
+  - 适当的清理：disconnect 时关闭 WebSocket、清除计时器
+- 编写单元测试：
+  - 测试状态转换（connect → connected，无 handshake 步骤）
+  - 测试重连退避时间
+  - 测试事件回调注册和注销
+  - 测试 disconnect 清理
+
+**产出**：
+
+- `BridgeClient` 类，可连接 Bridge Server WebSocket 端点
 - 完整的连接生命周期与重连
 - 单元测试通过
 
 **验收标准**：
 
-- [ ] Client 连接到 `ws://127.0.0.1:18789`（Gateway 运行时）或优雅失败
+- [ ] Client 连接到 `ws://127.0.0.1:18790`（Bridge Server 运行时）或优雅失败
 - [ ] 重连尝试遵循指数退避模式
-- [ ] 状态变化正确发出
-- [ ] Event handlers 接收到解析后的 JSON events
+- [ ] 状态变化正确发出（4 状态，无 handshaking）
+- [ ] Event handlers 接收到解析后的 `SessionLogEvent` 对象
 - [ ] `disconnect()` 干净地拆除所有计时器和 WebSocket
 - [ ] 单元测试覆盖状态机转换
 
@@ -160,47 +209,61 @@
 
 ### T1.2 — Event Parser + Action Types
 
-> 将原始 Gateway events 解析为 typed CharacterAction 对象，供 game engine 消费。
+> 将 Session Log events 解析为 typed CharacterAction 对象，供 game engine 消费。
 
 **依赖**：T1.1
 
 **工作项**：
 
-- 扩展 `src/connection/types.ts`，添加 OpenClaw 特定的 event 类型：
-  - `AgentLifecyclePayload`（`stream: "lifecycle"`、`phase: "start" | "end" | "error"`）
-  - `AgentToolPayload`（`stream: "tool"`、`toolName`、`status`、`toolInput`、`result`）
-  - `AgentAssistantPayload`（`stream: "assistant"`、`delta`）
-  - `PresencePayload`、`HealthPayload`
+- 扩展 `src/connection/types.ts`，添加 Session Log 特定的 event 类型：
+  - `SessionLogEvent` 的 `type` 字段区分事件类型：
+    - `type: 'session'` —— session 初始化（id、version、cwd）
+    - `type: 'message'` + `role: 'assistant'` —— 包含 `text`、`thinking`、`toolCall` content items
+    - `type: 'message'` + `role: 'toolResult'` —— 工具执行结果（`exitCode`、`durationMs`）
+    - `type: 'message'` + `role: 'user'` —— 用户输入
+  - `ContentItem` 类型：`TextContent | ThinkingContent | ToolCallContent | ToolResultContent`
   - `CharacterAction` union type（GOTO_ROOM、CHANGE_EMOTION、WAKE_UP、GO_SLEEP、CELEBRATE、CONFUSED）
   - `RoomId`、`AnimationId`、`EmotionId` 类型
 - 创建 `src/connection/eventParser.ts`：
-  - `parseGatewayEvent(frame: GatewayFrame): CharacterAction | null`
-  - `TOOL_ROOM_MAP` 常量，映射 tool names 到 rooms/animations/emotions（见 TECHNICAL.md 第 4.2 节）
-  - Type guard 函数：`isLifecycle()`、`isTool()`、`isAssistant()`
+  - `parseSessionLogEvent(event: SessionLogEvent): CharacterAction | null`
+  - `TOOL_ROOM_MAP` 常量，映射**小写** tool names 到 rooms/animations/emotions（见 TECHNICAL.md 第 4.2 节）：
+    - `exec` → Office（typing, focused）
+    - `read` → Living Room（sitting, thinking）
+    - `write` → Office（typing, focused）
+    - `edit` → Office（typing, focused）
+    - `web_search` → Living Room（thinking, curious）
+    - `memory_search` → Living Room（thinking, thinking）
+    - `glob` / `grep` → Living Room（sitting, curious）
+    - `task` → Living Room（think, thinking）
+  - 从 `toolCall` content items 中提取 tool name（`content.name` 字段）
+  - 根据 `stopReason` 字段判断 session 状态：`toolUse`（继续工作）vs `stop`（任务完成）
   - 处理边界情况：未知 tool names → 默认到 office，格式错误的 events → 返回 null
 - 创建 `ActionQueue` 类（见 TECHNICAL.md 第 4.2 节）：
   - 最大大小：3
   - 去重：相同房间的 actions 替换而非入队
   - FIFO pop
 - 编写单元测试：
-  - 测试每个 tool name 映射到正确的 room/animation/emotion
-  - 测试 lifecycle events 产生正确的 actions
+  - 测试每个小写 tool name 映射到正确的 room/animation/emotion
+  - 测试 `type: 'session'` event 产生 `WAKE_UP` action
+  - 测试 `stopReason: 'stop'` 产生 `GO_SLEEP` action
+  - 测试 assistant message 中多个 `toolCall` items 的处理
   - 测试未知 tools 回退到 office
   - 测试 ActionQueue 去重和溢出
   - 测试格式错误的 events 返回 null
 
 **产出**：
 
-- Gateway events 和 CharacterActions 的完整类型系统
+- Session Log events 和 CharacterActions 的完整类型系统
 - 带可配置映射的 event parser
 - 用于角色移动期间缓冲的 ActionQueue
 - 覆盖所有映射的单元测试
 
 **验收标准**：
 
-- [ ] TOOL_ROOM_MAP 中所有 tool names 产生正确的 CharacterActions
-- [ ] `lifecycle.start` → `WAKE_UP`、`lifecycle.end` → `GO_SLEEP`、`lifecycle.error` → `CONFUSED`
-- [ ] Assistant streaming → `GOTO_ROOM(office, type, focused)`
+- [ ] TOOL_ROOM_MAP 中所有小写 tool names 产生正确的 CharacterActions
+- [ ] `type: 'session'` → `WAKE_UP`；`stopReason: 'stop'` → `GO_SLEEP`
+- [ ] 一个 assistant message 含多个 toolCalls 时，每个 tool 产生独立的 action
+- [ ] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
 - [ ] 未知/格式错误的 events 返回 `null`（不崩溃）
 - [ ] ActionQueue 遵守最大大小和去重规则
 - [ ] 所有单元测试通过
@@ -209,40 +272,45 @@
 
 ### T1.3 — Mock Data Provider
 
-> 构建一个 mock event 生成器，模拟真实的 OpenClaw agent 活动。
+> 构建一个 mock event 生成器，模拟真实的 OpenClaw agent 活动，生成 Session Log 格式的事件。
 
 **依赖**：T1.2
 
 **工作项**：
 
 - 创建 `src/connection/mockProvider.ts`：
-  - `MockProvider` 类，生成真实的 event 序列
+  - `MockProvider` 类，生成 Session Log 格式的真实 event 序列
   - Session 模拟循环（见 TECHNICAL.md 第 4.3 节）：
-    1. 发出 `lifecycle.start`
-    2. 循环 10-30 次：暂停 3-8s → 发出 `tool.start` → 暂停 1-5s → 发出 `tool.end`
-    3. 在 tool calls 之间穿插 `assistant` streaming events
-    4. 发出 `lifecycle.end`
-    5. 暂停 10-30s（idle 期间）
-    6. 从步骤 1 重复
-  - 加权随机 tool 选择（Write/Edit 最频繁、Task 最少）
+    1. 发出 `type: 'session'` event（session 初始化）
+    2. 发出 `type: 'message', role: 'user'` event（用户输入）
+    3. 循环 10-30 次：
+       - 暂停 3-8s → 发出 `type: 'message', role: 'assistant'` 包含 `toolCall` content items
+       - 暂停 1-5s → 发出 `type: 'message', role: 'toolResult'` 包含执行结果
+    4. 在 tool calls 之间穿插含 `text`/`thinking` content 的 assistant messages
+    5. 发出最终 assistant message（`stopReason: 'stop'`）
+    6. 暂停 10-30s（idle 期间）
+    7. 从步骤 2 重复
+  - 加权随机 tool 选择（`write`/`edit` 最频繁、`task` 最少）—— 使用**小写** tool names
+  - 每个 event 包含 `id`、`parentId`、`timestamp`（ISO 8601）字段
+  - 生成 realistic `usage` 数据（inputTokens、outputTokens、cost）
   - `start(onEvent)` —— 开始生成 events
-  - `stop()` —— 停止生成，发出 lifecycle.end
-  - 定期生成 realistic `presence` 和 `health` events
+  - `stop()` —— 停止生成，发出最终 `stop` message
 - 编写测试：
   - 测试 start/stop lifecycle 干净（无悬挂计时器）
   - 测试 tool 分布在多次迭代后大致匹配权重
-  - 测试 events 格式正确（GatewayFrames）
+  - 测试 events 格式正确（SessionLogEvent 格式，含正确字段）
 
 **产出**：
 
-- 生成 realistic agent 行为的 MockProvider
+- 生成 realistic agent 行为的 MockProvider（Session Log 格式）
 - 所有测试通过
 
 **验收标准**：
 
-- [ ] 运行 MockProvider 发出 lifecycle、tool 和 assistant events 序列
-- [ ] Events 格式正确（GatewayFrames）
-- [ ] Tool 分布感觉真实（更多 Write/Edit，较少 Task/WebFetch）
+- [ ] 运行 MockProvider 发出 session、user message、assistant（toolCall）和 toolResult events 序列
+- [ ] Events 格式正确（SessionLogEvent 格式，含 id/parentId/timestamp）
+- [ ] Tool names 为小写：`write`、`edit`、`read`、`exec`、`web_search` 等
+- [ ] Tool 分布感觉真实（更多 write/edit，较少 task/web_search）
 - [ ] `stop()` 清理所有计时器（无内存泄漏）
 - [ ] Session 循环在 idle 间隔之间重复
 
@@ -250,24 +318,24 @@
 
 ### T1.4 — Connection Manager + 连接状态 UI
 
-> 协调 Gateway vs Mock mode 切换，并将连接状态暴露给 UI。
+> 协调 Bridge vs Mock mode 切换，并将连接状态暴露给 UI。
 
 **依赖**：T1.3
 
 **工作项**：
 
 - 创建 `src/connection/connectionManager.ts`：
-  - `ConnectionManager` 类，协调 `GatewayClient` 和 `MockProvider`
-  - `connect()` 时：尝试 Gateway 连接。如果失败或超时（5s），自动切换到 MockProvider
-  - Gateway 断开时：短暂延迟后切换到 MockProvider，后台继续尝试重连 Gateway
-  - Gateway 重连成功时：从 Mock 无缝切换回 Gateway
-  - 无论数据源如何（Gateway 或 Mock），都发出标准化的 `CharacterAction` events
+  - `ConnectionManager` 类，协调 `BridgeClient` 和 `MockProvider`
+  - `connect()` 时：尝试 Bridge Server 连接。如果失败或超时（5s），自动切换到 MockProvider
+  - Bridge 断开时：短暂延迟后切换到 MockProvider，后台继续尝试重连 Bridge Server
+  - Bridge 重连成功时：从 Mock 无缝切换回 Bridge
+  - 无论数据源如何（Bridge 或 Mock），都发出标准化的 `CharacterAction` events
   - 暴露 `connectionStatus`：`'live'` | `'mock'` | `'connecting'` | `'disconnected'`
-  - 暴露最新的 `PresencePayload` 和 `HealthPayload` 供 dashboard 使用
-  - 暴露 `sessionInfo`：model、tokens used、session ID（来自 Gateway RPC 或 mock 数据）
+  - 暴露 session log 中的 `usage` 数据（tokens、cost）供 dashboard 使用
+  - 暴露 `sessionInfo`：model（来自 `model_change` event）、tokens used、session ID（来自 `session` event）
 - 创建 `src/ui/ConnectionBadge.tsx`：
   - 小型 React 组件，显示连接状态
-  - 绿色圆点 + "Live"（连接到 Gateway 时）
+  - 绿色圆点 + "Live"（连接到 Bridge Server 时）
   - 黄色圆点 + "Mock"（使用 mock 数据时）
   - 红色圆点 + "Disconnected"（都不可用时）
   - "Connecting..." 状态的动画脉冲圆点
@@ -282,10 +350,10 @@
 
 **验收标准**：
 
-- [ ] 应用启动时显示 "Mock" badge（因为 OpenClaw 未安装）
-- [ ] ConnectionManager 启动时尝试 Gateway 连接，回退到 mock
+- [ ] 应用启动时显示 "Mock" badge（因为 Bridge Server 未运行）
+- [ ] ConnectionManager 启动时尝试 Bridge Server 连接，回退到 mock
 - [ ] Mock provider 的 events 可被观察到（console.log 或 debug UI）
-- [ ] 如果 Gateway 可用，切换会自动发生
+- [ ] 如果 Bridge Server 可用，切换会自动发生
 - [ ] Connection badge 准确反映当前状态
 - [ ] 清理时无悬挂计时器或 WebSocket 连接
 
@@ -808,27 +876,27 @@
   - GameLoop 的 update 循环处理队列
 - 集成流程验证：
   ```
-  MockProvider 发出 tool event → EventParser 产生 CharacterAction →
+  MockProvider 发出 SessionLogEvent → EventParser 产生 CharacterAction →
   ConnectionManager 转发到 GameState → Character.processAction() →
   角色走到房间 → 到达 → 播放动画 → 显示情绪
   ```
 - 处理快速事件序列：
   - 多个 tool events 快速连续到达 → 角色前往最新的房间（ActionQueue 去重）
-  - Lifecycle start 后跟 tool → 角色醒来并走到 tool 对应的房间
-  - 行走中收到 lifecycle end → 角色重定向到 bedroom
+  - Session 初始化后跟 tool → 角色醒来并走到 tool 对应的房间
+  - `stopReason: 'stop'` 到达时如果在行走中 → 角色重定向到 bedroom
 - 处理边界情况：
   - 应用启动时无 events → 角色从 bedroom 睡觉开始
   - Session 中间 mock 切换到 live → 角色继续平滑运行
-  - Gateway 断开 → 角色走到 bedroom 睡觉（视觉 "offline" 指示器）
+  - Bridge Server 断开 → 角色走到 bedroom 睡觉（视觉 "offline" 指示器）
 - 端到端冒烟测试：运行应用，观察角色对 mock events 响应 2+ 分钟
 - **集成测试**（Vitest）：
   - 测试：MockProvider → EventParser → ActionQueue → Character FSM pipeline
-    - 发出 `tool: Write` event → 验证角色最终在 office 且状态为 `typing`
-    - 发出 `lifecycle.end` event → 验证角色最终在 bedroom 且状态为 `sleeping`
+    - 发出含 `toolCall: write` 的 assistant message → 验证角色最终在 office 且状态为 `typing`
+    - 发出 `stopReason: 'stop'` 的 assistant message → 验证角色最终在 bedroom 且状态为 `sleeping`
     - 发出快速 events → 验证 ActionQueue 去重和优先级排序
   - 测试：ConnectionManager 正确切换 mock ↔ live
-    - 无 Gateway 启动 → 验证 MockProvider 激活
-    - 模拟 Gateway 可用 → 验证切换到 live mode
+    - 无 Bridge Server 启动 → 验证 MockProvider 激活
+    - 模拟 Bridge Server 可用 → 验证切换到 live mode
   - 测试：VisibilityManager 正确缓冲 events
     - 模拟 tab hidden → 发出 events → 模拟 tab visible → 验证只应用最新状态
   - 这些测试使用真实模块实例（非 mocks）来验证跨模块契约
@@ -860,15 +928,15 @@
 **工作项**：
 
 - 创建 `src/ui/Dashboard.tsx`：
-  - **连接区域**：状态指示器（Live/Mock/Disconnected）、Gateway URL
+  - **连接区域**：状态指示器（Live/Mock/Disconnected）、Bridge Server URL
   - **Agent 状态区域**：当前状态（Working/Thinking/Idle/Sleeping）、当前 tool 名称、当前房间、当前情绪
-  - **Session 区域**：session ID、model name（如果从 Gateway 可用）、运行时长
-  - **Token 使用量区域**：已用 tokens / 限制，简单进度条
+  - **Session 区域**：session ID、model name（来自 `model_change` event）、运行时长
+  - **Token 使用量区域**：已用 tokens / 限制，简单进度条（数据来自 session log 的 `usage` 字段）
   - **活动日志区域**：可滚动的最近 20 个 events 列表，带时间戳
     ```
-    14:32:05  Write  → Office
-    14:31:58  Read   → Living Room
-    14:31:42  Bash   → Office
+    14:32:05  write  → Office
+    14:31:58  read   → Living Room
+    14:31:42  exec   → Office
     14:31:30  (idle) → Bedroom
     ```
   - 通过 EventBus 订阅 GameState 变化（节流 250ms）
@@ -914,7 +982,7 @@
   - 确保龙虾帽清晰可见且可辨识
 - **初始 camera 位置**：自动居中并缩放以适配完整的单层楼房屋
 - **错误处理**：
-  - WebSocket URL 错误时优雅处理
+  - Bridge WebSocket URL 错误时优雅处理
   - Dashboard 中连接问题的清晰错误信息
   - 正常运行期间控制台无未捕获错误
 - **性能验证**：
@@ -924,10 +992,10 @@
 - **更新 README.md**：
   - 项目描述、功能、截图
   - 快速启动说明（`pnpm install && pnpm dev`）
-  - 配置（WebSocket URL、mock mode）
+  - 配置（Bridge WebSocket URL、mock mode）
   - 链接到 docs/ 获取详细文档
 - **开发体验**：
-  - 添加 `pnpm dev:mock` 脚本，强制使用 mock mode（无论 Gateway 是否可用）
+  - 添加 `pnpm dev:mock` 脚本，强制使用 mock mode（无论 Bridge Server 是否可用）
   - 添加 debug 快捷键：
     - `G` —— 切换 isometric grid overlay
     - `F` —— 切换 FPS 计数器
@@ -960,7 +1028,8 @@
 graph TD
     T0.1["T0.1<br/>项目脚手架"]
     T0.2["T0.2<br/>开发工具链设置"]
-    T1.1["T1.1<br/>WS Client"]
+    T0.3["T0.3<br/>Session Log 架构适配"]
+    T1.1["T1.1<br/>Bridge Client"]
     T1.2["T1.2<br/>Event Parser"]
     T1.3["T1.3<br/>Mock Provider"]
     T1.4["T1.4<br/>Connection Manager"]
@@ -979,9 +1048,10 @@ graph TD
     T5.3["T5.3<br/>打磨"]
 
     T0.1 --> T0.2
+    T0.2 --> T0.3
 
     %% Phase 1（Connection）—— 顺序链
-    T0.2 --> T1.1
+    T0.3 --> T1.1
     T1.1 --> T1.2
     T1.2 --> T1.3
     T1.3 --> T1.4
@@ -1013,6 +1083,7 @@ graph TD
     %% 样式
     style T0.1 fill:#4a9eff,color:#fff
     style T0.2 fill:#4a9eff,color:#fff
+    style T0.3 fill:#4a9eff,color:#fff
     style T1.1 fill:#ff9f43,color:#fff
     style T1.2 fill:#ff9f43,color:#fff
     style T1.3 fill:#ff9f43,color:#fff
@@ -1037,8 +1108,8 @@ graph TD
 两条主要轨道可以并行推进：
 
 ```
-轨道 A（Connection）:  T0.1 → T0.2 → T1.1 → T1.2 → T1.3 → T1.4 ──────────────────────┐
-                                                                                          ├→ T5.1 → T5.2 → T5.3
+轨道 A（Connection）:  T0.1 → T0.2 → T0.3 → T1.1 → T1.2 → T1.3 → T1.4 ────────────────┐
+                                                                                           ├→ T5.1 → T5.2 → T5.3
 轨道 B（Engine+World）: T0.1 → T0.2 → T2.1 → T2.2 → T2.3 → T3.1 → T3.2 → T3.3 → T4.1 → T4.2a → T4.2b → T4.3 ─┘
 ```
 
@@ -1046,7 +1117,7 @@ graph TD
 
 对于单人开发者，推荐顺序为：
 
-1. **T0.1** → **T0.2**（bootstrap）
+1. **T0.1** → **T0.2** → **T0.3**（bootstrap + 架构适配）
 2. **T2.1** → **T2.2** → **T2.3**（尽早让屏幕上出现视觉内容——保持动力！）
 3. **T1.1** → **T1.2** → **T1.3** → **T1.4**（数据层）
 4. **T3.1** → **T3.2** → **T3.3**（建造房屋）
@@ -1059,39 +1130,40 @@ graph TD
 
 ## 预估时间线
 
-| 任务                         | 预估时间   | 累计时间  |
-| ---------------------------- | ---------- | --------- |
-| T0.1 项目脚手架              | 0.5 天     | 0.5 天    |
-| T0.2 开发工具链设置          | 0.5 天     | 1 天      |
-| T2.1 Isometric 数学 + Canvas | 0.5 天     | 1.5 天    |
-| T2.2 Game Loop + State       | 0.5 天     | 2 天      |
-| T2.3 Camera 系统             | 0.5 天     | 2.5 天    |
-| T1.1 WS Client               | 0.5 天     | 3 天      |
-| T1.2 Event Parser            | 0.5 天     | 3.5 天    |
-| T1.3 Mock Provider           | 0.5 天     | 4 天      |
-| T1.4 Connection Manager      | 0.5 天     | 4.5 天    |
-| T3.1 Tile Map + Rooms        | 0.5 天     | 5 天      |
-| T3.2 地板 & 墙壁渲染         | 0.5 天     | 5.5 天    |
-| T3.3 家具                    | 0.5 天     | 6 天      |
-| T4.1 角色 Sprite             | 0.5 天     | 6.5 天    |
-| T4.2a Pathfinding            | 0.5 天     | 7 天      |
-| T4.2b 角色 FSM               | 0.5 天     | 7.5 天    |
-| T4.3 情绪气泡                | 0.5 天     | 8 天      |
-| T5.1 端到端串联              | 0.5 天     | 8.5 天    |
-| T5.2 Dashboard               | 0.5 天     | 9 天      |
-| T5.3 打磨                    | 0.5 天     | 9.5 天    |
-| **Buffer**                   | **1.5 天** | **11 天** |
+| 任务                         | 预估时间   | 累计时间    |
+| ---------------------------- | ---------- | ----------- |
+| T0.1 项目脚手架              | 0.5 天     | 0.5 天      |
+| T0.2 开发工具链设置          | 0.5 天     | 1 天        |
+| T0.3 Session Log 架构适配    | 0.5 天     | 1.5 天      |
+| T2.1 Isometric 数学 + Canvas | 0.5 天     | 2 天        |
+| T2.2 Game Loop + State       | 0.5 天     | 2.5 天      |
+| T2.3 Camera 系统             | 0.5 天     | 3 天        |
+| T1.1 Bridge Client           | 0.5 天     | 3.5 天      |
+| T1.2 Event Parser            | 0.5 天     | 4 天        |
+| T1.3 Mock Provider           | 0.5 天     | 4.5 天      |
+| T1.4 Connection Manager      | 0.5 天     | 5 天        |
+| T3.1 Tile Map + Rooms        | 0.5 天     | 5.5 天      |
+| T3.2 地板 & 墙壁渲染         | 0.5 天     | 6 天        |
+| T3.3 家具                    | 0.5 天     | 6.5 天      |
+| T4.1 角色 Sprite             | 0.5 天     | 7 天        |
+| T4.2a Pathfinding            | 0.5 天     | 7.5 天      |
+| T4.2b 角色 FSM               | 0.5 天     | 8 天        |
+| T4.3 情绪气泡                | 0.5 天     | 8.5 天      |
+| T5.1 端到端串联              | 0.5 天     | 9 天        |
+| T5.2 Dashboard               | 0.5 天     | 9.5 天      |
+| T5.3 打磨                    | 0.5 天     | 10 天       |
+| **Buffer**                   | **1.5 天** | **11.5 天** |
 
-**MVP 总预估：约 9.5 个工作日 + 1.5 天 buffer = 约 11 个工作日**（按每天半个任务的节奏，大约 2.5 个日历周）。
+**MVP 总预估：约 10 个工作日 + 1.5 天 buffer = 约 11.5 个工作日**（按每天半个任务的节奏，大约 2.5 个日历周）。
 
-> **关于 buffer 的说明**：Buffer 考虑了集成阶段（T5.1）的意外复杂度、sprite 创建可能花费更长时间、以及 WebSocket 协议中只有在实际测试时才会暴露的边界情况。
+> **关于 buffer 的说明**：Buffer 考虑了集成阶段（T5.1）的意外复杂度、sprite 创建可能花费更长时间、以及 Bridge Server 与 session log 解析中只有在实际测试时才会暴露的边界情况。
 
 ---
 
 ## Checklist 总结
 
-- [ ] P0：项目可启动、lint、测试、构建
-- [ ] P1：Events 从 Gateway（或 mock）流向解析后的 CharacterActions
+- [ ] P0：项目可启动、lint、测试、构建、Bridge Server 就绪
+- [ ] P1：Events 从 Bridge Server（或 mock）流向解析后的 CharacterActions
 - [ ] P2：Isometric canvas 通过 game loop 渲染、camera 可平移和缩放
 - [ ] P3：单层楼房屋可见，包含 3 个房间、墙壁、门、家具
 - [ ] P4：龙虾帽角色在房间间行走、播放动画、显示情绪
