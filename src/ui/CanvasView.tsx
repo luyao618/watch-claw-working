@@ -57,20 +57,31 @@ export default function CanvasView({
   useEffect(() => {
     initCanvas()
 
+    // Throttle FPS reporting to ~4Hz to avoid 60fps React state updates
+    let lastFpsReportTime = 0
+    const FPS_REPORT_INTERVAL_MS = 250
+
     // Create game loop
     const loop = new GameLoop(
       // Update
       (dt) => {
         const gs = gsRef.current
         updateCharacter(gs.character, dt, gs.world)
-        updateCamera(gs.camera)
+        updateCamera(gs.camera, dt)
       },
       // Render
       (interpolation) => {
         if (!ctxRef.current) return
-        renderFrame(ctxRef.current, gsRef.current, interpolation)
+        const gs = gsRef.current
+        // Write FPS into game state so the renderer's FPS counter can display it
+        gs.debug.currentFps = loop.fps
+        renderFrame(ctxRef.current, gs, interpolation)
         if (onFpsUpdate) {
-          onFpsUpdate(loop.fps)
+          const now = performance.now()
+          if (now - lastFpsReportTime >= FPS_REPORT_INTERVAL_MS) {
+            lastFpsReportTime = now
+            onFpsUpdate(loop.fps)
+          }
         }
       },
     )
@@ -117,28 +128,31 @@ export default function CanvasView({
     }
     document.addEventListener('visibilitychange', onVisibility)
 
+    // Handle wheel events natively with { passive: false } to avoid Chrome warnings
+    const canvas = canvasRef.current
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      zoomStep(
+        gsRef.current.camera,
+        e.deltaY < 0 ? 1 : -1,
+        rect.width / 2,
+        rect.height / 2,
+      )
+    }
+    canvas?.addEventListener('wheel', onWheel, { passive: false })
+
     return () => {
       loop.stop()
       resizeObserver.disconnect()
       mql?.removeEventListener('change', updateDPR)
       document.removeEventListener('visibilitychange', onVisibility)
+      canvas?.removeEventListener('wheel', onWheel)
     }
   }, [initCanvas, onFpsUpdate])
 
   // Mouse event handlers
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    zoomStep(
-      gsRef.current.camera,
-      e.deltaY < 0 ? 1 : -1,
-      rect.width / 2,
-      rect.height / 2,
-    )
-  }, [])
-
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || e.button === 2) {
       // Middle or right click — pan
@@ -193,7 +207,6 @@ export default function CanvasView({
         display: 'block',
         cursor: isDragging ? 'grabbing' : 'default',
       }}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

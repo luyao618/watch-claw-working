@@ -84,17 +84,31 @@ const DEFAULT_TOOL_MAPPING: ToolMapping = {
 
 // ── Throttle for assistant text events ──────────────────────────────────────
 
-let lastAssistantTextTime = 0
 const ASSISTANT_TEXT_THROTTLE_MS = 2000
 
-function shouldThrottleAssistant(): boolean {
-  const now = Date.now()
-  if (now - lastAssistantTextTime < ASSISTANT_TEXT_THROTTLE_MS) {
-    return true
+/**
+ * Encapsulates throttle state to avoid module-level mutable variables.
+ * Provides deterministic behavior in tests — each EventParser instance
+ * (or a call to reset()) starts with a clean slate.
+ */
+class AssistantThrottle {
+  private lastTime = 0
+
+  shouldThrottle(): boolean {
+    const now = Date.now()
+    if (now - this.lastTime < ASSISTANT_TEXT_THROTTLE_MS) {
+      return true
+    }
+    this.lastTime = now
+    return false
   }
-  lastAssistantTextTime = now
-  return false
+
+  reset(): void {
+    this.lastTime = 0
+  }
 }
+
+const assistantThrottle = new AssistantThrottle()
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -168,7 +182,7 @@ export function parseSessionLogEvent(
     }
 
     if (hasText) {
-      if (!shouldThrottleAssistant()) {
+      if (!assistantThrottle.shouldThrottle()) {
         return {
           type: 'GOTO_ROOM',
           room: 'office',
@@ -192,5 +206,5 @@ export function parseSessionLogEvent(
  * Reset the assistant text throttle (for testing).
  */
 export function resetAssistantThrottle(): void {
-  lastAssistantTextTime = 0
+  assistantThrottle.reset()
 }

@@ -15,7 +15,7 @@ import { TILE_WIDTH, TILE_HEIGHT } from '@/utils/constants.ts'
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 5.0
 const ZOOM_STEP = 0.25
-const CAMERA_LERP_SPEED = 0.1 // Higher = faster interpolation
+const CAMERA_LERP_SPEED = 0.1 // Base lerp factor at 60fps
 
 // ── Camera Functions ────────────────────────────────────────────────────────
 
@@ -129,12 +129,19 @@ export function screenToWorld(
 
 /**
  * Update camera state with smooth interpolation toward target values.
- * Call this every frame.
+ * Uses frame-rate-independent smoothing so behavior is consistent
+ * regardless of whether the game runs at 30fps or 60fps.
+ *
+ * @param dt — delta time in seconds (from the fixed-timestep update)
  */
-export function updateCamera(camera: CameraState): void {
-  camera.offsetX = lerp(camera.offsetX, camera.targetOffsetX, CAMERA_LERP_SPEED)
-  camera.offsetY = lerp(camera.offsetY, camera.targetOffsetY, CAMERA_LERP_SPEED)
-  camera.zoom = lerp(camera.zoom, camera.targetZoom, CAMERA_LERP_SPEED)
+export function updateCamera(camera: CameraState, dt = 1 / 60): void {
+  // Frame-rate-independent exponential smoothing:
+  // factor = 1 - (1 - BASE_SPEED)^(dt * 60)
+  const t = 1 - Math.pow(1 - CAMERA_LERP_SPEED, dt * 60)
+
+  camera.offsetX = lerp(camera.offsetX, camera.targetOffsetX, t)
+  camera.offsetY = lerp(camera.offsetY, camera.targetOffsetY, t)
+  camera.zoom = lerp(camera.zoom, camera.targetZoom, t)
 
   // Snap if close enough
   if (Math.abs(camera.offsetX - camera.targetOffsetX) < 0.5) {

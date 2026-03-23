@@ -2,7 +2,7 @@
  * Dashboard — side panel showing connection status, agent state, token usage, and activity log.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import ConnectionBadge from './ConnectionBadge.tsx'
 import type {
   ConnectionStatus,
@@ -102,7 +102,6 @@ export default function Dashboard({
   visible,
 }: DashboardProps) {
   const logRef = useRef<HTMLDivElement>(null)
-  const [, forceUpdate] = useState(0)
 
   // Auto-scroll log
   useEffect(() => {
@@ -110,14 +109,6 @@ export default function Dashboard({
       logRef.current.scrollTop = logRef.current.scrollHeight
     }
   }, [events.length])
-
-  // Force periodic re-render for live data
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      forceUpdate((n) => n + 1)
-    }, 250)
-    return () => clearInterval(intervalId)
-  }, [])
 
   if (!visible) return null
 

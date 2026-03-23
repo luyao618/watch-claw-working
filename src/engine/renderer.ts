@@ -548,20 +548,21 @@ function renderDebugGrid(
 
 function renderFpsCounter(
   ctx: CanvasRenderingContext2D,
-  _state: GameState, // eslint-disable-line @typescript-eslint/no-unused-vars
+  state: GameState,
 ): void {
+  const fpsText = `FPS: ${state.debug.currentFps}`
   ctx.fillStyle = '#00000080'
   ctx.fillRect(
     8,
     ctx.canvas.height / (window.devicePixelRatio || 1) - 28,
-    60,
+    70,
     20,
   )
   ctx.fillStyle = '#0f0'
   ctx.font = '12px monospace'
   ctx.textAlign = 'left'
   ctx.fillText(
-    'FPS: --',
+    fpsText,
     12,
     ctx.canvas.height / (window.devicePixelRatio || 1) - 14,
   )

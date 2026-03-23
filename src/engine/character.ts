@@ -292,12 +292,35 @@ function updateCurrentRoom(character: CharacterState, world: WorldState): void {
   }
 }
 
+const MAX_PENDING_ACTIONS = 5
+
 /**
  * Queue an action for the character. Used by ConnectionManager.
+ * Caps the queue at MAX_PENDING_ACTIONS and deduplicates same-room GOTO_ROOM actions.
  */
 export function queueAction(
   character: CharacterState,
   action: CharacterAction,
 ): void {
-  character.pendingActions.push(action)
+  const queue = character.pendingActions
+
+  // Dedup: if the last action targets the same room, replace it
+  if (queue.length > 0) {
+    const last = queue[queue.length - 1]
+    if (
+      last.type === 'GOTO_ROOM' &&
+      action.type === 'GOTO_ROOM' &&
+      last.room === action.room
+    ) {
+      queue[queue.length - 1] = action
+      return
+    }
+  }
+
+  // Cap queue size — drop oldest non-critical actions when full
+  if (queue.length >= MAX_PENDING_ACTIONS) {
+    queue.shift()
+  }
+
+  queue.push(action)
 }

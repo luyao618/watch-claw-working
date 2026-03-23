@@ -120,6 +120,7 @@ export interface DebugState {
   showFps: boolean
   showDashboard: boolean
   forceMock: boolean
+  currentFps: number
 }
 
 // ── Game State ──────────────────────────────────────────────────────────────
@@ -183,5 +184,6 @@ export function createInitialDebugState(): DebugState {
     showFps: true,
     showDashboard: true,
     forceMock: false,
+    currentFps: 0,
   }
 }

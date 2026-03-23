@@ -30,6 +30,8 @@ export class MockProvider {
   private outerTimerId: ReturnType<typeof setTimeout> | null = null
   private innerTimerId: ReturnType<typeof setTimeout> | null = null
   private idleTimerId: ReturnType<typeof setTimeout> | null = null
+  /** Tracks all ad-hoc timers (thinking delay, text reply, user message) so stop() can cancel them */
+  private miscTimerIds = new Set<ReturnType<typeof setTimeout>>()
   private onEvent: ((event: SessionLogEvent) => void) | null = null
   private eventSeq = 0
   private toolCount = 0
@@ -71,7 +73,7 @@ export class MockProvider {
     this.emitSessionInit()
 
     // Emit user message after a short pause
-    setTimeout(() => {
+    this.scheduleTimer(() => {
       if (!this.running) return
       this.emitUserMessage(this.randomUserMessage())
       this.scheduleNextTool()
@@ -101,7 +103,7 @@ export class MockProvider {
     const thinkDelay = thinkFirst ? randomBetween(1000, 3000) : 0
 
     if (thinkFirst) {
-      setTimeout(() => {
+      this.scheduleTimer(() => {
         if (!this.running) return
         this.emitAssistantThinking()
       }, thinkDelay / 2)
@@ -124,7 +126,7 @@ export class MockProvider {
 
         // Sometimes emit assistant text after tool result
         if (Math.random() < 0.2) {
-          setTimeout(
+          this.scheduleTimer(
             () => {
               if (!this.running) return
               this.emitAssistantTextReply()
@@ -429,6 +431,17 @@ export class MockProvider {
     return `mock-${++this.eventSeq}`
   }
 
+  /**
+   * Schedule a callback and track its timer ID so clearAllTimers() can cancel it.
+   */
+  private scheduleTimer(callback: () => void, delayMs: number): void {
+    const id = setTimeout(() => {
+      this.miscTimerIds.delete(id)
+      callback()
+    }, delayMs)
+    this.miscTimerIds.add(id)
+  }
+
   private clearAllTimers(): void {
     if (this.outerTimerId) {
       clearTimeout(this.outerTimerId)
@@ -442,5 +455,9 @@ export class MockProvider {
       clearTimeout(this.idleTimerId)
       this.idleTimerId = null
     }
+    for (const id of this.miscTimerIds) {
+      clearTimeout(id)
+    }
+    this.miscTimerIds.clear()
   }
 }
