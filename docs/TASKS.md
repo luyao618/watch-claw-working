@@ -3,7 +3,7 @@
 > **Version**: 0.1.0 (Draft)
 > **Date**: 2026-03-22
 > **Granularity**: ~half-day per task
-> **Total estimated tasks**: 19 tasks across 6 phases
+> **Total estimated tasks**: 20 tasks across 6 phases
 
 ---
 
@@ -13,14 +13,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### Phase Summary
 
-| Phase | Name                 | Tasks | Scope                                          |
-| ----- | -------------------- | ----- | ---------------------------------------------- |
-| P0    | Project Bootstrap    | 2     | Scaffolding, tooling, dev environment          |
-| P1    | Connection Layer     | 4     | WebSocket client, event parsing, mock provider |
-| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera          |
-| P3    | World Building       | 3     | Tile map, rooms, furniture                     |
-| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions            |
-| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish           |
+| Phase | Name                 | Tasks | Scope                                                          |
+| ----- | -------------------- | ----- | -------------------------------------------------------------- |
+| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation |
+| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                    |
+| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                          |
+| P3    | World Building       | 3     | Tile map, rooms, furniture                                     |
+| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                            |
+| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                           |
 
 ---
 
@@ -80,9 +80,9 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Create `src/utils/constants.ts` with initial constants:
   ```
   TILE_WIDTH = 64, TILE_HEIGHT = 32,
-  WS_URL = 'ws://127.0.0.1:18789',
-  WS_RECONNECT_BASE_MS = 1000,
-  WS_RECONNECT_MAX_MS = 30000,
+  BRIDGE_WS_URL = 'ws://127.0.0.1:18790',
+  BRIDGE_RECONNECT_BASE_MS = 1000,
+  BRIDGE_RECONNECT_MAX_MS = 30000,
   CHARACTER_SPEED = 2,
   ANIMATION_FPS = 8,
   DASHBOARD_UPDATE_INTERVAL_MS = 250,
@@ -110,49 +110,98 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ---
 
-## Phase 1: Connection Layer
+### T0.3 — Session Log Architecture Adaptation
 
-### T1.1 — Gateway WebSocket Client
-
-> Implement the WebSocket client that connects to the OpenClaw Gateway with auto-reconnect.
+> Adapt the completed T0.1/T0.2 work to add the Bridge Server and session log monitoring directory and configuration.
 
 **Depends on**: T0.2
 
 **Work items**:
 
-- Create `src/connection/types.ts`:
-  - `ConnectionState` type (`disconnected` | `connecting` | `handshaking` | `connected` | `reconnecting`)
-  - `GatewayFrame` interface (the raw WebSocket message envelope)
-  - `ServerEvent`, `ClientRequest`, `ServerResponse` interfaces
-  - `GatewayClientOptions` interface (url, reconnect settings)
-- Create `src/connection/gateway.ts`:
-  - `GatewayClient` class implementing the connection state machine (see TECHNICAL.md Section 4.1)
-  - `connect(url)` — opens WebSocket, sends handshake, transitions through states
-  - `disconnect()` — clean close
-  - Auto-reconnect with exponential backoff (1s → 2s → 4s → ... → 30s max)
-  - Heartbeat monitoring (reset timeout on each `tick` event)
-  - `onEvent(handler)` — register event listener, returns unsubscribe function
-  - `onStateChange(handler)` — register state change listener
-  - `request(method, params)` — send RPC request, return Promise for response
-  - Proper cleanup: close WebSocket, clear timers on disconnect
-- Write unit tests:
-  - Test state transitions (connect → handshake → connected)
-  - Test reconnect backoff timing
-  - Test event callback registration and unregistration
-  - Test heartbeat timeout detection
+- Create the `bridge/` directory in the project:
+  - `bridge/server.ts` — Bridge Server entry point (~50-80 lines Node.js script)
+  - `bridge/README.md` — Bridge Server purpose documentation
+- Implement the Bridge Server (`bridge/server.ts`):
+  - Read `~/.openclaw/agents/main/sessions/sessions.json`, find the most recently active session (sort by `updatedAt`)
+  - Use `fs.watch` to monitor the session's JSONL file (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`)
+  - Start a WebSocket server listening on `ws://127.0.0.1:18790`
+  - When the JSONL file appends new lines, parse and broadcast them to all connected WebSocket clients
+  - Periodically re-read `sessions.json` (every 5s) to detect session switches
+  - On session switch: stop watching old file, start watching new file, notify clients
+- Update `src/utils/constants.ts`:
+  - `WS_URL` → `BRIDGE_WS_URL = 'ws://127.0.0.1:18790'`
+  - `WS_RECONNECT_BASE_MS` → `BRIDGE_RECONNECT_BASE_MS`
+  - `WS_RECONNECT_MAX_MS` → `BRIDGE_RECONNECT_MAX_MS`
+- Install `concurrently` dependency, update `package.json` `dev` script:
+  - `"dev": "concurrently \"vite\" \"tsx bridge/server.ts\""` — start both Vite and Bridge Server simultaneously
+- Add base type files under `src/connection/` created in T0.1 (if needed)
 
 **Output**:
 
-- `GatewayClient` class that can connect to any WebSocket endpoint
+- `bridge/` directory with Bridge Server implementation
+- `pnpm dev` starts both Vite dev server and Bridge Server simultaneously
+- `constants.ts` updated with Bridge-related constants
+
+**Acceptance criteria**:
+
+- [ ] `pnpm dev` starts both Vite and Bridge Server simultaneously
+- [ ] Bridge Server listens for connections on `ws://127.0.0.1:18790`
+- [ ] Bridge Server finds the most recently active session and monitors its JSONL file
+- [ ] New JSONL lines are correctly parsed and broadcast
+- [ ] Session switches are automatically tracked
+- [ ] Constants in `constants.ts` have been renamed
+
+---
+
+## Phase 1: Connection Layer
+
+### T1.1 — Bridge WebSocket Client
+
+> Implement the WebSocket client that connects to the Bridge Server with auto-reconnect.
+
+**Depends on**: T0.3
+
+**Work items**:
+
+- Create `src/connection/types.ts`:
+  - `ConnectionState` type (`disconnected` | `connecting` | `connected` | `reconnecting`) — no `handshaking` state needed
+  - `SessionLogEvent` interface (structure of session log JSONL lines):
+    - `id: string`, `parentId?: string`, `timestamp: string` (ISO 8601)
+    - `type: 'session' | 'message' | 'model_change' | 'thinking_level_change' | 'custom'`
+    - `message?:` (for `type: 'message'` events):
+      - `role: 'user' | 'assistant' | 'toolResult'`
+      - `content: string | ContentItem[]` (string for user, array for assistant/toolResult)
+      - `usage?: { input, output, cacheRead, cacheWrite, totalTokens, cost }` (assistant only)
+      - `stopReason?: 'toolUse' | 'stop'` (assistant only)
+  - `BridgeClientOptions` interface (url, reconnect settings)
+- Create `src/connection/bridgeClient.ts`:
+  - `BridgeClient` class implementing the connection state machine (see TECHNICAL.md Section 4.1)
+  - 4-state machine (no handshaking): `disconnected` → `connecting` → `connected` (or `reconnecting`)
+  - `connect(url)` — opens WebSocket, transitions directly to `connected` on success
+  - `disconnect()` — clean close
+  - Auto-reconnect with exponential backoff (1s → 2s → 4s → ... → 30s max)
+  - No heartbeat/tick mechanism (Bridge Server does not require heartbeat protocol)
+  - `onEvent(handler)` — register event listener, receives `SessionLogEvent`, returns unsubscribe function
+  - `onStateChange(handler)` — register state change listener
+  - Proper cleanup: close WebSocket, clear timers on disconnect
+- Write unit tests:
+  - Test state transitions (connect → connected, no handshake step)
+  - Test reconnect backoff timing
+  - Test event callback registration and unregistration
+  - Test disconnect cleanup
+
+**Output**:
+
+- `BridgeClient` class that can connect to the Bridge Server WebSocket endpoint
 - Full connection lifecycle with reconnect
 - Unit tests passing
 
 **Acceptance criteria**:
 
-- [ ] Client connects to `ws://127.0.0.1:18789` when Gateway is running (or fails gracefully)
+- [ ] Client connects to `ws://127.0.0.1:18790` when Bridge Server is running (or fails gracefully)
 - [ ] Reconnection attempts follow exponential backoff pattern
-- [ ] State changes are emitted correctly
-- [ ] Event handlers receive parsed JSON events
+- [ ] State changes are emitted correctly (4 states, no handshaking)
+- [ ] Event handlers receive parsed `SessionLogEvent` objects
 - [ ] `disconnect()` cleanly tears down all timers and the WebSocket
 - [ ] Unit tests cover the state machine transitions
 
@@ -160,47 +209,61 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### T1.2 — Event Parser + Action Types
 
-> Parse raw Gateway events into typed CharacterAction objects that the game engine consumes.
+> Parse Session Log events into typed CharacterAction objects that the game engine consumes.
 
 **Depends on**: T1.1
 
 **Work items**:
 
-- Extend `src/connection/types.ts` with OpenClaw-specific event types:
-  - `AgentLifecyclePayload` (`stream: "lifecycle"`, `phase: "start" | "end" | "error"`)
-  - `AgentToolPayload` (`stream: "tool"`, `toolName`, `status`, `toolInput`, `result`)
-  - `AgentAssistantPayload` (`stream: "assistant"`, `delta`)
-  - `PresencePayload`, `HealthPayload`
+- Extend `src/connection/types.ts` with Session Log-specific event types:
+  - `SessionLogEvent` `type` field distinguishes event types:
+    - `type: 'session'` — session initialization (id, version, cwd)
+    - `type: 'message'` + `role: 'assistant'` — contains `text`, `thinking`, `toolCall` content items
+    - `type: 'message'` + `role: 'toolResult'` — tool execution results (`exitCode`, `durationMs`)
+    - `type: 'message'` + `role: 'user'` — user input
+  - `ContentItem` type: `TextContent | ThinkingContent | ToolCallContent | ToolResultContent`
   - `CharacterAction` union type (GOTO_ROOM, CHANGE_EMOTION, WAKE_UP, GO_SLEEP, CELEBRATE, CONFUSED)
   - `RoomId`, `AnimationId`, `EmotionId` types
 - Create `src/connection/eventParser.ts`:
-  - `parseGatewayEvent(frame: GatewayFrame): CharacterAction | null`
-  - `TOOL_ROOM_MAP` constant mapping tool names to rooms/animations/emotions (see TECHNICAL.md Section 4.2)
-  - Type guard functions: `isLifecycle()`, `isTool()`, `isAssistant()`
+  - `parseSessionLogEvent(event: SessionLogEvent): CharacterAction | null`
+  - `TOOL_ROOM_MAP` constant mapping **lowercase** tool names to rooms/animations/emotions (see TECHNICAL.md Section 4.2):
+    - `exec` → Office (typing, focused)
+    - `read` → Living Room (sitting, thinking)
+    - `write` → Office (typing, focused)
+    - `edit` → Office (typing, focused)
+    - `web_search` → Living Room (thinking, curious)
+    - `memory_search` → Living Room (thinking, thinking)
+    - `glob` / `grep` → Living Room (sitting, curious)
+    - `task` → Living Room (think, thinking)
+  - Extract tool name from `toolCall` content items (`content.name` field)
+  - Use `stopReason` field to determine session state: `toolUse` (continuing) vs `stop` (task complete)
   - Handle edge cases: unknown tool names → default to office, malformed events → return null
 - Create `ActionQueue` class (see TECHNICAL.md Section 4.2):
   - Max size: 3
   - Deduplication: same-room actions replace instead of queue
   - FIFO pop
 - Write unit tests:
-  - Test each tool name maps to correct room/animation/emotion
-  - Test lifecycle events produce correct actions
+  - Test each lowercase tool name maps to correct room/animation/emotion
+  - Test `type: 'session'` event produces `WAKE_UP` action
+  - Test `stopReason: 'stop'` produces `GO_SLEEP` action
+  - Test handling of multiple `toolCall` items in a single assistant message
   - Test unknown tools fall back to office
   - Test ActionQueue deduplication and overflow
   - Test malformed events return null
 
 **Output**:
 
-- Complete type system for Gateway events and CharacterActions
+- Complete type system for Session Log events and CharacterActions
 - Event parser with configurable mapping
 - ActionQueue for buffering during character movement
 - Unit tests covering all mappings
 
 **Acceptance criteria**:
 
-- [ ] All tool names from the TOOL_ROOM_MAP produce correct CharacterActions
-- [ ] `lifecycle.start` → `WAKE_UP`, `lifecycle.end` → `GO_SLEEP`, `lifecycle.error` → `CONFUSED`
-- [ ] Assistant streaming → `GOTO_ROOM(office, type, focused)`
+- [ ] All lowercase tool names from the TOOL_ROOM_MAP produce correct CharacterActions
+- [ ] `type: 'session'` → `WAKE_UP`; `stopReason: 'stop'` → `GO_SLEEP`
+- [ ] A single assistant message with multiple toolCalls produces independent actions per tool
+- [ ] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
 - [ ] Unknown/malformed events return `null` (no crash)
 - [ ] ActionQueue respects max size and deduplication rules
 - [ ] All unit tests pass
@@ -209,40 +272,45 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### T1.3 — Mock Data Provider
 
-> Build a mock event generator that simulates realistic OpenClaw agent activity.
+> Build a mock event generator that simulates realistic OpenClaw agent activity, producing Session Log format events.
 
 **Depends on**: T1.2
 
 **Work items**:
 
 - Create `src/connection/mockProvider.ts`:
-  - `MockProvider` class that generates realistic event sequences
+  - `MockProvider` class that generates realistic event sequences in Session Log format
   - Session simulation cycle (see TECHNICAL.md Section 4.3):
-    1. Emit `lifecycle.start`
-    2. Loop 10-30 times: pause 3-8s → emit `tool.start` → pause 1-5s → emit `tool.end`
-    3. Intersperse `assistant` streaming events between tool calls
-    4. Emit `lifecycle.end`
-    5. Pause 10-30s (idle period)
-    6. Repeat from step 1
-  - Weighted random tool selection (Write/Edit most frequent, Task least)
+    1. Emit `type: 'session'` event (session initialization)
+    2. Emit `type: 'message', role: 'user'` event (user input)
+    3. Loop 10-30 times:
+       - Pause 3-8s → emit `type: 'message', role: 'assistant'` with `toolCall` content items
+       - Pause 1-5s → emit `type: 'message', role: 'toolResult'` with execution results
+    4. Intersperse assistant messages with `text`/`thinking` content between tool calls
+    5. Emit final assistant message (`stopReason: 'stop'`)
+    6. Pause 10-30s (idle period)
+    7. Repeat from step 2
+  - Weighted random tool selection (`write`/`edit` most frequent, `task` least) — using **lowercase** tool names
+  - Each event includes `id`, `parentId`, `timestamp` (ISO 8601) fields
+  - Generate realistic `usage` data (inputTokens, outputTokens, cost)
   - `start(onEvent)` — begin generating events
-  - `stop()` — stop generating, emit lifecycle.end
-  - Generate realistic `presence` and `health` events periodically
+  - `stop()` — stop generating, emit final `stop` message
 - Write tests:
   - Test that start/stop lifecycle is clean (no dangling timers)
   - Test that tool distribution roughly matches weights over many iterations
-  - Test that events are well-formed GatewayFrames
+  - Test that events are well-formed SessionLogEvents with correct fields
 
 **Output**:
 
-- MockProvider that generates realistic agent behavior
+- MockProvider that generates realistic agent behavior (Session Log format)
 - Passes all tests
 
 **Acceptance criteria**:
 
-- [ ] Running MockProvider emits a sequence of lifecycle, tool, and assistant events
-- [ ] Events are correctly formatted as GatewayFrames
-- [ ] Tool distribution feels realistic (more Write/Edit, fewer Task/WebFetch)
+- [ ] Running MockProvider emits a sequence of session, user message, assistant (toolCall), and toolResult events
+- [ ] Events are correctly formatted as SessionLogEvents (with id/parentId/timestamp)
+- [ ] Tool names are lowercase: `write`, `edit`, `read`, `exec`, `web_search`, etc.
+- [ ] Tool distribution feels realistic (more write/edit, fewer task/web_search)
 - [ ] `stop()` cleans up all timers (no memory leaks)
 - [ ] Session cycles repeat with idle gaps between them
 
@@ -250,24 +318,24 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### T1.4 — Connection Manager + Connection Status UI
 
-> Orchestrate Gateway vs Mock mode switching and expose connection state to the UI.
+> Orchestrate Bridge vs Mock mode switching and expose connection state to the UI.
 
 **Depends on**: T1.3
 
 **Work items**:
 
 - Create `src/connection/connectionManager.ts`:
-  - `ConnectionManager` class that orchestrates `GatewayClient` and `MockProvider`
-  - On `connect()`: attempt Gateway connection. If it fails or times out (5s), auto-switch to MockProvider
-  - On Gateway disconnect: switch to MockProvider after a brief delay, keep trying to reconnect Gateway in background
-  - On Gateway reconnect success: switch back from Mock to Gateway seamlessly
-  - Emit normalized `CharacterAction` events regardless of source (Gateway or Mock)
+  - `ConnectionManager` class that orchestrates `BridgeClient` and `MockProvider`
+  - On `connect()`: attempt Bridge Server connection. If it fails or times out (5s), auto-switch to MockProvider
+  - On Bridge disconnect: switch to MockProvider after a brief delay, keep trying to reconnect Bridge Server in background
+  - On Bridge reconnect success: switch back from Mock to Bridge seamlessly
+  - Emit normalized `CharacterAction` events regardless of source (Bridge or Mock)
   - Expose `connectionStatus`: `'live'` | `'mock'` | `'connecting'` | `'disconnected'`
-  - Expose latest `PresencePayload` and `HealthPayload` for the dashboard
-  - Expose `sessionInfo`: model, tokens used, session ID (from Gateway RPC or mock data)
+  - Expose session log `usage` data (tokens, cost) for the dashboard
+  - Expose `sessionInfo`: model (from `model_change` event), tokens used, session ID (from `session` event)
 - Create `src/ui/ConnectionBadge.tsx`:
   - Small React component showing connection status
-  - Green dot + "Live" when connected to Gateway
+  - Green dot + "Live" when connected to Bridge Server
   - Yellow dot + "Mock" when using mock data
   - Red dot + "Disconnected" when neither is active
   - Animated pulsing dot for "Connecting..." state
@@ -282,10 +350,10 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] App starts and shows "Mock" badge (since OpenClaw is not installed)
-- [ ] ConnectionManager attempts Gateway connection on startup, falls back to mock
+- [ ] App starts and shows "Mock" badge (since Bridge Server is not running)
+- [ ] ConnectionManager attempts Bridge Server connection on startup, falls back to mock
 - [ ] Events from mock provider can be observed (console.log or debug UI)
-- [ ] If Gateway were available, switching would happen automatically
+- [ ] If Bridge Server were available, switching would happen automatically
 - [ ] Connection badge accurately reflects current state
 - [ ] No dangling timers or WebSocket connections on cleanup
 
@@ -808,27 +876,27 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - GameLoop's update cycle processes the queue
 - Integration flow verification:
   ```
-  MockProvider emits tool event → EventParser produces CharacterAction →
+  MockProvider emits SessionLogEvent → EventParser produces CharacterAction →
   ConnectionManager forwards to GameState → Character.processAction() →
   Character walks to room → Arrives → Plays animation → Shows emotion
   ```
 - Handle rapid event sequences:
   - Multiple tool events in quick succession → character goes to the latest room (ActionQueue dedup)
-  - Lifecycle start followed by tool → character wakes up and walks to tool room
-  - Lifecycle end while walking → character redirects to bedroom
+  - Session initialization followed by tool → character wakes up and walks to tool room
+  - `stopReason: 'stop'` arrives while walking → character redirects to bedroom
 - Handle edge cases:
   - App starts with no events → character starts in bedroom sleeping
   - Connection switches from mock to live mid-session → character continues smoothly
-  - Gateway disconnects → character walks to bedroom and sleeps (visual "offline" indicator)
+  - Bridge Server disconnects → character walks to bedroom and sleeps (visual "offline" indicator)
 - End-to-end smoke test: run the app, observe character responding to mock events for 2+ minutes
 - **Integration tests** (Vitest):
   - Test: MockProvider → EventParser → ActionQueue → Character FSM pipeline
-    - Emit a `tool: Write` event → verify character ends up in office with `typing` state
-    - Emit a `lifecycle.end` event → verify character ends up in bedroom with `sleeping` state
+    - Emit an assistant message with `toolCall: write` → verify character ends up in office with `typing` state
+    - Emit an assistant message with `stopReason: 'stop'` → verify character ends up in bedroom with `sleeping` state
     - Emit rapid events → verify ActionQueue deduplication and priority ordering
   - Test: ConnectionManager switches mock ↔ live correctly
-    - Start with no Gateway → verify MockProvider activates
-    - Simulate Gateway becoming available → verify switch to live mode
+    - Start with no Bridge Server → verify MockProvider activates
+    - Simulate Bridge Server becoming available → verify switch to live mode
   - Test: VisibilityManager buffers events correctly
     - Simulate tab hidden → emit events → simulate tab visible → verify only latest state applied
   - These tests use real module instances (not mocks) to verify cross-module contracts
@@ -860,15 +928,15 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Work items**:
 
 - Create `src/ui/Dashboard.tsx`:
-  - **Connection section**: status indicator (Live/Mock/Disconnected), Gateway URL
+  - **Connection section**: status indicator (Live/Mock/Disconnected), Bridge Server URL
   - **Agent state section**: current state (Working/Thinking/Idle/Sleeping), current tool name, current room, current emotion
-  - **Session section**: session ID, model name (if available from Gateway), run duration
-  - **Token usage section**: tokens used / limit, simple progress bar
+  - **Session section**: session ID, model name (from `model_change` event), run duration
+  - **Token usage section**: tokens used / limit, simple progress bar (data from session log `usage` field)
   - **Activity log section**: scrollable list of last 20 events with timestamps
     ```
-    14:32:05  Write  → Office
-    14:31:58  Read   → Living Room
-    14:31:42  Bash   → Office
+    14:32:05  write  → Office
+    14:31:58  read   → Living Room
+    14:31:42  exec   → Office
     14:31:30  (idle) → Bedroom
     ```
   - Subscribe to GameState changes via EventBus (throttled at 250ms)
@@ -914,7 +982,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Ensure the lobster hat is clearly visible and recognizable
 - **Initial camera position**: auto-center and zoom to frame the full one-floor house
 - **Error handling**:
-  - Graceful handling if WebSocket URL is wrong
+  - Graceful handling if Bridge WebSocket URL is wrong
   - Clear error messages in the dashboard for connection issues
   - No uncaught errors in console during normal operation
 - **Performance verification**:
@@ -924,10 +992,10 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - **Update README.md**:
   - Project description, features, screenshots
   - Quick start instructions (`pnpm install && pnpm dev`)
-  - Configuration (WebSocket URL, mock mode)
+  - Configuration (Bridge WebSocket URL, mock mode)
   - Link to docs/ for detailed documentation
 - **Dev experience**:
-  - Add `pnpm dev:mock` script that forces mock mode regardless of Gateway availability
+  - Add `pnpm dev:mock` script that forces mock mode regardless of Bridge Server availability
   - Add debug key shortcuts:
     - `G` — toggle isometric grid overlay
     - `F` — toggle FPS counter
@@ -960,7 +1028,8 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 graph TD
     T0.1["T0.1<br/>Project Scaffolding"]
     T0.2["T0.2<br/>Dev Tooling Setup"]
-    T1.1["T1.1<br/>WS Client"]
+    T0.3["T0.3<br/>Session Log Adaptation"]
+    T1.1["T1.1<br/>Bridge Client"]
     T1.2["T1.2<br/>Event Parser"]
     T1.3["T1.3<br/>Mock Provider"]
     T1.4["T1.4<br/>Connection Manager"]
@@ -979,9 +1048,10 @@ graph TD
     T5.3["T5.3<br/>Polish"]
 
     T0.1 --> T0.2
+    T0.2 --> T0.3
 
     %% Phase 1 (Connection) — sequential chain
-    T0.2 --> T1.1
+    T0.3 --> T1.1
     T1.1 --> T1.2
     T1.2 --> T1.3
     T1.3 --> T1.4
@@ -1013,6 +1083,7 @@ graph TD
     %% Styling
     style T0.1 fill:#4a9eff,color:#fff
     style T0.2 fill:#4a9eff,color:#fff
+    style T0.3 fill:#4a9eff,color:#fff
     style T1.1 fill:#ff9f43,color:#fff
     style T1.2 fill:#ff9f43,color:#fff
     style T1.3 fill:#ff9f43,color:#fff
@@ -1037,8 +1108,8 @@ graph TD
 The two main tracks can run in parallel:
 
 ```
-Track A (Connection):  T0.1 → T0.2 → T1.1 → T1.2 → T1.3 → T1.4 ──────────────────────┐
-                                                                                         ├→ T5.1 → T5.2 → T5.3
+Track A (Connection):  T0.1 → T0.2 → T0.3 → T1.1 → T1.2 → T1.3 → T1.4 ────────────────┐
+                                                                                          ├→ T5.1 → T5.2 → T5.3
 Track B (Engine+World): T0.1 → T0.2 → T2.1 → T2.2 → T2.3 → T3.1 → T3.2 → T3.3 → T4.1 → T4.2a → T4.2b → T4.3 ─┘
 ```
 
@@ -1046,7 +1117,7 @@ If two developers are working on this, one can focus on Track A (connection laye
 
 For a single developer, the recommended order is:
 
-1. **T0.1** → **T0.2** (bootstrap)
+1. **T0.1** → **T0.2** → **T0.3** (bootstrap + architecture adaptation)
 2. **T2.1** → **T2.2** → **T2.3** (get something visual on screen early — motivation!)
 3. **T1.1** → **T1.2** → **T1.3** → **T1.4** (data layer)
 4. **T3.1** → **T3.2** → **T3.3** (build the house)
@@ -1059,39 +1130,40 @@ This order prioritizes **visual feedback early** (seeing the isometric grid on s
 
 ## Estimated Timeline
 
-| Task                         | Est. Time    | Cumulative  |
-| ---------------------------- | ------------ | ----------- |
-| T0.1 Project Scaffolding     | 0.5 day      | 0.5 day     |
-| T0.2 Dev Tooling Setup       | 0.5 day      | 1 day       |
-| T2.1 Isometric Math + Canvas | 0.5 day      | 1.5 days    |
-| T2.2 Game Loop + State       | 0.5 day      | 2 days      |
-| T2.3 Camera System           | 0.5 day      | 2.5 days    |
-| T1.1 WS Client               | 0.5 day      | 3 days      |
-| T1.2 Event Parser            | 0.5 day      | 3.5 days    |
-| T1.3 Mock Provider           | 0.5 day      | 4 days      |
-| T1.4 Connection Manager      | 0.5 day      | 4.5 days    |
-| T3.1 Tile Map + Rooms        | 0.5 day      | 5 days      |
-| T3.2 Floor & Wall Rendering  | 0.5 day      | 5.5 days    |
-| T3.3 Furniture               | 0.5 day      | 6 days      |
-| T4.1 Character Sprite        | 0.5 day      | 6.5 days    |
-| T4.2a Pathfinding            | 0.5 day      | 7 days      |
-| T4.2b Character FSM          | 0.5 day      | 7.5 days    |
-| T4.3 Emotion Bubbles         | 0.5 day      | 8 days      |
-| T5.1 End-to-End Wiring       | 0.5 day      | 8.5 days    |
-| T5.2 Dashboard               | 0.5 day      | 9 days      |
-| T5.3 Polish                  | 0.5 day      | 9.5 days    |
-| **Buffer**                   | **1.5 days** | **11 days** |
+| Task                         | Est. Time    | Cumulative    |
+| ---------------------------- | ------------ | ------------- |
+| T0.1 Project Scaffolding     | 0.5 day      | 0.5 day       |
+| T0.2 Dev Tooling Setup       | 0.5 day      | 1 day         |
+| T0.3 Session Log Adaptation  | 0.5 day      | 1.5 days      |
+| T2.1 Isometric Math + Canvas | 0.5 day      | 2 days        |
+| T2.2 Game Loop + State       | 0.5 day      | 2.5 days      |
+| T2.3 Camera System           | 0.5 day      | 3 days        |
+| T1.1 Bridge Client           | 0.5 day      | 3.5 days      |
+| T1.2 Event Parser            | 0.5 day      | 4 days        |
+| T1.3 Mock Provider           | 0.5 day      | 4.5 days      |
+| T1.4 Connection Manager      | 0.5 day      | 5 days        |
+| T3.1 Tile Map + Rooms        | 0.5 day      | 5.5 days      |
+| T3.2 Floor & Wall Rendering  | 0.5 day      | 6 days        |
+| T3.3 Furniture               | 0.5 day      | 6.5 days      |
+| T4.1 Character Sprite        | 0.5 day      | 7 days        |
+| T4.2a Pathfinding            | 0.5 day      | 7.5 days      |
+| T4.2b Character FSM          | 0.5 day      | 8 days        |
+| T4.3 Emotion Bubbles         | 0.5 day      | 8.5 days      |
+| T5.1 End-to-End Wiring       | 0.5 day      | 9 days        |
+| T5.2 Dashboard               | 0.5 day      | 9.5 days      |
+| T5.3 Polish                  | 0.5 day      | 10 days       |
+| **Buffer**                   | **1.5 days** | **11.5 days** |
 
-**Total estimated MVP: ~9.5 working days + 1.5 days buffer = ~11 working days** (roughly 2.5 calendar weeks at half-day per task pace).
+**Total estimated MVP: ~10 working days + 1.5 days buffer = ~11.5 working days** (roughly 2.5 calendar weeks at half-day per task pace).
 
-> **Note on the buffer**: The buffer accounts for unexpected complexity in integration (T5.1), sprite creation taking longer than expected, and edge cases in the WebSocket protocol that only surface during real testing.
+> **Note on the buffer**: The buffer accounts for unexpected complexity in integration (T5.1), sprite creation taking longer than expected, and edge cases in Bridge Server and session log parsing that only surface during real testing.
 
 ---
 
 ## Checklist Summary
 
-- [ ] P0: Project boots, lints, tests, builds
-- [ ] P1: Events flow from Gateway (or mock) to parsed CharacterActions
+- [ ] P0: Project boots, lints, tests, builds, Bridge Server ready
+- [ ] P1: Events flow from Bridge Server (or mock) to parsed CharacterActions
 - [ ] P2: Isometric canvas renders with game loop, camera pans and zooms
 - [ ] P3: One-floor house visible with 3 rooms, walls, doors, furniture
 - [ ] P4: Lobster-hat character walks between rooms, plays animations, shows emotions

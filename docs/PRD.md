@@ -11,7 +11,7 @@
 
 **Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. It renders an isometric, cross-section view of a cozy three-story house where a lobster-hat character -- representing the OpenClaw agent -- moves between rooms, performs activities, and expresses emotions based on the agent's actual runtime status.
 
-The project connects directly to the OpenClaw Gateway via WebSocket (`ws://127.0.0.1:18789`), parses real-time agent events (tool calls, lifecycle phases, presence), and translates them into character behaviors: walking to the office to code, sitting on the couch to think, sleeping in bed when idle.
+The project uses a lightweight Bridge Server to monitor OpenClaw's Session Log files (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`), parses real-time agent events (tool calls, assistant messages, session lifecycle), and pushes them to the browser via WebSocket (`ws://127.0.0.1:18790`), translating them into character behaviors: walking to the office to code, sitting on the couch to think, sleeping in bed when idle.
 
 ### One-liner
 
@@ -26,10 +26,10 @@ The project connects directly to the OpenClaw Gateway via WebSocket (`ws://127.0
 
 This project draws inspiration from two existing projects:
 
-| Project                                                           | What we borrow                                          | What we do differently                                                                                 |
-| ----------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D rendering | We use WebSocket (not file tailing), isometric view (not top-down), single character (not multi-agent) |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine           | We focus on a cozy home (not corporate office), high-fidelity pixel art (not DOM tiles)                |
+| Project                                                           | What we borrow                                          | What we do differently                                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D rendering | We use Bridge Server push (not direct file tailing), isometric view (not top-down), single character (not multi-agent) |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine           | We focus on a cozy home (not corporate office), high-fidelity pixel art (not DOM tiles)                                |
 
 ---
 
@@ -109,33 +109,33 @@ The key design principle: **the agent's activity determines which room the chara
 The MVP focuses on **one floor (main floor) with 3 rooms** to validate the core experience loop:
 
 ```
-OpenClaw does something → Event arrives via WebSocket → Character moves to room → Animation plays
+OpenClaw does something → Bridge Server pushes event → Character moves to room → Animation plays
 ```
 
 ### 4.2 MVP Floor Layout: Main Floor
 
-| Room            | Agent Activity                                              | Character Animation                    | Emotion  |
-| --------------- | ----------------------------------------------------------- | -------------------------------------- | -------- |
-| **Office**      | `Write`, `Edit`, `Bash`, assistant text streaming           | Sitting at desk, typing on keyboard    | Focused  |
-| **Living Room** | `Read`, `Grep`, `Glob`, `WebFetch`, thinking (no tool call) | Sitting on couch, looking at fireplace | Thinking |
-| **Bedroom**     | Idle (no activity), waiting for user input, session end     | Lying in bed, sleeping                 | Sleepy   |
+| Room            | Agent Activity                                                | Character Animation                    | Emotion  |
+| --------------- | ------------------------------------------------------------- | -------------------------------------- | -------- |
+| **Office**      | `write`, `edit`, `exec`, assistant text streaming             | Sitting at desk, typing on keyboard    | Focused  |
+| **Living Room** | `read`, `grep`, `glob`, `web_search`, thinking (no tool call) | Sitting on couch, looking at fireplace | Thinking |
+| **Bedroom**     | Idle (no activity), waiting for user input, session end       | Lying in bed, sleeping                 | Sleepy   |
 
 ### 4.3 MVP Feature List
 
 #### Must Have (P0)
 
-| #   | Feature                       | Description                                                                             |
-| --- | ----------------------------- | --------------------------------------------------------------------------------------- |
-| 1   | **WebSocket connection**      | Connect to OpenClaw Gateway at `ws://127.0.0.1:18789`, handle handshake, auto-reconnect |
-| 2   | **Event parsing**             | Parse `agent` events (lifecycle/tool/assistant streams), `presence`, `health`           |
-| 3   | **Event-to-behavior mapping** | Map parsed events to character actions (go to room, play animation, show emotion)       |
-| 4   | **Mock mode**                 | When Gateway is unavailable, generate simulated events for development and demo         |
-| 5   | **Isometric renderer**        | Canvas 2D isometric tile rendering with proper draw order (painter's algorithm)         |
-| 6   | **One-floor layout**          | Main floor with 3 rooms: office, living room, bedroom                                   |
-| 7   | **Lobster-hat character**     | Animated pixel character with states: idle, walk, sit, type, sleep                      |
-| 8   | **Pathfinding**               | BFS pathfinding on tile grid, smooth character movement between rooms                   |
-| 9   | **Emotion bubbles**           | Display emotion above character head: focused, thinking, sleepy, happy, confused        |
-| 10  | **Status dashboard**          | Side panel showing: connection status, current agent state, token usage, session info   |
+| #   | Feature                       | Description                                                                                                |
+| --- | ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | **Bridge Server connection**  | Connect to Bridge Server at `ws://127.0.0.1:18790`, monitor most recent Session Log, auto-reconnect        |
+| 2   | **Event parsing**             | Parse Session Log events (`session`, `message`, `model_change`), extract tool calls and assistant messages |
+| 3   | **Event-to-behavior mapping** | Map parsed events to character actions (go to room, play animation, show emotion)                          |
+| 4   | **Mock mode**                 | When Bridge Server is unavailable, generate simulated events for development and demo                      |
+| 5   | **Isometric renderer**        | Canvas 2D isometric tile rendering with proper draw order (painter's algorithm)                            |
+| 6   | **One-floor layout**          | Main floor with 3 rooms: office, living room, bedroom                                                      |
+| 7   | **Lobster-hat character**     | Animated pixel character with states: idle, walk, sit, type, sleep                                         |
+| 8   | **Pathfinding**               | BFS pathfinding on tile grid, smooth character movement between rooms                                      |
+| 9   | **Emotion bubbles**           | Display emotion above character head: focused, thinking, sleepy, happy, confused                           |
+| 10  | **Status dashboard**          | Side panel showing: connection status, current agent state, token usage, session info                      |
 
 #### Nice to Have (P1)
 
@@ -166,24 +166,24 @@ OpenClaw does something → Event arrives via WebSocket → Character moves to r
 
 | Room               | Agent Activity                                         | Character Animation                         | Emotion   |
 | ------------------ | ------------------------------------------------------ | ------------------------------------------- | --------- |
-| **Reading Room**   | `Read`, `Grep`, `Glob` (file browsing / search)        | Sitting in armchair, flipping through books | Curious   |
-| **Lab / Workshop** | `Task` (sub-agent spawning), complex multi-tool chains | Standing at whiteboard, drawing diagrams    | Excited   |
+| **Reading Room**   | `read`, `grep`, `glob` (file browsing / search)        | Sitting in armchair, flipping through books | Curious   |
+| **Lab / Workshop** | `task` (sub-agent spawning), complex multi-tool chains | Standing at whiteboard, drawing diagrams    | Excited   |
 | **Balcony**        | Task completed successfully                            | Sitting in lounge chair, sunbathing         | Satisfied |
 
 #### Main Floor (2F) -- same as MVP
 
 | Room            | Agent Activity                               | Character Animation | Emotion  |
 | --------------- | -------------------------------------------- | ------------------- | -------- |
-| **Office**      | `Write`, `Edit`, `Bash`, assistant streaming | Typing at desk      | Focused  |
-| **Living Room** | `WebFetch`, thinking, light browsing         | Sitting on couch    | Thinking |
+| **Office**      | `write`, `edit`, `exec`, assistant streaming | Typing at desk      | Focused  |
+| **Living Room** | `web_search`, thinking, light browsing       | Sitting on couch    | Thinking |
 | **Bedroom**     | Idle, waiting, session end                   | Sleeping in bed     | Sleepy   |
 
 #### Basement (1F)
 
 | Room             | Agent Activity                                       | Character Animation               | Emotion |
 | ---------------- | ---------------------------------------------------- | --------------------------------- | ------- |
-| **Tool Room**    | `Bash` (system commands, scripts)                    | Using wrench/hammer on workbench  | Serious |
-| **Storage Room** | `Glob` (file system scanning), large file operations | Sorting boxes and filing cabinets | Busy    |
+| **Tool Room**    | `exec` (system commands, scripts)                    | Using wrench/hammer on workbench  | Serious |
+| **Storage Room** | `glob` (file system scanning), large file operations | Sorting boxes and filing cabinets | Busy    |
 | **Kitchen**      | Build / compile tasks, data processing pipelines     | Cooking at stove, stirring pots   | Happy   |
 
 ### 5.2 Additional v1.0 Features
@@ -206,42 +206,42 @@ OpenClaw does something → Event arrives via WebSocket → Character moves to r
 
 This is the definitive mapping table that drives the entire visualization.
 
-### 6.1 OpenClaw Gateway Events
+### 6.1 OpenClaw Session Log Events
 
-| Gateway Event         | `event` field | `stream` / key field                    | Data available                |
-| --------------------- | ------------- | --------------------------------------- | ----------------------------- |
-| Agent lifecycle start | `agent`       | `stream: "lifecycle"`, `phase: "start"` | `runId`                       |
-| Agent lifecycle end   | `agent`       | `stream: "lifecycle"`, `phase: "end"`   | `runId`, usage stats          |
-| Agent lifecycle error | `agent`       | `stream: "lifecycle"`, `phase: "error"` | Error details                 |
-| Tool call             | `agent`       | `stream: "tool"`                        | Tool name, params, result     |
-| Assistant text        | `agent`       | `stream: "assistant"`                   | Text delta (streaming)        |
-| Presence update       | `presence`    | Device entries                          | Connected clients, last input |
-| Health check          | `health`      | Health snapshot                         | System status                 |
+| Session Log Event                   | `type` field            | Key fields                                   | Data available                    |
+| ----------------------------------- | ----------------------- | -------------------------------------------- | --------------------------------- |
+| Session initialization              | `session`               | `sessionId`, `version`, `cwd`                | Session ID, working directory     |
+| User message                        | `message`               | `role: "user"`                               | User input text                   |
+| Assistant message (with tool calls) | `message`               | `role: "assistant"`, `content: [{toolCall}]` | Tool name, params, text, thinking |
+| Tool execution result               | `message`               | `role: "toolResult"`, `details`              | exitCode, durationMs, output      |
+| Model change                        | `model_change`          | `provider`, `modelId`                        | Current model info                |
+| Thinking level change               | `thinking_level_change` | `thinkingLevel`                              | Thinking level setting            |
+| Custom event (e.g. model-snapshot)  | `custom`                | `customType`                                 | Custom data                       |
 
 ### 6.2 Complete Mapping Table
 
-| OpenClaw Event        | Tool / Phase     | Target Room                             | Animation                | Emotion   | Priority |
-| --------------------- | ---------------- | --------------------------------------- | ------------------------ | --------- | -------- |
-| `lifecycle.start`     | --               | Living Room                             | Wake up, walk to couch   | Thinking  | High     |
-| `lifecycle.end`       | --               | Bedroom                                 | Walk to bed, lie down    | Sleepy    | High     |
-| `lifecycle.error`     | --               | (current room)                          | Sit down, hold head      | Confused  | High     |
-| `tool: Write`         | Write            | Office                                  | Typing at keyboard       | Focused   | Medium   |
-| `tool: Edit`          | Edit             | Office                                  | Typing at keyboard       | Focused   | Medium   |
-| `tool: Bash`          | Bash             | Office (MVP) / Tool Room (v1.0)         | Typing / using tools     | Serious   | Medium   |
-| `tool: Read`          | Read             | Living Room (MVP) / Reading Room (v1.0) | Reading, flipping pages  | Curious   | Medium   |
-| `tool: Grep`          | Grep             | Living Room (MVP) / Reading Room (v1.0) | Searching through books  | Curious   | Medium   |
-| `tool: Glob`          | Glob             | Living Room (MVP) / Storage Room (v1.0) | Browsing shelves         | Busy      | Medium   |
-| `tool: WebFetch`      | WebFetch         | Living Room                             | Browsing on tablet/phone | Curious   | Medium   |
-| `tool: Task`          | Task (sub-agent) | Living Room (MVP) / Lab (v1.0)          | Drawing on whiteboard    | Excited   | Medium   |
-| `assistant` streaming | --               | Office                                  | Typing at keyboard       | Focused   | Low      |
-| No event (idle > 30s) | --               | Bedroom                                 | Sleeping                 | Sleepy    | Low      |
-| Task completed        | --               | Living Room (MVP) / Balcony (v1.0)      | Celebrating, stretching  | Satisfied | Medium   |
+| OpenClaw Event                         | Tool / Phase     | Target Room                             | Animation                | Emotion   | Priority |
+| -------------------------------------- | ---------------- | --------------------------------------- | ------------------------ | --------- | -------- |
+| `type: "session"` (session start)      | --               | Living Room                             | Wake up, walk to couch   | Thinking  | High     |
+| `stopReason: "stop"` (session end)     | --               | Bedroom                                 | Walk to bed, lie down    | Sleepy    | High     |
+| Tool execution failure (exitCode != 0) | --               | (current room)                          | Sit down, hold head      | Confused  | High     |
+| `tool: write`                          | write            | Office                                  | Typing at keyboard       | Focused   | Medium   |
+| `tool: edit`                           | edit             | Office                                  | Typing at keyboard       | Focused   | Medium   |
+| `tool: exec`                           | exec             | Office (MVP) / Tool Room (v1.0)         | Typing / using tools     | Serious   | Medium   |
+| `tool: read`                           | read             | Living Room (MVP) / Reading Room (v1.0) | Reading, flipping pages  | Curious   | Medium   |
+| `tool: grep`                           | grep             | Living Room (MVP) / Reading Room (v1.0) | Searching through books  | Curious   | Medium   |
+| `tool: glob`                           | glob             | Living Room (MVP) / Storage Room (v1.0) | Browsing shelves         | Busy      | Medium   |
+| `tool: web_search`                     | web_search       | Living Room                             | Browsing on tablet/phone | Curious   | Medium   |
+| `tool: task`                           | task (sub-agent) | Living Room (MVP) / Lab (v1.0)          | Drawing on whiteboard    | Excited   | Medium   |
+| `assistant` streaming                  | --               | Office                                  | Typing at keyboard       | Focused   | Low      |
+| No event (idle > 30s)                  | --               | Bedroom                                 | Sleeping                 | Sleepy    | Low      |
+| Task completed                         | --               | Living Room (MVP) / Balcony (v1.0)      | Celebrating, stretching  | Satisfied | Medium   |
 
 ### 6.3 Priority Resolution
 
 When multiple events arrive in quick succession, the higher-priority event takes precedence. Priority levels are:
 
-- **High**: Lifecycle events (`start`, `end`, `error`) — these override everything
+- **High**: Session lifecycle events (`type: "session"` start, `stopReason: "stop"` end, tool execution failure) — these override everything
 - **Medium**: Tool call events — normal activity routing
 - **Low**: Assistant streaming, idle transitions — throttled and deprioritized
 
@@ -272,7 +272,7 @@ A compact side panel (right side or bottom) displaying:
 │  Mode: Live / Mock       │
 ├──────────────────────────┤
 │  Agent State: Working    │
-│  Current Tool: Write     │
+│  Current Tool: write    │
 │  Room: Office            │
 │  Emotion: Focused        │
 ├──────────────────────────┤
@@ -281,9 +281,9 @@ A compact side panel (right side or bottom) displaying:
 │  Duration: 4m 32s        │
 ├──────────────────────────┤
 │  Last Activity:          │
-│  14:32:05 Write App.tsx  │
-│  14:31:58 Read utils.ts  │
-│  14:31:42 Bash npm test  │
+│  14:32:05 write App.tsx  │
+│  14:31:58 read utils.ts  │
+│  14:31:42 exec npm test  │
 └──────────────────────────┘
 ```
 
@@ -291,17 +291,17 @@ A compact side panel (right side or bottom) displaying:
 
 ## 8. Non-Functional Requirements
 
-| Requirement             | Target                                                                 |
-| ----------------------- | ---------------------------------------------------------------------- |
-| **Frame rate**          | 60fps Canvas rendering (requestAnimationFrame)                         |
-| **Bundle size**         | < 500KB gzipped (excluding sprite assets)                              |
-| **Browser support**     | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+                          |
-| **Responsive**          | Minimum viewport: 800x600; scales up to 4K                             |
-| **Startup time**        | < 2s to first meaningful paint                                         |
-| **WebSocket reconnect** | Auto-reconnect with exponential backoff (1s, 2s, 4s, ... max 30s)      |
-| **Mock mode fallback**  | < 100ms to switch to mock when Gateway is unreachable                  |
-| **Memory usage**        | < 100MB browser memory footprint                                       |
-| **Accessibility**       | Reduced motion support (disable animations via prefers-reduced-motion) |
+| Requirement            | Target                                                                 |
+| ---------------------- | ---------------------------------------------------------------------- |
+| **Frame rate**         | 60fps Canvas rendering (requestAnimationFrame)                         |
+| **Bundle size**        | < 500KB gzipped (excluding sprite assets)                              |
+| **Browser support**    | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+                          |
+| **Responsive**         | Minimum viewport: 800x600; scales up to 4K                             |
+| **Startup time**       | < 2s to first meaningful paint                                         |
+| **Bridge reconnect**   | Auto-reconnect with exponential backoff (1s, 2s, 4s, ... max 30s)      |
+| **Mock mode fallback** | < 100ms to switch to mock when Bridge Server is unreachable            |
+| **Memory usage**       | < 100MB browser memory footprint                                       |
+| **Accessibility**      | Reduced motion support (disable animations via prefers-reduced-motion) |
 
 ---
 
