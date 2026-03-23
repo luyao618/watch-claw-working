@@ -56,10 +56,10 @@
 
 **验收标准**：
 
-- [ ] `pnpm dev` 启动无错误
-- [ ] 浏览器显示 "Watch Claw" 文本
-- [ ] `pnpm build` 产生干净的 production build
-- [ ] Path alias `@/` 在 imports 中正确解析
+- [x] `pnpm dev` 启动无错误
+- [x] 浏览器显示 "Watch Claw" 文本
+- [x] `pnpm build` 产生干净的 production build
+- [x] Path alias `@/` 在 imports 中正确解析
 
 ---
 
@@ -101,12 +101,12 @@
 
 **验收标准**：
 
-- [ ] `pnpm lint` 运行无错误
-- [ ] `pnpm format` 格式化所有文件
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm test` 运行且简单测试通过
-- [ ] Git commit 触发 lint-staged hook
-- [ ] `eventBus.ts` 可用：subscribe、emit、unsubscribe
+- [x] `pnpm lint` 运行无错误
+- [x] `pnpm format` 格式化所有文件
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm test` 运行且简单测试通过
+- [x] Git commit 触发 lint-staged hook
+- [x] `eventBus.ts` 可用：subscribe、emit、unsubscribe
 
 ---
 
@@ -144,12 +144,12 @@
 
 **验收标准**：
 
-- [ ] `pnpm dev` 同时启动 Vite 和 Bridge Server
-- [ ] Bridge Server 在 `ws://127.0.0.1:18790` 监听连接
-- [ ] Bridge Server 找到最近活跃的 session 并监控其 JSONL 文件
-- [ ] 新的 JSONL 行被正确解析并广播
-- [ ] Session 切换时自动跟踪新 session
-- [ ] `constants.ts` 中的常量名已更新
+- [x] `pnpm dev` 同时启动 Vite 和 Bridge Server
+- [x] Bridge Server 在 `ws://127.0.0.1:18790` 监听连接
+- [x] Bridge Server 找到最近活跃的 session 并监控其 JSONL 文件
+- [x] 新的 JSONL 行被正确解析并广播
+- [x] Session 切换时自动跟踪新 session
+- [x] `constants.ts` 中的常量名已更新
 
 ---
 
@@ -198,12 +198,12 @@
 
 **验收标准**：
 
-- [ ] Client 连接到 `ws://127.0.0.1:18790`（Bridge Server 运行时）或优雅失败
-- [ ] 重连尝试遵循指数退避模式
-- [ ] 状态变化正确发出（4 状态，无 handshaking）
-- [ ] Event handlers 接收到解析后的 `SessionLogEvent` 对象
-- [ ] `disconnect()` 干净地拆除所有计时器和 WebSocket
-- [ ] 单元测试覆盖状态机转换
+- [x] Client 连接到 `ws://127.0.0.1:18790`（Bridge Server 运行时）或优雅失败
+- [x] 重连尝试遵循指数退避模式
+- [x] 状态变化正确发出（4 状态，无 handshaking）
+- [x] Event handlers 接收到解析后的 `SessionLogEvent` 对象
+- [x] `disconnect()` 干净地拆除所有计时器和 WebSocket
+- [x] 单元测试覆盖状态机转换
 
 ---
 
@@ -260,13 +260,13 @@
 
 **验收标准**：
 
-- [ ] TOOL_ROOM_MAP 中所有小写 tool names 产生正确的 CharacterActions
-- [ ] `type: 'session'` → `WAKE_UP`；`stopReason: 'stop'` → `GO_SLEEP`
-- [ ] 一个 assistant message 含多个 toolCalls 时，每个 tool 产生独立的 action
-- [ ] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
-- [ ] 未知/格式错误的 events 返回 `null`（不崩溃）
-- [ ] ActionQueue 遵守最大大小和去重规则
-- [ ] 所有单元测试通过
+- [x] TOOL_ROOM_MAP 中所有小写 tool names 产生正确的 CharacterActions
+- [x] `type: 'session'` → `WAKE_UP`；`stopReason: 'stop'` → `GO_SLEEP`
+- [x] 一个 assistant message 含多个 toolCalls 时，每个 tool 产生独立的 action
+- [x] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
+- [x] 未知/格式错误的 events 返回 `null`（不崩溃）
+- [x] ActionQueue 遵守最大大小和去重规则
+- [x] 所有单元测试通过
 
 ---
 
@@ -307,12 +307,12 @@
 
 **验收标准**：
 
-- [ ] 运行 MockProvider 发出 session、user message、assistant（toolCall）和 toolResult events 序列
-- [ ] Events 格式正确（SessionLogEvent 格式，含 id/parentId/timestamp）
-- [ ] Tool names 为小写：`write`、`edit`、`read`、`exec`、`web_search` 等
-- [ ] Tool 分布感觉真实（更多 write/edit，较少 task/web_search）
-- [ ] `stop()` 清理所有计时器（无内存泄漏）
-- [ ] Session 循环在 idle 间隔之间重复
+- [x] 运行 MockProvider 发出 session、user message、assistant（toolCall）和 toolResult events 序列
+- [x] Events 格式正确（SessionLogEvent 格式，含 id/parentId/timestamp）
+- [x] Tool names 为小写：`write`、`edit`、`read`、`exec`、`web_search` 等
+- [x] Tool 分布感觉真实（更多 write/edit，较少 task/web_search）
+- [x] `stop()` 清理所有计时器（无内存泄漏）
+- [x] Session 循环在 idle 间隔之间重复
 
 ---
 
@@ -350,12 +350,12 @@
 
 **验收标准**：
 
-- [ ] 应用启动时显示 "Mock" badge（因为 Bridge Server 未运行）
-- [ ] ConnectionManager 启动时尝试 Bridge Server 连接，回退到 mock
-- [ ] Mock provider 的 events 可被观察到（console.log 或 debug UI）
-- [ ] 如果 Bridge Server 可用，切换会自动发生
-- [ ] Connection badge 准确反映当前状态
-- [ ] 清理时无悬挂计时器或 WebSocket 连接
+- [x] 应用启动时显示 "Mock" badge（因为 Bridge Server 未运行）
+- [x] ConnectionManager 启动时尝试 Bridge Server 连接，回退到 mock
+- [x] Mock provider 的 events 可被观察到（console.log 或 debug UI）
+- [x] 如果 Bridge Server 可用，切换会自动发生
+- [x] Connection badge 准确反映当前状态
+- [x] 清理时无悬挂计时器或 WebSocket 连接
 
 ---
 
@@ -401,11 +401,11 @@
 
 **验收标准**：
 
-- [ ] 打开应用显示可见的 isometric 菱形 grid
-- [ ] Grid 在 retina 显示器上渲染清晰（无模糊）
-- [ ] 浏览器窗口变化时 Canvas 正确 resize
-- [ ] Isometric 数学单元测试全部通过（往返、边界情况）
-- [ ] 鼠标位置可转换为 tile 坐标（hover 时 console.log）
+- [x] 打开应用显示可见的 isometric 菱形 grid
+- [x] Grid 在 retina 显示器上渲染清晰（无模糊）
+- [x] 浏览器窗口变化时 Canvas 正确 resize
+- [x] Isometric 数学单元测试全部通过（往返、边界情况）
+- [x] 鼠标位置可转换为 tile 坐标（hover 时 console.log）
 
 ---
 
@@ -453,11 +453,11 @@
 
 **验收标准**：
 
-- [ ] Game loop 稳定运行（FPS 计数器显示 ~60）
-- [ ] Debug grid 每帧渲染无闪烁
-- [ ] `pause()` 和 `resume()` 正常工作
-- [ ] Game state 对象可访问和修改
-- [ ] Delta time 上限防止帧率尖峰级联
+- [x] Game loop 稳定运行（FPS 计数器显示 ~60）
+- [x] Debug grid 每帧渲染无闪烁
+- [x] `pause()` 和 `resume()` 正常工作
+- [x] Game state 对象可访问和修改
+- [x] Delta time 上限防止帧率尖峰级联
 
 ---
 
@@ -497,12 +497,12 @@
 
 **验收标准**：
 
-- [ ] 鼠标滚轮以浮点步进缩放（±0.25，范围 0.5x 到 5x）
-- [ ] 右键拖拽平滑平移视图
-- [ ] 缩放控件（+/-/reset）正常工作
-- [ ] Camera 平滑插值到目标位置
-- [ ] Grid 在所有缩放级别正确渲染（无间隙、无抖动）
-- [ ] `centerOn()` 正确定位到给定 tile
+- [x] 鼠标滚轮以浮点步进缩放（±0.25，范围 0.5x 到 5x）
+- [x] 右键拖拽平滑平移视图
+- [x] 缩放控件（+/-/reset）正常工作
+- [x] Camera 平滑插值到目标位置
+- [x] Grid 在所有缩放级别正确渲染（无间隙、无抖动）
+- [x] `centerOn()` 正确定位到给定 tile
 
 ---
 
@@ -566,12 +566,12 @@
 
 **验收标准**：
 
-- [ ] Tile map 渲染为 isometric 平面图（使用 T2.1 的 debug renderer）
-- [ ] 三个不同的房间清晰可见，有墙壁分隔
-- [ ] Doors 连接各房间
-- [ ] Walkability grid 正确标记墙壁为阻塞
-- [ ] Room activityZones 和 entryTiles 在可行走 tiles 上
-- [ ] 单元测试通过
+- [x] Tile map 渲染为 isometric 平面图（使用 T2.1 的 debug renderer）
+- [x] 三个不同的房间清晰可见，有墙壁分隔
+- [x] Doors 连接各房间
+- [x] Walkability grid 正确标记墙壁为阻塞
+- [x] Room activityZones 和 entryTiles 在可行走 tiles 上
+- [x] 单元测试通过
 
 ---
 
@@ -611,12 +611,12 @@
 
 **验收标准**：
 
-- [ ] 地板以正确的 isometric 对齐渲染（tiles 之间无间隙）
-- [ ] 墙壁以正确的高度渲染（比地板高）
-- [ ] 两种不同的地板类型视觉可区分（office vs living/bedroom）
-- [ ] 门在视觉上是开放/可通过的
-- [ ] Sprites 加载无错误；文件缺失时回退到彩色形状
-- [ ] 绘制顺序正确（tile 边界无视觉故障）
+- [x] 地板以正确的 isometric 对齐渲染（tiles 之间无间隙）
+- [x] 墙壁以正确的高度渲染（比地板高）
+- [x] 两种不同的地板类型视觉可区分（office vs living/bedroom）
+- [x] 门在视觉上是开放/可通过的
+- [x] Sprites 加载无错误；文件缺失时回退到彩色形状
+- [x] 绘制顺序正确（tile 边界无视觉故障）
 
 ---
 
@@ -663,12 +663,12 @@
 
 **验收标准**：
 
-- [ ] Office 有可见的电脑桌和椅子
-- [ ] Living room 有可见的沙发和壁炉
-- [ ] Bedroom 有可见的床和灯
-- [ ] 角色无法穿过家具（walkability 检查）
-- [ ] 角色可以走到 occupiable tiles（椅子、沙发、床）
-- [ ] Depth sorting：角色在家具后面时正确被遮挡
+- [x] Office 有可见的电脑桌和椅子
+- [x] Living room 有可见的沙发和壁炉
+- [x] Bedroom 有可见的床和灯
+- [x] 角色无法穿过家具（walkability 检查）
+- [x] 角色可以走到 occupiable tiles（椅子、沙发、床）
+- [x] Depth sorting：角色在家具后面时正确被遮挡
 
 ---
 
@@ -722,12 +722,12 @@
 
 **验收标准**：
 
-- [ ] 角色在 isometric 地板上可见
-- [ ] Idle 动画持续播放（微妙的晃动）
-- [ ] 角色有可辨识的龙虾帽（即使是简单的）
-- [ ] 切换动画正常工作（idle → walk → type → 等）
-- [ ] 每个动画的帧率正确（walk 比 idle 快）
-- [ ] 角色与家具正确 depth-sort
+- [x] 角色在 isometric 地板上可见
+- [x] Idle 动画持续播放（微妙的晃动）
+- [x] 角色有可辨识的龙虾帽（即使是简单的）
+- [x] 切换动画正常工作（idle → walk → type → 等）
+- [x] 每个动画的帧率正确（walk 比 idle 快）
+- [x] 角色与家具正确 depth-sort
 
 ---
 
@@ -764,12 +764,12 @@
 
 **验收标准**：
 
-- [ ] `findPath(office, bedroom)` 返回经过 door tiles 的路径
-- [ ] `findPath` 永远不会穿过墙壁或家具路由
-- [ ] 对不可达目标返回 `null`
-- [ ] `moveAlongPath` 产生平滑的逐帧移动
-- [ ] 方向从移动向量正确确定
-- [ ] 所有单元测试通过
+- [x] `findPath(office, bedroom)` 返回经过 door tiles 的路径
+- [x] `findPath` 永远不会穿过墙壁或家具路由
+- [x] 对不可达目标返回 `null`
+- [x] `moveAlongPath` 产生平滑的逐帧移动
+- [x] 方向从移动向量正确确定
+- [x] 所有单元测试通过
 
 ---
 
@@ -811,14 +811,14 @@
 
 **验收标准**：
 
-- [ ] Dispatching `GOTO_ROOM('office')` 让角色走到办公桌
-- [ ] 角色通过 doors 行走（不穿墙）
-- [ ] 角色行走时面向正确方向
-- [ ] 移动时播放 walk 动画，到达时播放目标动画
-- [ ] 如果角色已在目标房间，直接过渡（不行走）
-- [ ] Idle 30s 后触发自动睡觉
-- [ ] Pathfinding 处理角色已在目标位置的情况
-- [ ] 所有单元测试通过
+- [x] Dispatching `GOTO_ROOM('office')` 让角色走到办公桌
+- [x] 角色通过 doors 行走（不穿墙）
+- [x] 角色行走时面向正确方向
+- [x] 移动时播放 walk 动画，到达时播放目标动画
+- [x] 如果角色已在目标房间，直接过渡（不行走）
+- [x] Idle 30s 后触发自动睡觉
+- [x] Pathfinding 处理角色已在目标位置的情况
+- [x] 所有单元测试通过
 
 ---
 
@@ -851,12 +851,12 @@
 
 **验收标准**：
 
-- [ ] 情绪气泡在角色头顶可见
-- [ ] 气泡轻柔浮动（正弦波晃动）
-- [ ] 角色状态转换时情绪变化（例如 typing → focused，sleeping → sleepy）
-- [ ] 不同情绪视觉可区分
-- [ ] 情绪变化时气泡平滑淡入
-- [ ] 气泡在所有缩放级别正确渲染
+- [x] 情绪气泡在角色头顶可见
+- [x] 气泡轻柔浮动（正弦波晃动）
+- [x] 角色状态转换时情绪变化（例如 typing → focused，sleeping → sleepy）
+- [x] 不同情绪视觉可区分
+- [x] 情绪变化时气泡平滑淡入
+- [x] 气泡在所有缩放级别正确渲染
 
 ---
 
@@ -909,13 +909,13 @@
 
 **验收标准**：
 
-- [ ] 角色响应 mock events 在房间间移动
-- [ ] 角色在每个房间播放正确的动画（office 打字、living room 坐着、bedroom 睡觉）
-- [ ] 角色为每个活动显示正确的情绪
-- [ ] 快速 events 处理无视觉故障（通过队列平滑过渡）
-- [ ] 30+ 秒无 events 时角色睡觉
-- [ ] 集成测试通过：event→character pipeline、mock↔live 切换、visibility 缓冲
-- [ ] 长时间运行无 JavaScript 控制台错误
+- [x] 角色响应 mock events 在房间间移动
+- [x] 角色在每个房间播放正确的动画（office 打字、living room 坐着、bedroom 睡觉）
+- [x] 角色为每个活动显示正确的情绪
+- [x] 快速 events 处理无视觉故障（通过队列平滑过渡）
+- [x] 30+ 秒无 events 时角色睡觉
+- [x] 集成测试通过：event→character pipeline、mock↔live 切换、visibility 缓冲
+- [x] 长时间运行无 JavaScript 控制台错误
 
 ---
 
@@ -956,13 +956,13 @@
 
 **验收标准**：
 
-- [ ] Dashboard 显示当前连接状态（开发环境为 Mock）
-- [ ] 角色切换房间/活动时 agent 状态更新
-- [ ] 活动日志可滚动，显示带时间戳的近期 events
-- [ ] Token 使用量区域显示（mock 数据或连接时的真实数据）
-- [ ] Dashboard 可通过 `D` 键切换
-- [ ] Dashboard 不导致 canvas rendering 卡顿（节流更新）
-- [ ] 布局响应式：窄视口时 dashboard 收缩或隐藏
+- [x] Dashboard 显示当前连接状态（开发环境为 Mock）
+- [x] 角色切换房间/活动时 agent 状态更新
+- [x] 活动日志可滚动，显示带时间戳的近期 events
+- [x] Token 使用量区域显示（mock 数据或连接时的真实数据）
+- [x] Dashboard 可通过 `D` 键切换
+- [x] Dashboard 不导致 canvas rendering 卡顿（节流更新）
+- [x] 布局响应式：窄视口时 dashboard 收缩或隐藏
 
 ---
 
@@ -1011,14 +1011,14 @@
 
 **验收标准**：
 
-- [ ] 应用稳定运行 10+ 分钟无错误
-- [ ] 角色行为感觉自然和响应迅速
-- [ ] 龙虾帽清晰可见且可辨识
-- [ ] README 有清晰的安装说明
-- [ ] Debug 快捷键全部可用（G、F、D、M）
-- [ ] `pnpm dev` → 5 秒内启动应用
-- [ ] 正常运行期间无控制台错误
-- [ ] 内存使用稳定（10 分钟运行无增长）
+- [x] 应用稳定运行 10+ 分钟无错误
+- [x] 角色行为感觉自然和响应迅速
+- [x] 龙虾帽清晰可见且可辨识
+- [x] README 有清晰的安装说明
+- [x] Debug 快捷键全部可用（G、F、D、M）
+- [x] `pnpm dev` → 5 秒内启动应用
+- [x] 正常运行期间无控制台错误
+- [x] 内存使用稳定（10 分钟运行无增长）
 
 ---
 
@@ -1162,9 +1162,9 @@ graph TD
 
 ## Checklist 总结
 
-- [ ] P0：项目可启动、lint、测试、构建、Bridge Server 就绪
-- [ ] P1：Events 从 Bridge Server（或 mock）流向解析后的 CharacterActions
-- [ ] P2：Isometric canvas 通过 game loop 渲染、camera 可平移和缩放
-- [ ] P3：单层楼房屋可见，包含 3 个房间、墙壁、门、家具
-- [ ] P4：龙虾帽角色在房间间行走、播放动画、显示情绪
-- [ ] P5：Events 端到端驱动角色行为、dashboard 显示状态、应用已打磨
+- [x] P0：项目可启动、lint、测试、构建、Bridge Server 就绪
+- [x] P1：Events 从 Bridge Server（或 mock）流向解析后的 CharacterActions
+- [x] P2：Isometric canvas 通过 game loop 渲染、camera 可平移和缩放
+- [x] P3：单层楼房屋可见，包含 3 个房间、墙壁、门、家具
+- [x] P4：龙虾帽角色在房间间行走、播放动画、显示情绪
+- [x] P5：Events 端到端驱动角色行为、dashboard 显示状态、应用已打磨
