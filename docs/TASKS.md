@@ -13,14 +13,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### Phase Summary
 
-| Phase | Name | Tasks | Scope |
-|-------|------|-------|-------|
-| P0 | Project Bootstrap | 2 | Scaffolding, tooling, dev environment |
-| P1 | Connection Layer | 4 | WebSocket client, event parsing, mock provider |
-| P2 | Engine Foundation | 3 | Game loop, isometric renderer, camera |
-| P3 | World Building | 3 | Tile map, rooms, furniture |
-| P4 | Character System | 4 | Sprites, FSM, pathfinding, emotions |
-| P5 | Integration & Polish | 3 | End-to-end wiring, dashboard, polish |
+| Phase | Name                 | Tasks | Scope                                          |
+| ----- | -------------------- | ----- | ---------------------------------------------- |
+| P0    | Project Bootstrap    | 2     | Scaffolding, tooling, dev environment          |
+| P1    | Connection Layer     | 4     | WebSocket client, event parsing, mock provider |
+| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera          |
+| P3    | World Building       | 3     | Tile map, rooms, furniture                     |
+| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions            |
+| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish           |
 
 ---
 
@@ -33,6 +33,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: Nothing (starting point)
 
 **Work items**:
+
 - Initialize project with `pnpm create vite@latest . --template react-ts`
 - Configure `tsconfig.json` with strict mode, path aliases (`@/` → `src/`)
 - Configure `vite.config.ts` with path alias resolution
@@ -48,11 +49,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Verify `pnpm dev` starts and shows the page
 
 **Output**:
+
 - Working Vite dev server at `http://localhost:5173`
 - All directories created with placeholder files
 - TypeScript compiles without errors
 
 **Acceptance criteria**:
+
 - [ ] `pnpm dev` starts without errors
 - [ ] Browser shows "Watch Claw" text
 - [ ] `pnpm build` produces a clean production build
@@ -67,6 +70,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T0.1
 
 **Work items**:
+
 - Install and configure ESLint with TypeScript parser and React plugin
 - Install and configure Prettier (2-space indent, single quotes, trailing comma)
 - Set up `.eslintrc.cjs` and `.prettierrc`
@@ -90,11 +94,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Update `.gitignore` for Vite project (dist/, node_modules/, etc.)
 
 **Output**:
+
 - Linting, formatting, and testing pipelines all functional
 - Core utility modules ready for use
 - Pre-commit hooks working
 
 **Acceptance criteria**:
+
 - [ ] `pnpm lint` runs without errors
 - [ ] `pnpm format` formats all files
 - [ ] `pnpm typecheck` passes
@@ -113,6 +119,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T0.2
 
 **Work items**:
+
 - Create `src/connection/types.ts`:
   - `ConnectionState` type (`disconnected` | `connecting` | `handshaking` | `connected` | `reconnecting`)
   - `GatewayFrame` interface (the raw WebSocket message envelope)
@@ -135,11 +142,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Test heartbeat timeout detection
 
 **Output**:
+
 - `GatewayClient` class that can connect to any WebSocket endpoint
 - Full connection lifecycle with reconnect
 - Unit tests passing
 
 **Acceptance criteria**:
+
 - [ ] Client connects to `ws://127.0.0.1:18789` when Gateway is running (or fails gracefully)
 - [ ] Reconnection attempts follow exponential backoff pattern
 - [ ] State changes are emitted correctly
@@ -156,6 +165,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T1.1
 
 **Work items**:
+
 - Extend `src/connection/types.ts` with OpenClaw-specific event types:
   - `AgentLifecyclePayload` (`stream: "lifecycle"`, `phase: "start" | "end" | "error"`)
   - `AgentToolPayload` (`stream: "tool"`, `toolName`, `status`, `toolInput`, `result`)
@@ -180,12 +190,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Test malformed events return null
 
 **Output**:
+
 - Complete type system for Gateway events and CharacterActions
 - Event parser with configurable mapping
 - ActionQueue for buffering during character movement
 - Unit tests covering all mappings
 
 **Acceptance criteria**:
+
 - [ ] All tool names from the TOOL_ROOM_MAP produce correct CharacterActions
 - [ ] `lifecycle.start` → `WAKE_UP`, `lifecycle.end` → `GO_SLEEP`, `lifecycle.error` → `CONFUSED`
 - [ ] Assistant streaming → `GOTO_ROOM(office, type, focused)`
@@ -202,6 +214,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T1.2
 
 **Work items**:
+
 - Create `src/connection/mockProvider.ts`:
   - `MockProvider` class that generates realistic event sequences
   - Session simulation cycle (see TECHNICAL.md Section 4.3):
@@ -221,10 +234,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Test that events are well-formed GatewayFrames
 
 **Output**:
+
 - MockProvider that generates realistic agent behavior
 - Passes all tests
 
 **Acceptance criteria**:
+
 - [ ] Running MockProvider emits a sequence of lifecycle, tool, and assistant events
 - [ ] Events are correctly formatted as GatewayFrames
 - [ ] Tool distribution feels realistic (more Write/Edit, fewer Task/WebFetch)
@@ -240,6 +255,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T1.3
 
 **Work items**:
+
 - Create `src/connection/connectionManager.ts`:
   - `ConnectionManager` class that orchestrates `GatewayClient` and `MockProvider`
   - On `connect()`: attempt Gateway connection. If it fails or times out (5s), auto-switch to MockProvider
@@ -259,11 +275,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Manual integration test: start the app, verify it shows "Mock" mode and events flow
 
 **Output**:
+
 - ConnectionManager that seamlessly switches between live and mock data
 - Visual connection status indicator in the UI
 - Events flowing to the console (or a debug div) from either source
 
 **Acceptance criteria**:
+
 - [ ] App starts and shows "Mock" badge (since OpenClaw is not installed)
 - [ ] ConnectionManager attempts Gateway connection on startup, falls back to mock
 - [ ] Events from mock provider can be observed (console.log or debug UI)
@@ -282,6 +300,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T0.2 (can be done in parallel with P1)
 
 **Work items**:
+
 - Create `src/engine/isometric.ts`:
   - `cartesianToIso(col, row)` — grid position → screen pixel offset
   - `isoToCartesian(screenX, screenY)` — screen pixel → grid position (for mouse)
@@ -307,11 +326,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Edge cases: negative coordinates, fractional positions
 
 **Output**:
+
 - Isometric math utilities with full test coverage
 - Canvas component with DPR handling and resize support
 - Visible isometric debug grid on screen
 
 **Acceptance criteria**:
+
 - [ ] Opening the app shows a visible isometric diamond grid
 - [ ] Grid renders crisp on retina displays (no blurring)
 - [ ] Canvas resizes correctly when browser window changes size
@@ -327,6 +348,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T2.1
 
 **Work items**:
+
 - Create `src/engine/gameLoop.ts`:
   - `GameLoop` class with fixed timestep (see TECHNICAL.md Section 4.7)
   - `start()`, `stop()`, `pause()`, `resume()`
@@ -338,11 +360,11 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - `GameState` interface:
     ```typescript
     interface GameState {
-      character: CharacterState;
-      world: WorldState;
-      camera: CameraState;
-      connection: ConnectionInfo;
-      debug: DebugState;
+      character: CharacterState
+      world: WorldState
+      camera: CameraState
+      connection: ConnectionInfo
+      debug: DebugState
     }
     ```
   - `createInitialGameState()` factory function
@@ -355,12 +377,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Add FPS counter display (bottom-left corner of canvas, togglable)
 
 **Output**:
+
 - Game loop running at stable 60fps
 - GameState object created and updated each frame
 - Debug grid renders continuously via the game loop
 - FPS counter visible
 
 **Acceptance criteria**:
+
 - [ ] Game loop runs stably (check FPS counter shows ~60)
 - [ ] Debug grid renders each frame without flickering
 - [ ] `pause()` and `resume()` work correctly
@@ -376,6 +400,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T2.2
 
 **Work items**:
+
 - Create `src/engine/camera.ts`:
   - `CameraState` interface: `{ offsetX, offsetY, zoom, targetOffsetX, targetOffsetY }`
   - `pan(dx, dy)` — move camera by pixel delta
@@ -397,11 +422,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Set initial camera position to center the one-floor layout on screen
 
 **Output**:
+
 - Camera panning and zooming via mouse and UI buttons
 - Smooth camera animation
 - Debug grid zooms and pans correctly
 
 **Acceptance criteria**:
+
 - [ ] Mouse wheel zooms in/out with float steps (±0.25, range 0.5x through 5x)
 - [ ] Right-click drag pans the view smoothly
 - [ ] Zoom controls (+/-/reset) work correctly
@@ -420,6 +447,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T2.3
 
 **Work items**:
+
 - Create `src/world/tileMap.ts`:
   - `TileType` enum: `FLOOR_WOOD`, `FLOOR_CARPET`, `WALL`, `DOOR`, `EMPTY`
   - Main floor tile map: approximately 16x12 grid (adjustable)
@@ -437,12 +465,17 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - `Room` interface:
     ```typescript
     interface Room {
-      id: RoomId;
-      name: string;
-      bounds: { startCol: number; startRow: number; endCol: number; endRow: number };
-      entryTile: TileCoord;       // Door tile closest to the room
-      activityZone: TileCoord;    // Where the character sits/stands/sleeps
-      furnitureItems: FurniturePlacement[];
+      id: RoomId
+      name: string
+      bounds: {
+        startCol: number
+        startRow: number
+        endCol: number
+        endRow: number
+      }
+      entryTile: TileCoord // Door tile closest to the room
+      activityZone: TileCoord // Where the character sits/stands/sleeps
+      furnitureItems: FurniturePlacement[]
     }
     ```
   - Define three rooms:
@@ -458,11 +491,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - All three rooms are fully enclosed
 
 **Output**:
+
 - Complete tile map for one floor with 3 rooms
 - Room definitions with entry points and activity zones
 - Walkability grid generated correctly
 
 **Acceptance criteria**:
+
 - [ ] Tile map renders as an isometric floor plan (using debug renderer from T2.1)
 - [ ] Three distinct rooms are visible with walls between them
 - [ ] Doors connect the rooms
@@ -479,6 +514,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T3.1
 
 **Work items**:
+
 - Create placeholder sprite assets (programmatic or simple PNGs):
   - `public/assets/tiles/floor-wood.png` — warm wood floor tile (64x32 isometric diamond)
   - `public/assets/tiles/floor-carpet.png` — carpet floor tile (64x32)
@@ -500,11 +536,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Verify the visual result: a visible isometric one-floor house with 3 rooms
 
 **Output**:
+
 - Visible isometric floor plan with distinct floor types per room
 - Walls enclosing the rooms with door openings
 - Sprites loaded and cached
 
 **Acceptance criteria**:
+
 - [ ] Floor renders with correct isometric alignment (no gaps between tiles)
 - [ ] Walls render with correct height (taller than floor)
 - [ ] Two different floor types are visually distinct (office vs living/bedroom)
@@ -521,18 +559,19 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T3.2
 
 **Work items**:
+
 - Create `src/world/furniture.ts`:
   - `FurnitureType` enum: `DESK_COMPUTER`, `CHAIR_OFFICE`, `SOFA`, `FIREPLACE`, `BED`, `LAMP`, `BOOKSHELF`, `TABLE`
   - `FurniturePlacement` interface:
     ```typescript
     interface FurniturePlacement {
-      type: FurnitureType;
-      col: number;
-      row: number;
-      spriteKey: string;
-      zOffset: number;      // Vertical render offset
-      walkable: boolean;    // Can character walk on this tile?
-      occupiable: boolean;  // Can character sit/stand here? (for chairs, beds)
+      type: FurnitureType
+      col: number
+      row: number
+      spriteKey: string
+      zOffset: number // Vertical render offset
+      walkable: boolean // Can character walk on this tile?
+      occupiable: boolean // Can character sit/stand here? (for chairs, beds)
     }
     ```
   - Define furniture for each room:
@@ -549,11 +588,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Update walkability grid: furniture tiles marked as non-walkable (except `occupiable` tiles like chairs)
 
 **Output**:
+
 - Each room has recognizable furniture
 - Furniture renders in correct depth order
 - Walkability grid updated to account for furniture
 
 **Acceptance criteria**:
+
 - [ ] Office has a desk with computer and chair visible
 - [ ] Living room has sofa and fireplace visible
 - [ ] Bedroom has bed and lamp visible
@@ -572,6 +613,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T3.2 (needs renderer to display character)
 
 **Work items**:
+
 - Create character sprites (programmatic placeholder or simple pixel art):
   - **Idle**: 4 frames (subtle breathing/bobbing), 4 directions (NE, NW, SE, SW)
   - **Walk**: 6 frames (leg movement), 4 directions
@@ -585,14 +627,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Create animation data:
   ```typescript
   const ANIMATIONS: Record<AnimationId, AnimationConfig> = {
-    idle:      { frameCount: 4, fps: 2,  loop: true  },
-    walk:      { frameCount: 6, fps: 8,  loop: true  },
-    type:      { frameCount: 4, fps: 6,  loop: true  },
-    sleep:     { frameCount: 4, fps: 1,  loop: true  },
-    sit:       { frameCount: 2, fps: 1,  loop: true  },
-    think:     { frameCount: 4, fps: 2,  loop: true  },
-    celebrate: { frameCount: 6, fps: 4,  loop: false },
-  };
+    idle: { frameCount: 4, fps: 2, loop: true },
+    walk: { frameCount: 6, fps: 8, loop: true },
+    type: { frameCount: 4, fps: 6, loop: true },
+    sleep: { frameCount: 4, fps: 1, loop: true },
+    sit: { frameCount: 2, fps: 1, loop: true },
+    think: { frameCount: 4, fps: 2, loop: true },
+    celebrate: { frameCount: 6, fps: 4, loop: false },
+  }
   ```
 - Build animation playback system in `src/engine/character.ts` (initial):
   - Track `currentAnimation`, `currentFrame`, `frameTimer`
@@ -605,11 +647,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Character renders above floor, at same depth plane as furniture
 
 **Output**:
+
 - Animated character visible on screen with lobster-hat silhouette
 - Animation playback at correct frame rates
 - Character properly depth-sorted with furniture
 
 **Acceptance criteria**:
+
 - [ ] Character is visible on the isometric floor
 - [ ] Idle animation plays continuously (subtle bobbing)
 - [ ] Character has a recognizable lobster hat (even if simple)
@@ -626,6 +670,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T3.3 (needs furniture/walkability grid)
 
 **Work items**:
+
 - Create `src/engine/pathfinding.ts`:
   - `findPath(from, to, walkabilityGrid): TileCoord[] | null` (BFS implementation, see TECHNICAL.md Section 4.6)
   - 4-directional neighbors (N, S, E, W) — no diagonals for isometric
@@ -644,11 +689,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Direction calculation for all 4 directions
 
 **Output**:
+
 - BFS pathfinding that routes through doors between rooms
 - Movement interpolation for smooth tile-to-tile walking
 - Unit tests covering all path scenarios
 
 **Acceptance criteria**:
+
 - [ ] `findPath(office, bedroom)` returns a path that goes through door tiles
 - [ ] `findPath` never routes through walls or furniture
 - [ ] Returns `null` for unreachable destinations
@@ -665,6 +712,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T4.1, T4.2a (needs animation system and pathfinding)
 
 **Work items**:
+
 - Implement full FSM in `src/engine/character.ts` (see TECHNICAL.md Section 4.5):
   - States: `idle`, `walking`, `typing`, `sitting`, `sleeping`, `thinking`, `celebrating`
   - `processAction(action: CharacterAction)` — respond to actions from the event parser:
@@ -688,11 +736,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Manual test: dispatch actions via console and watch character walk between rooms
 
 **Output**:
+
 - Character FSM with all state transitions
 - Character responds to all CharacterAction types
 - Properly integrated with GameLoop
 
 **Acceptance criteria**:
+
 - [ ] Dispatching `GOTO_ROOM('office')` makes character walk to the office desk
 - [ ] Character walks through doors (not through walls)
 - [ ] Character faces the correct direction while walking
@@ -709,10 +759,11 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 > Display emotion bubbles above the character's head.
 
 **Depends on**: T4.2b
-  - 16x16 pixel bubbles for each emotion: focused, thinking, sleepy, happy, confused, curious, serious, satisfied
-  - Each is a small icon/emoji-style pixel sprite floating above the character
-  - Simple approach: colored circle with a small icon inside (e.g., yellow circle + "Z" for sleepy)
-  - Small downward-pointing triangle/arrow connecting bubble to character
+
+- 16x16 pixel bubbles for each emotion: focused, thinking, sleepy, happy, confused, curious, serious, satisfied
+- Each is a small icon/emoji-style pixel sprite floating above the character
+- Simple approach: colored circle with a small icon inside (e.g., yellow circle + "Z" for sleepy)
+- Small downward-pointing triangle/arrow connecting bubble to character
 - Implement emotion bubble rendering in `src/engine/renderer.ts`:
   - `renderEmotionBubble(ctx, character)`:
     - Draw bubble sprite above character's head (offset by character height + gap)
@@ -725,11 +776,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Add rendering to the main render pipeline (draw after character, above all entities)
 
 **Output**:
+
 - Emotion bubbles appear above character head
 - Smooth floating animation and fade-in
 - Emotion changes in response to character state
 
 **Acceptance criteria**:
+
 - [ ] Emotion bubble is visible above the character's head
 - [ ] Bubble floats gently (sine wave bobbing)
 - [ ] Emotion changes when character transitions states (e.g., typing → focused, sleeping → sleepy)
@@ -748,6 +801,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T1.4, T4.2b (both connection layer and character system must be complete)
 
 **Work items**:
+
 - Wire `ConnectionManager` → `GameState` → Character:
   - ConnectionManager emits CharacterActions via callback
   - Actions are pushed to the character's ActionQueue
@@ -780,11 +834,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - These tests use real module instances (not mocks) to verify cross-module contracts
 
 **Output**:
+
 - Complete event → visualization pipeline working end-to-end
 - Character responds to all event types correctly
 - Edge cases handled gracefully
 
 **Acceptance criteria**:
+
 - [ ] Character moves between rooms in response to mock events
 - [ ] Character plays correct animation in each room (typing in office, sitting in living room, sleeping in bedroom)
 - [ ] Character shows correct emotion for each activity
@@ -802,6 +858,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T5.1
 
 **Work items**:
+
 - Create `src/ui/Dashboard.tsx`:
   - **Connection section**: status indicator (Live/Mock/Disconnected), Gateway URL
   - **Agent state section**: current state (Working/Thinking/Idle/Sleeping), current tool name, current room, current emotion
@@ -824,11 +881,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 - Make dashboard collapsible/toggleable (keyboard shortcut: `D` key)
 
 **Output**:
+
 - Functional status dashboard showing all key information
 - Updates in real-time based on events
 - Clean, non-intrusive layout alongside the canvas
 
 **Acceptance criteria**:
+
 - [ ] Dashboard shows current connection status (Mock for development)
 - [ ] Agent state updates when character changes rooms/activities
 - [ ] Activity log scrolls and shows recent events with timestamps
@@ -846,6 +905,7 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 **Depends on**: T5.2
 
 **Work items**:
+
 - **Visual polish**:
   - Adjust tile colors and furniture placement for visual balance
   - Ensure character walk speed feels natural (not too fast, not too slow)
@@ -876,11 +936,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
   - Console-friendly: log connection status changes, event parsing errors
 
 **Output**:
+
 - Polished, functional MVP
 - Updated README and documentation
 - Clean dev experience with debug tools
 
 **Acceptance criteria**:
+
 - [ ] App runs smoothly for 10+ minutes without errors
 - [ ] Character behavior feels natural and responsive
 - [ ] Lobster hat is clearly visible and recognizable
@@ -997,28 +1059,28 @@ This order prioritizes **visual feedback early** (seeing the isometric grid on s
 
 ## Estimated Timeline
 
-| Task | Est. Time | Cumulative |
-|------|-----------|------------|
-| T0.1 Project Scaffolding | 0.5 day | 0.5 day |
-| T0.2 Dev Tooling Setup | 0.5 day | 1 day |
-| T2.1 Isometric Math + Canvas | 0.5 day | 1.5 days |
-| T2.2 Game Loop + State | 0.5 day | 2 days |
-| T2.3 Camera System | 0.5 day | 2.5 days |
-| T1.1 WS Client | 0.5 day | 3 days |
-| T1.2 Event Parser | 0.5 day | 3.5 days |
-| T1.3 Mock Provider | 0.5 day | 4 days |
-| T1.4 Connection Manager | 0.5 day | 4.5 days |
-| T3.1 Tile Map + Rooms | 0.5 day | 5 days |
-| T3.2 Floor & Wall Rendering | 0.5 day | 5.5 days |
-| T3.3 Furniture | 0.5 day | 6 days |
-| T4.1 Character Sprite | 0.5 day | 6.5 days |
-| T4.2a Pathfinding | 0.5 day | 7 days |
-| T4.2b Character FSM | 0.5 day | 7.5 days |
-| T4.3 Emotion Bubbles | 0.5 day | 8 days |
-| T5.1 End-to-End Wiring | 0.5 day | 8.5 days |
-| T5.2 Dashboard | 0.5 day | 9 days |
-| T5.3 Polish | 0.5 day | 9.5 days |
-| **Buffer** | **1.5 days** | **11 days** |
+| Task                         | Est. Time    | Cumulative  |
+| ---------------------------- | ------------ | ----------- |
+| T0.1 Project Scaffolding     | 0.5 day      | 0.5 day     |
+| T0.2 Dev Tooling Setup       | 0.5 day      | 1 day       |
+| T2.1 Isometric Math + Canvas | 0.5 day      | 1.5 days    |
+| T2.2 Game Loop + State       | 0.5 day      | 2 days      |
+| T2.3 Camera System           | 0.5 day      | 2.5 days    |
+| T1.1 WS Client               | 0.5 day      | 3 days      |
+| T1.2 Event Parser            | 0.5 day      | 3.5 days    |
+| T1.3 Mock Provider           | 0.5 day      | 4 days      |
+| T1.4 Connection Manager      | 0.5 day      | 4.5 days    |
+| T3.1 Tile Map + Rooms        | 0.5 day      | 5 days      |
+| T3.2 Floor & Wall Rendering  | 0.5 day      | 5.5 days    |
+| T3.3 Furniture               | 0.5 day      | 6 days      |
+| T4.1 Character Sprite        | 0.5 day      | 6.5 days    |
+| T4.2a Pathfinding            | 0.5 day      | 7 days      |
+| T4.2b Character FSM          | 0.5 day      | 7.5 days    |
+| T4.3 Emotion Bubbles         | 0.5 day      | 8 days      |
+| T5.1 End-to-End Wiring       | 0.5 day      | 8.5 days    |
+| T5.2 Dashboard               | 0.5 day      | 9 days      |
+| T5.3 Polish                  | 0.5 day      | 9.5 days    |
+| **Buffer**                   | **1.5 days** | **11 days** |
 
 **Total estimated MVP: ~9.5 working days + 1.5 days buffer = ~11 working days** (roughly 2.5 calendar weeks at half-day per task pace).
 
