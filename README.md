@@ -27,11 +27,11 @@ Watch Claw connects to the OpenClaw Gateway via WebSocket (`ws://127.0.0.1:18789
 
 ### MVP (v0.1) -- One Floor, Three Rooms
 
-| Room | Agent Activity | Character Behavior | Emotion |
-|------|---------------|-------------------|---------|
-| **Office** | `Write`, `Edit`, `Bash`, assistant streaming | Sitting at desk, typing | Focused |
-| **Living Room** | `Read`, `Grep`, `Glob`, `WebFetch`, thinking | Sitting on couch | Thinking |
-| **Bedroom** | Idle, waiting for input, session end | Lying in bed, sleeping | Sleepy |
+| Room            | Agent Activity                               | Character Behavior      | Emotion  |
+| --------------- | -------------------------------------------- | ----------------------- | -------- |
+| **Office**      | `Write`, `Edit`, `Bash`, assistant streaming | Sitting at desk, typing | Focused  |
+| **Living Room** | `Read`, `Grep`, `Glob`, `WebFetch`, thinking | Sitting on couch        | Thinking |
+| **Bedroom**     | Idle, waiting for input, session end         | Lying in bed, sleeping  | Sleepy   |
 
 ### Core Capabilities
 
@@ -85,17 +85,17 @@ Planned features beyond MVP (P1):
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| Language | TypeScript 5.x (strict) | Type safety for game state, events, and protocol |
-| UI Framework | React 18 | Overlay UI only; game state lives outside React |
-| Rendering | Canvas 2D API | Pixel-perfect control, integer scaling, small bundle |
-| Build Tool | Vite 6 | Fast HMR, native TS, simple config |
-| Communication | Native WebSocket | Direct connection to OpenClaw Gateway |
-| State Management | Imperative game state + React useReducer (UI) | 60fps game world without React re-render overhead |
-| Package Manager | pnpm | Fast, disk-efficient, strict dependencies |
-| Linting | ESLint + Prettier | Consistent code style, type-aware linting |
-| Testing | Vitest | Fast unit tests, Vite-compatible |
+| Layer            | Technology                                    | Why                                                  |
+| ---------------- | --------------------------------------------- | ---------------------------------------------------- |
+| Language         | TypeScript 5.x (strict)                       | Type safety for game state, events, and protocol     |
+| UI Framework     | React 18                                      | Overlay UI only; game state lives outside React      |
+| Rendering        | Canvas 2D API                                 | Pixel-perfect control, integer scaling, small bundle |
+| Build Tool       | Vite 6                                        | Fast HMR, native TS, simple config                   |
+| Communication    | Native WebSocket                              | Direct connection to OpenClaw Gateway                |
+| State Management | Imperative game state + React useReducer (UI) | 60fps game world without React re-render overhead    |
+| Package Manager  | pnpm                                          | Fast, disk-efficient, strict dependencies            |
+| Linting          | ESLint + Prettier                             | Consistent code style, type-aware linting            |
+| Testing          | Vitest                                        | Fast unit tests, Vite-compatible                     |
 
 ## Architecture
 
@@ -177,40 +177,40 @@ pnpm test
 
 Watch Claw translates OpenClaw events into character actions:
 
-| OpenClaw Event | Target Room | Animation | Emotion | Priority |
-|---------------|-------------|-----------|---------|----------|
-| `lifecycle.start` | Living Room | Wake up | Thinking | High |
-| `lifecycle.end` | Bedroom | Lie down | Sleepy | High |
-| `lifecycle.error` | (current) | Hold head | Confused | High |
-| `tool: Write/Edit` | Office | Typing | Focused | Medium |
-| `tool: Bash` | Office | Typing | Serious | Medium |
-| `tool: Read/Grep/Glob` | Living Room | Sitting | Curious | Medium |
-| `tool: WebFetch` | Living Room | Browsing | Curious | Medium |
-| `tool: Task` | Living Room | Thinking | Thinking | Medium |
-| Task completed | Living Room | Celebrating | Satisfied | Medium |
-| Assistant streaming | Office | Typing | Focused | Low |
-| Idle > 30s | Bedroom | Sleeping | Sleepy | Low |
+| OpenClaw Event         | Target Room | Animation   | Emotion   | Priority |
+| ---------------------- | ----------- | ----------- | --------- | -------- |
+| `lifecycle.start`      | Living Room | Wake up     | Thinking  | High     |
+| `lifecycle.end`        | Bedroom     | Lie down    | Sleepy    | High     |
+| `lifecycle.error`      | (current)   | Hold head   | Confused  | High     |
+| `tool: Write/Edit`     | Office      | Typing      | Focused   | Medium   |
+| `tool: Bash`           | Office      | Typing      | Serious   | Medium   |
+| `tool: Read/Grep/Glob` | Living Room | Sitting     | Curious   | Medium   |
+| `tool: WebFetch`       | Living Room | Browsing    | Curious   | Medium   |
+| `tool: Task`           | Living Room | Thinking    | Thinking  | Medium   |
+| Task completed         | Living Room | Celebrating | Satisfied | Medium   |
+| Assistant streaming    | Office      | Typing      | Focused   | Low      |
+| Idle > 30s             | Bedroom     | Sleeping    | Sleepy    | Low      |
 
 ## Non-Functional Requirements
 
-| Requirement | Target |
-|-------------|--------|
-| Frame rate | 60fps (requestAnimationFrame) |
-| Bundle size | < 500KB gzipped |
-| Browser support | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+ |
-| Responsive | Min 800x600, scales to 4K |
-| Startup time | < 2s to first meaningful paint |
-| WebSocket reconnect | Exponential backoff (1s-30s) |
-| Mock mode fallback | < 100ms switch |
-| Memory usage | < 100MB |
-| Accessibility | Reduced motion support (`prefers-reduced-motion`) |
+| Requirement         | Target                                            |
+| ------------------- | ------------------------------------------------- |
+| Frame rate          | 60fps (requestAnimationFrame)                     |
+| Bundle size         | < 500KB gzipped                                   |
+| Browser support     | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+     |
+| Responsive          | Min 800x600, scales to 4K                         |
+| Startup time        | < 2s to first meaningful paint                    |
+| WebSocket reconnect | Exponential backoff (1s-30s)                      |
+| Mock mode fallback  | < 100ms switch                                    |
+| Memory usage        | < 100MB                                           |
+| Accessibility       | Reduced motion support (`prefers-reduced-motion`) |
 
 ## Inspiration
 
-| Project | What we borrow | What we do differently |
-|---------|---------------|----------------------|
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents) | JSONL file watching, character FSM, Canvas 2D | WebSocket (not file tailing), isometric (not top-down), single character |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine | Cozy home (not office), high-fidelity pixel art (not DOM tiles) |
+| Project                                                           | What we borrow                                | What we do differently                                                   |
+| ----------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------ |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D | WebSocket (not file tailing), isometric (not top-down), single character |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine | Cozy home (not office), high-fidelity pixel art (not DOM tiles)          |
 
 ## Documentation
 

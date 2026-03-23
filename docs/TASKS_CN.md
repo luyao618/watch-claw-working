@@ -13,14 +13,14 @@
 
 ### 阶段总结
 
-| 阶段 | 名称 | 任务数 | 范围 |
-|-------|------|-------|-------|
-| P0 | Project Bootstrap | 2 | 脚手架、工具链、开发环境 |
-| P1 | Connection Layer | 4 | WebSocket client、event 解析、mock provider |
-| P2 | Engine Foundation | 3 | Game loop、isometric renderer、camera |
-| P3 | World Building | 3 | Tile map、rooms、furniture |
-| P4 | Character System | 4 | Sprites、FSM、pathfinding、emotions |
-| P5 | Integration & Polish | 3 | 端到端串联、dashboard、打磨 |
+| 阶段 | 名称                 | 任务数 | 范围                                        |
+| ---- | -------------------- | ------ | ------------------------------------------- |
+| P0   | Project Bootstrap    | 2      | 脚手架、工具链、开发环境                    |
+| P1   | Connection Layer     | 4      | WebSocket client、event 解析、mock provider |
+| P2   | Engine Foundation    | 3      | Game loop、isometric renderer、camera       |
+| P3   | World Building       | 3      | Tile map、rooms、furniture                  |
+| P4   | Character System     | 4      | Sprites、FSM、pathfinding、emotions         |
+| P5   | Integration & Polish | 3      | 端到端串联、dashboard、打磨                 |
 
 ---
 
@@ -33,6 +33,7 @@
 **依赖**：无（起点）
 
 **工作项**：
+
 - 使用 `pnpm create vite@latest . --template react-ts` 初始化项目
 - 配置 `tsconfig.json`，启用 strict mode，设置 path aliases（`@/` → `src/`）
 - 配置 `vite.config.ts`，设置 path alias 解析
@@ -48,11 +49,13 @@
 - 验证 `pnpm dev` 能启动并显示页面
 
 **产出**：
+
 - 工作正常的 Vite dev server（`http://localhost:5173`）
 - 所有目录已创建并包含占位文件
 - TypeScript 编译无错误
 
 **验收标准**：
+
 - [ ] `pnpm dev` 启动无错误
 - [ ] 浏览器显示 "Watch Claw" 文本
 - [ ] `pnpm build` 产生干净的 production build
@@ -67,6 +70,7 @@
 **依赖**：T0.1
 
 **工作项**：
+
 - 安装并配置 ESLint（TypeScript parser + React plugin）
 - 安装并配置 Prettier（2-space indent、single quotes、trailing comma）
 - 设置 `.eslintrc.cjs` 和 `.prettierrc`
@@ -90,11 +94,13 @@
 - 更新 `.gitignore`（dist/、node_modules/ 等）
 
 **产出**：
+
 - Linting、formatting 和 testing 管道全部可用
 - 核心 utility 模块准备就绪
 - Pre-commit hooks 工作正常
 
 **验收标准**：
+
 - [ ] `pnpm lint` 运行无错误
 - [ ] `pnpm format` 格式化所有文件
 - [ ] `pnpm typecheck` 通过
@@ -113,6 +119,7 @@
 **依赖**：T0.2
 
 **工作项**：
+
 - 创建 `src/connection/types.ts`：
   - `ConnectionState` 类型（`disconnected` | `connecting` | `handshaking` | `connected` | `reconnecting`）
   - `GatewayFrame` 接口（原始 WebSocket 消息信封）
@@ -135,11 +142,13 @@
   - 测试 heartbeat 超时检测
 
 **产出**：
+
 - `GatewayClient` 类，可连接任何 WebSocket 端点
 - 完整的连接生命周期与重连
 - 单元测试通过
 
 **验收标准**：
+
 - [ ] Client 连接到 `ws://127.0.0.1:18789`（Gateway 运行时）或优雅失败
 - [ ] 重连尝试遵循指数退避模式
 - [ ] 状态变化正确发出
@@ -156,6 +165,7 @@
 **依赖**：T1.1
 
 **工作项**：
+
 - 扩展 `src/connection/types.ts`，添加 OpenClaw 特定的 event 类型：
   - `AgentLifecyclePayload`（`stream: "lifecycle"`、`phase: "start" | "end" | "error"`）
   - `AgentToolPayload`（`stream: "tool"`、`toolName`、`status`、`toolInput`、`result`）
@@ -180,12 +190,14 @@
   - 测试格式错误的 events 返回 null
 
 **产出**：
+
 - Gateway events 和 CharacterActions 的完整类型系统
 - 带可配置映射的 event parser
 - 用于角色移动期间缓冲的 ActionQueue
 - 覆盖所有映射的单元测试
 
 **验收标准**：
+
 - [ ] TOOL_ROOM_MAP 中所有 tool names 产生正确的 CharacterActions
 - [ ] `lifecycle.start` → `WAKE_UP`、`lifecycle.end` → `GO_SLEEP`、`lifecycle.error` → `CONFUSED`
 - [ ] Assistant streaming → `GOTO_ROOM(office, type, focused)`
@@ -202,6 +214,7 @@
 **依赖**：T1.2
 
 **工作项**：
+
 - 创建 `src/connection/mockProvider.ts`：
   - `MockProvider` 类，生成真实的 event 序列
   - Session 模拟循环（见 TECHNICAL.md 第 4.3 节）：
@@ -221,10 +234,12 @@
   - 测试 events 格式正确（GatewayFrames）
 
 **产出**：
+
 - 生成 realistic agent 行为的 MockProvider
 - 所有测试通过
 
 **验收标准**：
+
 - [ ] 运行 MockProvider 发出 lifecycle、tool 和 assistant events 序列
 - [ ] Events 格式正确（GatewayFrames）
 - [ ] Tool 分布感觉真实（更多 Write/Edit，较少 Task/WebFetch）
@@ -240,6 +255,7 @@
 **依赖**：T1.3
 
 **工作项**：
+
 - 创建 `src/connection/connectionManager.ts`：
   - `ConnectionManager` 类，协调 `GatewayClient` 和 `MockProvider`
   - `connect()` 时：尝试 Gateway 连接。如果失败或超时（5s），自动切换到 MockProvider
@@ -259,11 +275,13 @@
 - 手动集成测试：启动应用，验证显示 "Mock" mode 且 events 正常流动
 
 **产出**：
+
 - 在 live 和 mock 数据之间无缝切换的 ConnectionManager
 - UI 中的视觉连接状态指示器
 - 来自任一数据源的 events 流向控制台（或 debug div）
 
 **验收标准**：
+
 - [ ] 应用启动时显示 "Mock" badge（因为 OpenClaw 未安装）
 - [ ] ConnectionManager 启动时尝试 Gateway 连接，回退到 mock
 - [ ] Mock provider 的 events 可被观察到（console.log 或 debug UI）
@@ -282,6 +300,7 @@
 **依赖**：T0.2（可与 P1 并行）
 
 **工作项**：
+
 - 创建 `src/engine/isometric.ts`：
   - `cartesianToIso(col, row)` —— grid 位置 → 屏幕像素偏移
   - `isoToCartesian(screenX, screenY)` —— 屏幕像素 → grid 位置（用于鼠标）
@@ -307,11 +326,13 @@
   - 边界情况：负坐标、小数位置
 
 **产出**：
+
 - 完全测试覆盖的 isometric 数学工具
 - 带 DPR 处理和 resize 支持的 Canvas 组件
 - 屏幕上可见的 isometric debug grid
 
 **验收标准**：
+
 - [ ] 打开应用显示可见的 isometric 菱形 grid
 - [ ] Grid 在 retina 显示器上渲染清晰（无模糊）
 - [ ] 浏览器窗口变化时 Canvas 正确 resize
@@ -327,6 +348,7 @@
 **依赖**：T2.1
 
 **工作项**：
+
 - 创建 `src/engine/gameLoop.ts`：
   - `GameLoop` 类，使用 fixed timestep（见 TECHNICAL.md 第 4.7 节）
   - `start()`、`stop()`、`pause()`、`resume()`
@@ -338,11 +360,11 @@
   - `GameState` 接口：
     ```typescript
     interface GameState {
-      character: CharacterState;
-      world: WorldState;
-      camera: CameraState;
-      connection: ConnectionInfo;
-      debug: DebugState;
+      character: CharacterState
+      world: WorldState
+      camera: CameraState
+      connection: ConnectionInfo
+      debug: DebugState
     }
     ```
   - `createInitialGameState()` 工厂函数
@@ -355,12 +377,14 @@
 - 添加 FPS 计数器显示（canvas 左下角，可切换）
 
 **产出**：
+
 - 稳定运行在 60fps 的 game loop
 - 每帧创建并更新 GameState 对象
 - Debug grid 通过 game loop 持续渲染
 - FPS 计数器可见
 
 **验收标准**：
+
 - [ ] Game loop 稳定运行（FPS 计数器显示 ~60）
 - [ ] Debug grid 每帧渲染无闪烁
 - [ ] `pause()` 和 `resume()` 正常工作
@@ -376,6 +400,7 @@
 **依赖**：T2.2
 
 **工作项**：
+
 - 创建 `src/engine/camera.ts`：
   - `CameraState` 接口：`{ offsetX, offsetY, zoom, targetOffsetX, targetOffsetY }`
   - `pan(dx, dy)` —— 按像素 delta 移动摄像机
@@ -397,11 +422,13 @@
 - 设置初始 camera 位置，将单层楼布局居中在屏幕上
 
 **产出**：
+
 - 通过鼠标和 UI 按钮进行 camera 平移和缩放
 - 平滑 camera 动画
 - Debug grid 正确缩放和平移
 
 **验收标准**：
+
 - [ ] 鼠标滚轮以浮点步进缩放（±0.25，范围 0.5x 到 5x）
 - [ ] 右键拖拽平滑平移视图
 - [ ] 缩放控件（+/-/reset）正常工作
@@ -420,6 +447,7 @@
 **依赖**：T2.3
 
 **工作项**：
+
 - 创建 `src/world/tileMap.ts`：
   - `TileType` 枚举：`FLOOR_WOOD`、`FLOOR_CARPET`、`WALL`、`DOOR`、`EMPTY`
   - 主楼层 tile map：大约 16x12 grid（可调）
@@ -437,12 +465,17 @@
   - `Room` 接口：
     ```typescript
     interface Room {
-      id: RoomId;
-      name: string;
-      bounds: { startCol: number; startRow: number; endCol: number; endRow: number };
-      entryTile: TileCoord;       // 最近房间的 door tile
-      activityZone: TileCoord;    // 角色坐/站/睡的位置
-      furnitureItems: FurniturePlacement[];
+      id: RoomId
+      name: string
+      bounds: {
+        startCol: number
+        startRow: number
+        endCol: number
+        endRow: number
+      }
+      entryTile: TileCoord // 最近房间的 door tile
+      activityZone: TileCoord // 角色坐/站/睡的位置
+      furnitureItems: FurniturePlacement[]
     }
     ```
   - 定义三个房间：
@@ -458,11 +491,13 @@
   - 所有三个房间完全封闭
 
 **产出**：
+
 - 包含 3 个房间的完整单层楼 tile map
 - 带入口点和活动区域的 Room 定义
 - 正确生成的 walkability grid
 
 **验收标准**：
+
 - [ ] Tile map 渲染为 isometric 平面图（使用 T2.1 的 debug renderer）
 - [ ] 三个不同的房间清晰可见，有墙壁分隔
 - [ ] Doors 连接各房间
@@ -479,6 +514,7 @@
 **依赖**：T3.1
 
 **工作项**：
+
 - 创建占位 sprite 资源（程序化生成或简单 PNG）：
   - `public/assets/tiles/floor-wood.png` —— 温暖的木地板 tile（64x32 isometric 菱形）
   - `public/assets/tiles/floor-carpet.png` —— 地毯地板 tile（64x32）
@@ -500,11 +536,13 @@
 - 验证视觉效果：一个可见的 isometric 单层楼房屋，包含 3 个房间
 
 **产出**：
+
 - 每个房间有不同地板类型的可见 isometric 平面图
 - 墙壁围合房间，有门
 - Sprites 已加载并缓存
 
 **验收标准**：
+
 - [ ] 地板以正确的 isometric 对齐渲染（tiles 之间无间隙）
 - [ ] 墙壁以正确的高度渲染（比地板高）
 - [ ] 两种不同的地板类型视觉可区分（office vs living/bedroom）
@@ -521,18 +559,19 @@
 **依赖**：T3.2
 
 **工作项**：
+
 - 创建 `src/world/furniture.ts`：
   - `FurnitureType` 枚举：`DESK_COMPUTER`、`CHAIR_OFFICE`、`SOFA`、`FIREPLACE`、`BED`、`LAMP`、`BOOKSHELF`、`TABLE`
   - `FurniturePlacement` 接口：
     ```typescript
     interface FurniturePlacement {
-      type: FurnitureType;
-      col: number;
-      row: number;
-      spriteKey: string;
-      zOffset: number;      // 垂直渲染偏移
-      walkable: boolean;    // 角色能否在此 tile 上行走？
-      occupiable: boolean;  // 角色能否坐/站在这里？（用于椅子、床）
+      type: FurnitureType
+      col: number
+      row: number
+      spriteKey: string
+      zOffset: number // 垂直渲染偏移
+      walkable: boolean // 角色能否在此 tile 上行走？
+      occupiable: boolean // 角色能否坐/站在这里？（用于椅子、床）
     }
     ```
   - 为每个房间定义家具：
@@ -549,11 +588,13 @@
 - 更新 walkability grid：家具 tiles 标记为不可行走（`occupiable` tiles 如椅子除外）
 
 **产出**：
+
 - 每个房间有可辨识的家具
 - 家具以正确的深度顺序渲染
 - Walkability grid 已更新以考虑家具
 
 **验收标准**：
+
 - [ ] Office 有可见的电脑桌和椅子
 - [ ] Living room 有可见的沙发和壁炉
 - [ ] Bedroom 有可见的床和灯
@@ -572,6 +613,7 @@
 **依赖**：T3.2（需要 renderer 来显示角色）
 
 **工作项**：
+
 - 创建角色 sprites（程序化占位或简单 pixel art）：
   - **Idle**：4 帧（微妙的呼吸/晃动），4 个方向（NE、NW、SE、SW）
   - **Walk**：6 帧（腿部运动），4 个方向
@@ -585,14 +627,14 @@
 - 创建动画数据：
   ```typescript
   const ANIMATIONS: Record<AnimationId, AnimationConfig> = {
-    idle:      { frameCount: 4, fps: 2,  loop: true  },
-    walk:      { frameCount: 6, fps: 8,  loop: true  },
-    type:      { frameCount: 4, fps: 6,  loop: true  },
-    sleep:     { frameCount: 4, fps: 1,  loop: true  },
-    sit:       { frameCount: 2, fps: 1,  loop: true  },
-    think:     { frameCount: 4, fps: 2,  loop: true  },
-    celebrate: { frameCount: 6, fps: 4,  loop: false },
-  };
+    idle: { frameCount: 4, fps: 2, loop: true },
+    walk: { frameCount: 6, fps: 8, loop: true },
+    type: { frameCount: 4, fps: 6, loop: true },
+    sleep: { frameCount: 4, fps: 1, loop: true },
+    sit: { frameCount: 2, fps: 1, loop: true },
+    think: { frameCount: 4, fps: 2, loop: true },
+    celebrate: { frameCount: 6, fps: 4, loop: false },
+  }
   ```
 - 在 `src/engine/character.ts` 中构建动画播放系统（初始版本）：
   - 追踪 `currentAnimation`、`currentFrame`、`frameTimer`
@@ -605,11 +647,13 @@
   - 角色渲染在地板之上，与家具在同一深度平面
 
 **产出**：
+
 - 屏幕上可见的带龙虾帽轮廓的动画角色
 - 正确帧率的动画播放
 - 角色与家具正确 depth-sorted
 
 **验收标准**：
+
 - [ ] 角色在 isometric 地板上可见
 - [ ] Idle 动画持续播放（微妙的晃动）
 - [ ] 角色有可辨识的龙虾帽（即使是简单的）
@@ -626,6 +670,7 @@
 **依赖**：T3.3（需要 furniture/walkability grid）
 
 **工作项**：
+
 - 创建 `src/engine/pathfinding.ts`：
   - `findPath(from, to, walkabilityGrid): TileCoord[] | null`（BFS 实现，见 TECHNICAL.md 第 4.6 节）
   - 4 方向邻居（N、S、E、W）—— isometric 无对角线
@@ -644,11 +689,13 @@
   - 所有 4 个方向的方向计算
 
 **产出**：
+
 - 通过 doors 在房间间路由的 BFS pathfinding
 - 平滑 tile-to-tile 行走的移动插值
 - 覆盖所有路径场景的单元测试
 
 **验收标准**：
+
 - [ ] `findPath(office, bedroom)` 返回经过 door tiles 的路径
 - [ ] `findPath` 永远不会穿过墙壁或家具路由
 - [ ] 对不可达目标返回 `null`
@@ -665,6 +712,7 @@
 **依赖**：T4.1、T4.2a（需要动画系统和 pathfinding）
 
 **工作项**：
+
 - 在 `src/engine/character.ts` 中实现完整 FSM（见 TECHNICAL.md 第 4.5 节）：
   - 状态：`idle`、`walking`、`typing`、`sitting`、`sleeping`、`thinking`、`celebrating`
   - `processAction(action: CharacterAction)` —— 响应来自 event parser 的 actions：
@@ -688,11 +736,13 @@
 - 手动测试：通过控制台 dispatch actions，观察角色在房间间行走
 
 **产出**：
+
 - 包含所有状态转换的角色 FSM
 - 角色响应所有 CharacterAction 类型
 - 与 GameLoop 正确集成
 
 **验收标准**：
+
 - [ ] Dispatching `GOTO_ROOM('office')` 让角色走到办公桌
 - [ ] 角色通过 doors 行走（不穿墙）
 - [ ] 角色行走时面向正确方向
@@ -709,10 +759,11 @@
 > 在角色头顶显示情绪气泡。
 
 **依赖**：T4.2b
-  - 每种情绪的 16x16 像素气泡：focused、thinking、sleepy、happy、confused、curious、serious、satisfied
-  - 每个是浮在角色上方的小图标/emoji 风格 pixel sprite
-  - 简单方案：带小图标的彩色圆圈（例如黄色圆圈 + "Z" 表示 sleepy）
-  - 连接气泡和角色的小向下三角/箭头
+
+- 每种情绪的 16x16 像素气泡：focused、thinking、sleepy、happy、confused、curious、serious、satisfied
+- 每个是浮在角色上方的小图标/emoji 风格 pixel sprite
+- 简单方案：带小图标的彩色圆圈（例如黄色圆圈 + "Z" 表示 sleepy）
+- 连接气泡和角色的小向下三角/箭头
 - 在 `src/engine/renderer.ts` 中实现情绪气泡渲染：
   - `renderEmotionBubble(ctx, character)`：
     - 在角色头顶绘制气泡 sprite（偏移角色高度 + 间距）
@@ -725,11 +776,13 @@
 - 添加到主 render pipeline（在角色之后绘制，在所有 entities 之上）
 
 **产出**：
+
 - 情绪气泡出现在角色头顶
 - 平滑的浮动动画和淡入效果
 - 情绪随角色状态变化
 
 **验收标准**：
+
 - [ ] 情绪气泡在角色头顶可见
 - [ ] 气泡轻柔浮动（正弦波晃动）
 - [ ] 角色状态转换时情绪变化（例如 typing → focused，sleeping → sleepy）
@@ -748,6 +801,7 @@
 **依赖**：T1.4、T4.2b（connection layer 和 character system 都必须完成）
 
 **工作项**：
+
 - 串联 `ConnectionManager` → `GameState` → Character：
   - ConnectionManager 通过 callback 发出 CharacterActions
   - Actions 推入角色的 ActionQueue
@@ -780,11 +834,13 @@
   - 这些测试使用真实模块实例（非 mocks）来验证跨模块契约
 
 **产出**：
+
 - 完整的端到端 event → 可视化 pipeline 正常工作
 - 角色正确响应所有 event 类型
 - 边界情况优雅处理
 
 **验收标准**：
+
 - [ ] 角色响应 mock events 在房间间移动
 - [ ] 角色在每个房间播放正确的动画（office 打字、living room 坐着、bedroom 睡觉）
 - [ ] 角色为每个活动显示正确的情绪
@@ -802,6 +858,7 @@
 **依赖**：T5.1
 
 **工作项**：
+
 - 创建 `src/ui/Dashboard.tsx`：
   - **连接区域**：状态指示器（Live/Mock/Disconnected）、Gateway URL
   - **Agent 状态区域**：当前状态（Working/Thinking/Idle/Sleeping）、当前 tool 名称、当前房间、当前情绪
@@ -824,11 +881,13 @@
 - 使 dashboard 可折叠/切换（快捷键：`D` 键）
 
 **产出**：
+
 - 显示所有关键信息的功能状态面板
 - 基于 events 实时更新
 - 与 canvas 并排的简洁、不干扰的布局
 
 **验收标准**：
+
 - [ ] Dashboard 显示当前连接状态（开发环境为 Mock）
 - [ ] 角色切换房间/活动时 agent 状态更新
 - [ ] 活动日志可滚动，显示带时间戳的近期 events
@@ -846,6 +905,7 @@
 **依赖**：T5.2
 
 **工作项**：
+
 - **视觉打磨**：
   - 调整 tile 颜色和家具位置以达到视觉平衡
   - 确保角色行走速度感觉自然（不太快也不太慢）
@@ -876,11 +936,13 @@
   - 控制台友好：记录连接状态变化、event 解析错误
 
 **产出**：
+
 - 打磨后的、功能完整的 MVP
 - 更新的 README 和文档
 - 带 debug 工具的良好开发体验
 
 **验收标准**：
+
 - [ ] 应用稳定运行 10+ 分钟无错误
 - [ ] 角色行为感觉自然和响应迅速
 - [ ] 龙虾帽清晰可见且可辨识
@@ -997,28 +1059,28 @@ graph TD
 
 ## 预估时间线
 
-| 任务 | 预估时间 | 累计时间 |
-|------|-----------|------------|
-| T0.1 项目脚手架 | 0.5 天 | 0.5 天 |
-| T0.2 开发工具链设置 | 0.5 天 | 1 天 |
-| T2.1 Isometric 数学 + Canvas | 0.5 天 | 1.5 天 |
-| T2.2 Game Loop + State | 0.5 天 | 2 天 |
-| T2.3 Camera 系统 | 0.5 天 | 2.5 天 |
-| T1.1 WS Client | 0.5 天 | 3 天 |
-| T1.2 Event Parser | 0.5 天 | 3.5 天 |
-| T1.3 Mock Provider | 0.5 天 | 4 天 |
-| T1.4 Connection Manager | 0.5 天 | 4.5 天 |
-| T3.1 Tile Map + Rooms | 0.5 天 | 5 天 |
-| T3.2 地板 & 墙壁渲染 | 0.5 天 | 5.5 天 |
-| T3.3 家具 | 0.5 天 | 6 天 |
-| T4.1 角色 Sprite | 0.5 天 | 6.5 天 |
-| T4.2a Pathfinding | 0.5 天 | 7 天 |
-| T4.2b 角色 FSM | 0.5 天 | 7.5 天 |
-| T4.3 情绪气泡 | 0.5 天 | 8 天 |
-| T5.1 端到端串联 | 0.5 天 | 8.5 天 |
-| T5.2 Dashboard | 0.5 天 | 9 天 |
-| T5.3 打磨 | 0.5 天 | 9.5 天 |
-| **Buffer** | **1.5 天** | **11 天** |
+| 任务                         | 预估时间   | 累计时间  |
+| ---------------------------- | ---------- | --------- |
+| T0.1 项目脚手架              | 0.5 天     | 0.5 天    |
+| T0.2 开发工具链设置          | 0.5 天     | 1 天      |
+| T2.1 Isometric 数学 + Canvas | 0.5 天     | 1.5 天    |
+| T2.2 Game Loop + State       | 0.5 天     | 2 天      |
+| T2.3 Camera 系统             | 0.5 天     | 2.5 天    |
+| T1.1 WS Client               | 0.5 天     | 3 天      |
+| T1.2 Event Parser            | 0.5 天     | 3.5 天    |
+| T1.3 Mock Provider           | 0.5 天     | 4 天      |
+| T1.4 Connection Manager      | 0.5 天     | 4.5 天    |
+| T3.1 Tile Map + Rooms        | 0.5 天     | 5 天      |
+| T3.2 地板 & 墙壁渲染         | 0.5 天     | 5.5 天    |
+| T3.3 家具                    | 0.5 天     | 6 天      |
+| T4.1 角色 Sprite             | 0.5 天     | 6.5 天    |
+| T4.2a Pathfinding            | 0.5 天     | 7 天      |
+| T4.2b 角色 FSM               | 0.5 天     | 7.5 天    |
+| T4.3 情绪气泡                | 0.5 天     | 8 天      |
+| T5.1 端到端串联              | 0.5 天     | 8.5 天    |
+| T5.2 Dashboard               | 0.5 天     | 9 天      |
+| T5.3 打磨                    | 0.5 天     | 9.5 天    |
+| **Buffer**                   | **1.5 天** | **11 天** |
 
 **MVP 总预估：约 9.5 个工作日 + 1.5 天 buffer = 约 11 个工作日**（按每天半个任务的节奏，大约 2.5 个日历周）。
 
