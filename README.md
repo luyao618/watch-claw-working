@@ -4,131 +4,168 @@
 
 > A pixel-art house where your OpenClaw AI lives -- watch it code, think, rest, and celebrate in real time.
 
-> **Status**: Under active development -- currently in MVP (v0.1) planning phase.
+![Watch Claw v0.2 Screenshot](./docs/assets/V0.2-demo.jpg)
+_v0.2 running with programmatic placeholder art -- new front-end and pixel art assets are under active development._
 
-![Watch Claw Demo](./docs/assets/ClawHomeDemo.jpg)
+**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. A lobster-hat character -- representing the OpenClaw agent -- lives in a cozy house, moving between rooms, performing activities, and expressing emotions based on the agent's actual runtime events.
 
-**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. It renders an isometric, cross-section view of a cozy three-story house where a lobster-hat character -- representing the OpenClaw agent -- moves between rooms, performs activities, and expresses emotions based on the agent's actual runtime status.
-
-### Who Is This For?
-
-- OpenClaw users who want a fun, ambient visualization of their AI agent's activity
-- Developers who enjoy pixel-art aesthetics and "digital pet" style companions
+The current version (v0.2) renders a single-floor house with three rooms using Canvas 2D. The project is actively migrating to **Phaser 3** with a side-view platformer style, expanding to a three-floor, nine-room house (v1.0).
 
 ## How It Works
 
 ```
-OpenClaw does something --> Event arrives via WebSocket --> Character moves to room --> Animation plays
+OpenClaw runs a tool
+       |
+       v
+Session JSONL file appended
+       |
+       v
+Bridge Server (fs.watch) detects change, broadcasts via WebSocket
+       |
+       v
+Watch Claw receives event, maps it to a CharacterAction
+       |
+       v
+Character walks to the corresponding room, plays animation, shows emotion
 ```
 
-Watch Claw connects to the OpenClaw Gateway via WebSocket (`ws://127.0.0.1:18789`), parses real-time agent events (tool calls, lifecycle phases, presence), and translates them into character behaviors: walking to the office to code, sitting on the couch to think, sleeping in bed when idle.
+A lightweight **Bridge Server** (Node.js) monitors OpenClaw's session log files (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`), detects new entries via `fs.watch`, and pushes them to the browser over WebSocket (`ws://127.0.0.1:18790`). The front-end parses these events and translates them into character behaviors.
 
-## Features
+## Current State (v0.2)
 
-### MVP (v0.1) -- One Floor, Three Rooms
+v0.2 is fully working with a single-floor, three-room layout:
 
-| Room            | Agent Activity                               | Character Behavior      | Emotion  |
-| --------------- | -------------------------------------------- | ----------------------- | -------- |
-| **Office**      | `Write`, `Edit`, `Bash`, assistant streaming | Sitting at desk, typing | Focused  |
-| **Living Room** | `Read`, `Grep`, `Glob`, `WebFetch`, thinking | Sitting on couch        | Thinking |
-| **Bedroom**     | Idle, waiting for input, session end         | Lying in bed, sleeping  | Sleepy   |
+| Room         | Agent Activity                            | Character Behavior      | Emotion  |
+| ------------ | ----------------------------------------- | ----------------------- | -------- |
+| **Workshop** | `write`, `edit`, `exec`, assistant stream | Sitting at desk, typing | Focused  |
+| **Study**    | `read`, `grep`, `glob`, `web_search`      | Browsing bookshelf      | Thinking |
+| **Bedroom**  | Idle > 30s, session end                   | Sleeping in bed         | Sleepy   |
 
-### Core Capabilities
+### What's Working
 
-- **Real-time WebSocket connection** -- connects to OpenClaw Gateway, handles handshake, auto-reconnects with exponential backoff
-- **Smart event parsing** -- maps agent tool calls and lifecycle events to character actions with priority-based queueing
-- **Mock mode** -- when Gateway is unavailable, generates simulated events for development and demo
-- **Isometric Canvas 2D rendering** -- pixel-perfect isometric view with painter's algorithm z-sorting
-- **Character state machine** -- 5 MVP states (idle, walk, sit, type, sleep) expandable to 7 in v1.0 (+ thinking, celebrating)
-- **BFS pathfinding** -- tile-based pathfinding for natural character movement between rooms
-- **Emotion bubbles** -- visual feedback above the character: focused, thinking, sleepy, happy, confused
-- **Status dashboard** -- connection status and mode (live/mock), current agent state, token usage, session info, activity log
+- **Bridge Server** -- watches the most recently active session JSONL, auto-detects session switches (polls every 2s), pushes events via WebSocket with auto-reconnect
+- **Event parsing** -- maps tool calls (`write`, `edit`, `exec`, `read`, `grep`, `glob`, `web_search`, `task`) and lifecycle events to `CharacterAction` objects with priority-based queueing
+- **Canvas 2D rendering** -- 3/4 top-down isometric view with painter's algorithm z-sorting, programmatic pixel-art furniture
+- **Character state machine** -- idle, walk, sit, type, sleep, think, celebrate states with BFS tile-based pathfinding
+- **Emotion bubbles** -- focused, thinking, sleepy, happy, confused, curious, serious, satisfied
+- **Status dashboard** -- connection status, current agent state, session info, event log, FPS counter
+- **Electron desktop app** -- standalone window with system tray, always-on-top option, macOS/Windows/Linux builds
 
-### Full Version (v1.0) -- Three Floors, Nine Rooms
+## v1.0 Roadmap (Phaser 3 Migration)
+
+v1.0 replaces the hand-written Canvas 2D renderer with **Phaser 3**, switching from a 3/4 top-down view to a **side-view platformer** style with physics-based movement (gravity, jumping, ladder climbing).
+
+### Three-Floor House (9 Rooms)
 
 ```
-              ATTIC (3F)
-    +--------+--------+--------+
-    | Reading|  Lab   |Balcony |
-    |  Room  |        |        |
-    +--------+--------+--------+
-             MAIN FLOOR (2F)
-    +--------+--------+--------+
-    | Office | Living |Bedroom |
-    |        |  Room  |        |
-    +--------+--------+--------+
-             BASEMENT (1F)
-    +--------+--------+--------+
-    |  Tool  |Storage |Kitchen |
-    |  Room  |        |        |
-    +--------+--------+--------+
+         +-------------------------------------------------+
+  3F     |  Warehouse       Study          Balcony          |
+  Attic  |  (glob/files)    (read/grep)    (web_search)     |
+         |      |--|            |--|                        |
+         +------+  +------------+  +------------------------+
+  2F     |  Toolbox         Office         Bedroom          |
+  Main   |  (exec)          (write/edit)   (idle/sleep)     |
+         |      |--|            |--|                        |
+         +------+  +------------+  +------------------------+
+  1F     |  Basement        Server Room    Trash            |
+  Base   |  (task/agents)   (code)         (cleanup)        |
+         +-------------------------------------------------+
+              ^ ladders/stairs connect floors ^
 ```
 
-Key additions in v1.0:
+### Migration Phases
 
-- **Staircase navigation** -- character walks between floors with animation
-- **Sound effects** -- footsteps, typing, snoring, cooking sounds, notification chimes
-- **Electron desktop app** -- standalone window, system tray, always-on-top option
-- **Sub-agent visualization** -- companion character appears when OpenClaw spawns sub-agents
-- **Activity history** -- timeline of recent agent activities with timestamps
-- **Custom themes** -- light/dark mode, seasonal themes
-- **Pet companion** -- a small pixel pet that reacts to the agent's mood
+| Phase | Scope                                      | Status  |
+| ----- | ------------------------------------------ | ------- |
+| P0    | Phaser bootstrap, React mount, loading bar | Pending |
+| P1    | Tiled tilemap, collision, room detection   | Pending |
+| P2    | Character sprite, FSM, physics, navigation | Pending |
+| P3    | Event bridge, emotions, particle effects   | Pending |
+| P4    | Dashboard update, sound, Electron polish   | Pending |
+| P5    | Three-floor expansion, full event mapping  | Pending |
 
-### Roadmap
+### Key Changes in v1.0
 
-Planned features beyond MVP (P1):
-
-- Zoom controls (mouse wheel / +/- buttons)
-- Viewport panning (click-drag)
-- Character click interaction (detailed agent info popup)
-- Day/night ambient lighting based on time of day
+- **Phaser 3 Arcade Physics** -- gravity, velocity, platform colliders, ladder climbing zones
+- **Tiled tilemap** -- visual map editing with collision layers and object layers (room zones, spawn points, activity spots)
+- **Side-view platformer movement** -- walk, jump, climb (replaces BFS pathfinding)
+- **9 rooms across 3 floors** -- each tool maps to a specific room
+- **Sound effects** -- footsteps, typing, snoring, celebration chimes
+- **Particle effects** -- confetti for celebration, sparks for errors, floating Z's for sleeping
 
 ## Tech Stack
 
-| Layer            | Technology                                    | Why                                                  |
-| ---------------- | --------------------------------------------- | ---------------------------------------------------- |
-| Language         | TypeScript 5.x (strict)                       | Type safety for game state, events, and protocol     |
-| UI Framework     | React 18                                      | Overlay UI only; game state lives outside React      |
-| Rendering        | Canvas 2D API                                 | Pixel-perfect control, integer scaling, small bundle |
-| Build Tool       | Vite 6                                        | Fast HMR, native TS, simple config                   |
-| Communication    | Native WebSocket                              | Direct connection to OpenClaw Gateway                |
-| State Management | Imperative game state + React useReducer (UI) | 60fps game world without React re-render overhead    |
-| Package Manager  | pnpm                                          | Fast, disk-efficient, strict dependencies            |
-| Linting          | ESLint + Prettier                             | Consistent code style, type-aware linting            |
-| Testing          | Vitest                                        | Fast unit tests, Vite-compatible                     |
+| Layer           | Technology                        | Purpose                                                 |
+| --------------- | --------------------------------- | ------------------------------------------------------- |
+| Language        | TypeScript 5.x (strict)           | Type safety for game state, events, and protocol        |
+| Game Engine     | Canvas 2D (v0.2), Phaser 3 (v1.0) | Rendering and physics                                   |
+| UI Framework    | React 19                          | Overlay UI only (dashboard, controls)                   |
+| Build Tool      | Vite 8                            | Fast HMR, native TS                                     |
+| Desktop         | Electron                          | Standalone desktop app with system tray                 |
+| Communication   | WebSocket (Bridge Server)         | Session log monitoring + real-time push                 |
+| Map Editor      | Tiled (v1.0)                      | Visual tilemap editing with collision and object layers |
+| Package Manager | pnpm                              | Fast, disk-efficient, strict dependencies               |
+| Testing         | Vitest                            | Fast unit tests, Vite-compatible                        |
+| Linting         | ESLint + Prettier                 | Consistent code style with Husky pre-commit hooks       |
 
 ## Architecture
 
 ```
-+----------------------------------------------------------------+
-|                        Browser (Web App)                        |
-|                                                                 |
-|   React Shell (CanvasView + Dashboard)                          |
-|       |                          |                              |
-|       | ref                      | subscribe (EventBus, 4Hz)    |
-|       v                          v                              |
-|   Game Engine (imperative, 60fps)                               |
-|   [GameLoop] -> [Renderer] [Character FSM] [Pathfinding BFS]   |
-|       |                                                         |
-|       v                                                         |
-|   GameState (plain TS object, mutated imperatively)             |
-|       ^                                                         |
-|       | dispatch(action)                                        |
-|   Connection Layer                                              |
-|   [GatewayClient (WS)] -> [EventParser] -> [MockProvider]      |
-+----------------------------------------------------------------+
++------------------------------------------------------------------+
+|                     Electron Desktop App                          |
+|                                                                   |
+|  React Shell                                                      |
+|  +---------------------------+  +------------------------------+  |
+|  | PhaserContainer (v1.0)    |  | Dashboard.tsx                |  |
+|  | or CanvasView (v0.2)      |  | (status, tokens, event log)  |  |
+|  +------------+--------------+  +------------------------------+  |
+|               |                                                   |
+|               v                                                   |
+|  Game Engine                                                      |
+|  [Phaser Scene / Canvas 2D] <-- [Character FSM]                   |
+|               ^                                                   |
+|               | dispatch(CharacterAction)                         |
+|  Connection Layer (stable, shared between v0.2 and v1.0)          |
+|  [BridgeClient] --> [EventParser] --> [ActionQueue]               |
+|  [ConnectionManager orchestrates all]                             |
++------------------------------------------------------------------+
                           |
-                          | WebSocket
+                          | WebSocket (ws://127.0.0.1:18790)
                           v
-               OpenClaw Gateway
-               ws://127.0.0.1:18789
+                   Bridge Server (Node.js)
+                          |
+                          | fs.watch
+                          v
+              OpenClaw Session Log (JSONL)
+              ~/.openclaw/agents/main/sessions/
 ```
 
-### Key Design Decisions
+### Connection Layer (stable across versions)
 
-1. **Game state lives outside React** -- 60fps updates without re-render cascades. React components subscribe to specific slices via EventBus, throttled to 4Hz.
-2. **Single Canvas, no DOM tiles** -- pixel-perfect isometric rendering with proper z-ordering via painter's algorithm.
-3. **WebSocket-first** -- real-time push, structured event types, no polling delay.
+The connection layer is fully working and shared between v0.2 and v1.0:
+
+- **BridgeClient** -- WebSocket client with exponential backoff reconnect (1s to 30s)
+- **EventParser** -- maps session log events (tool calls, lifecycle, model changes) to `CharacterAction` objects
+- **ActionQueue** -- priority queue (High > Medium > Low) that drops lowest-priority actions when full
+- **ConnectionManager** -- orchestrates BridgeClient + EventParser, provides `onAction()`, `onStatusChange()`, `onEventLog()` subscriptions
+
+## Event Mapping
+
+| OpenClaw Event                  | Tool / Phase | Target Room | Animation  | Emotion  | Priority |
+| ------------------------------- | ------------ | ----------- | ---------- | -------- | -------- |
+| Session start (`type: session`) | --           | Study       | Wake up    | Thinking | High     |
+| Session end (`stopReason`)      | --           | Bedroom     | Lie down   | Sleepy   | High     |
+| Tool failure (exitCode != 0)    | --           | (current)   | Hold head  | Confused | High     |
+| `tool: write`                   | write        | Workshop    | Typing     | Focused  | Medium   |
+| `tool: edit`                    | edit         | Workshop    | Typing     | Focused  | Medium   |
+| `tool: exec`                    | exec         | Workshop    | Typing     | Serious  | Medium   |
+| `tool: read`                    | read         | Study       | Reading    | Curious  | Medium   |
+| `tool: grep`                    | grep         | Study       | Searching  | Curious  | Medium   |
+| `tool: glob`                    | glob         | Study       | Browsing   | Busy     | Medium   |
+| `tool: web_search`              | web_search   | Study       | Browsing   | Curious  | Medium   |
+| `tool: task`                    | task         | Study       | Whiteboard | Excited  | Medium   |
+| Assistant streaming             | --           | Workshop    | Typing     | Focused  | Low      |
+| Idle > 30s                      | --           | Bedroom     | Sleeping   | Sleepy   | Low      |
 
 ## Getting Started
 
@@ -136,87 +173,75 @@ Planned features beyond MVP (P1):
 
 - [Node.js](https://nodejs.org/) >= 18
 - [pnpm](https://pnpm.io/) >= 8
-- [OpenClaw](https://github.com/openclaw/openclaw) (optional -- falls back to mock mode)
+- [OpenClaw](https://github.com/openclaw/openclaw) installed and configured
 
-### Installation
+### Run
 
 ```bash
-# Clone the repository
 git clone https://github.com/luyao618/watch-claw-working.git
 cd watch-claw-working
-
-# Install dependencies
 pnpm install
-
-# Start development server
 pnpm dev
 ```
 
-The app opens at `http://localhost:5173`. If OpenClaw Gateway is running on `ws://127.0.0.1:18789`, it connects automatically. Otherwise, it falls back to mock mode with simulated events.
+This starts both the Vite dev server and the Bridge Server concurrently. Open `http://localhost:5173` in your browser.
 
-### Build
+The Bridge Server automatically locates the most recently active OpenClaw session at `~/.openclaw/agents/main/sessions/` and pushes events in real time. Start an OpenClaw session in another terminal to see the character react.
+
+### Other Commands
 
 ```bash
-# Production build
-pnpm build
-
-# Preview production build
-pnpm preview
-
-# Type check
-pnpm typecheck
-
-# Lint
-pnpm lint
-
-# Run tests
-pnpm test
+pnpm build          # Production build
+pnpm preview        # Preview production build
+pnpm typecheck      # Type check
+pnpm lint           # Lint
+pnpm test           # Run tests
+pnpm dev:electron   # Run as Electron desktop app
+pnpm build:electron # Build Electron distributable
 ```
 
-## Event Mapping
+## Project Structure
 
-Watch Claw translates OpenClaw events into character actions:
-
-| OpenClaw Event         | Target Room | Animation   | Emotion   | Priority |
-| ---------------------- | ----------- | ----------- | --------- | -------- |
-| `lifecycle.start`      | Living Room | Wake up     | Thinking  | High     |
-| `lifecycle.end`        | Bedroom     | Lie down    | Sleepy    | High     |
-| `lifecycle.error`      | (current)   | Hold head   | Confused  | High     |
-| `tool: Write/Edit`     | Office      | Typing      | Focused   | Medium   |
-| `tool: Bash`           | Office      | Typing      | Serious   | Medium   |
-| `tool: Read/Grep/Glob` | Living Room | Sitting     | Curious   | Medium   |
-| `tool: WebFetch`       | Living Room | Browsing    | Curious   | Medium   |
-| `tool: Task`           | Living Room | Thinking    | Thinking  | Medium   |
-| Task completed         | Living Room | Celebrating | Satisfied | Medium   |
-| Assistant streaming    | Office      | Typing      | Focused   | Low      |
-| Idle > 30s             | Bedroom     | Sleeping    | Sleepy    | Low      |
-
-## Non-Functional Requirements
-
-| Requirement         | Target                                            |
-| ------------------- | ------------------------------------------------- |
-| Frame rate          | 60fps (requestAnimationFrame)                     |
-| Bundle size         | < 500KB gzipped                                   |
-| Browser support     | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+     |
-| Responsive          | Min 800x600, scales to 4K                         |
-| Startup time        | < 2s to first meaningful paint                    |
-| WebSocket reconnect | Exponential backoff (1s-30s)                      |
-| Mock mode fallback  | < 100ms switch                                    |
-| Memory usage        | < 100MB                                           |
-| Accessibility       | Reduced motion support (`prefers-reduced-motion`) |
+```
+watch-claw/
+├── bridge/              # Bridge Server (Node.js, WebSocket relay)
+│   └── server.ts        #   watches session JSONL -> WS push
+├── electron/            # Electron desktop shell
+│   ├── main.cjs
+│   └── preload.cjs
+├── src/
+│   ├── connection/      # Connection layer (stable, DO NOT MODIFY)
+│   │   ├── bridgeClient.ts       # WebSocket client with reconnect
+│   │   ├── eventParser.ts        # Session log -> CharacterAction
+│   │   ├── actionQueue.ts        # Priority queue
+│   │   ├── connectionManager.ts  # Orchestrates connection
+│   │   └── types.ts              # All shared types
+│   ├── engine/          # Canvas 2D game engine (v0.2, to be replaced)
+│   ├── world/           # Tilemap and room definitions (v0.2, to be replaced)
+│   ├── ui/              # React overlay components
+│   │   ├── CanvasView.tsx        # Game canvas mount
+│   │   └── Dashboard.tsx         # Status panel
+│   ├── utils/           # Shared utilities (eventBus, constants, helpers)
+│   ├── App.tsx
+│   └── main.tsx
+├── public/assets/       # Game assets (sprites, tilesets, tilemaps)
+├── docs/                # Documentation (PRD, Technical, Tasks)
+└── scripts/             # Dev helper scripts
+```
 
 ## Inspiration
 
-| Project                                                           | What we borrow                                | What we do differently                                                   |
-| ----------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------ |
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D | WebSocket (not file tailing), isometric (not top-down), single character |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine | Cozy home (not office), high-fidelity pixel art (not DOM tiles)          |
+| Project                                                           | What we borrow                     | What we do differently                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM | Bridge Server push (not file tailing), side-view platformer (v1.0), single character, Electron app |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture          | Cozy home (not corporate office), physics-based movement (v1.0), high-fidelity pixel art           |
 
 ## Documentation
 
-- [Product Requirements Document](./docs/PRD.md)
-- [Technical Design Document](./docs/TECHNICAL.md)
-- [Task Breakdown](./docs/TASKS.md)
+- [Product Requirements Document](./docs/PRD.md) ([中文](./docs/PRD_CN.md))
+- [Technical Design Document](./docs/TECHNICAL.md) ([中文](./docs/TECHNICAL_CN.md))
+- [Task Breakdown (v1.0)](./docs/TASKS.md) ([中文](./docs/TASKS_CN.md))
+- [Archived Tasks (v0.2)](./docs/TASKS_v0.2_ARCHIVED.md) ([中文](./docs/TASKS_v0.2_ARCHIVED_CN.md))
 
 ## Contributing
 
@@ -230,4 +255,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+[MIT](./LICENSE) -- Copyright 2026 luyao618
