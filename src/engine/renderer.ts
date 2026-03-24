@@ -1,11 +1,12 @@
 /**
- * Canvas 2D Isometric Renderer
+ * Canvas 2D 3/4 Top-Down Renderer
  *
- * Renders the isometric tile map, walls, furniture, character, and UI overlays.
- * Uses painter's algorithm for correct depth ordering.
+ * Renders the tile map, walls, furniture, character, and UI overlays
+ * in a Stardew Valley style 3/4 top-down perspective.
+ * Uses y-sorting for correct depth ordering.
  */
 
-import { cartesianToIso } from './isometric.ts'
+import { cartesianToScreen } from './coordinates.ts'
 import { TILE_WIDTH, TILE_HEIGHT } from '@/utils/constants.ts'
 import { lerp } from '@/utils/helpers.ts'
 import { TileType } from './gameState.ts'
@@ -15,21 +16,27 @@ import type {
   FurniturePlacement,
 } from './gameState.ts'
 import { FURNITURE_COLORS } from '@/world/furniture.ts'
+import { drawFallbackRect } from './spritesheet.ts'
+import {
+  getCharacterSpritesheet,
+  getEmotionSpritesheet,
+} from '@/world/sprites.ts'
+import {
+  drawPixelFurniture,
+  drawWallTile as drawPixelWall,
+} from './pixelFurniture.ts'
 
-// ── Tile Colors ─────────────────────────────────────────────────────────────
+// ── Tile Colors (clean solid colors) ─────────────────────────────────────────
 
 const TILE_COLORS: Record<TileType, string> = {
   [TileType.EMPTY]: 'transparent',
-  [TileType.FLOOR_WOOD]: '#c4a882',
-  [TileType.FLOOR_CARPET]: '#7a8a6a',
-  [TileType.WALL]: '#5a5a7a',
-  [TileType.DOOR]: '#8a7a5a',
+  [TileType.FLOOR_WOOD]: '#b89870', // warm honey wood
+  [TileType.FLOOR_CARPET]: '#a8946c', // warm tan/beige
+  [TileType.WALL]: '#6b5544',
+  [TileType.DOOR]: '#c8a878', // lighter wood for doorways
 }
 
-const WALL_COLOR = '#4a4a6a'
-const WALL_HEIGHT = 32 // Wall extends 32px above the tile
-
-// ── Emotion Bubble Colors ───────────────────────────────────────────────────
+// ── Emotion Bubble Colors (fallback) ────────────────────────────────────────
 
 const EMOTION_COLORS: Record<string, { bg: string; icon: string }> = {
   focused: { bg: '#4a9eff', icon: '!' },
@@ -43,7 +50,7 @@ const EMOTION_COLORS: Record<string, { bg: string; icon: string }> = {
   none: { bg: 'transparent', icon: '' },
 }
 
-// ── Character Colors ────────────────────────────────────────────────────────
+// ── Character Colors (fallback) ─────────────────────────────────────────────
 
 const CHARACTER_BODY_COLOR = '#4a7ab5'
 const CHARACTER_HEAD_COLOR = '#f0d0a0'
@@ -78,38 +85,36 @@ export function renderFrame(
   ctx.translate(camera.offsetX, camera.offsetY)
   ctx.scale(camera.zoom, camera.zoom)
 
-  // 1. Render floor tiles
+  // 1. Render floor tiles (all non-wall, non-empty tiles)
   for (let row = 0; row < world.height; row++) {
     for (let col = 0; col < world.width; col++) {
       const tile = world.tiles[row][col]
-      if (tile !== TileType.EMPTY) {
+      if (tile !== TileType.EMPTY && tile !== TileType.WALL) {
         renderFloorTile(ctx, tile, col, row)
       }
     }
   }
 
-  // 2. Collect all entities for z-sorting
+  // 2. Collect all entities for y-sorting
   const entities: Renderable[] = []
 
-  // Add walls
+  // Add walls (render as blocks with height)
   for (const wall of world.walls) {
-    const sortY = wall.row + wall.col
     entities.push({
-      sortY,
-      render: (c) => renderWall(c, wall.col, wall.row, wall.wallType),
+      sortY: wall.row * TILE_HEIGHT,
+      render: (c) => renderWall(c, wall.col, wall.row),
     })
   }
 
   // Add furniture
   for (const item of world.furniture) {
-    const sortY = item.row + item.col
     entities.push({
-      sortY,
+      sortY: (item.row + 1) * TILE_HEIGHT,
       render: (c) => renderFurniture(c, item),
     })
   }
 
-  // Add character (with interpolation for smooth rendering)
+  // Add character
   const renderCol =
     character.state === 'walking' && character.prevPosition
       ? lerp(character.prevPosition.col, character.position.col, interpolation)
@@ -118,33 +123,31 @@ export function renderFrame(
     character.state === 'walking' && character.prevPosition
       ? lerp(character.prevPosition.row, character.position.row, interpolation)
       : character.position.row
-  const charSortY = renderRow + renderCol
   entities.push({
-    sortY: charSortY,
+    sortY: (renderRow + 1) * TILE_HEIGHT,
     render: (c) => renderCharacter(c, character, renderCol, renderRow),
   })
 
-  // 3. Sort by sortY (back to front)
+  // 3. Sort by sortY
   entities.sort((a, b) => a.sortY - b.sortY)
 
-  // 4. Render entities in sorted order
+  // 4. Render entities
   for (const entity of entities) {
     entity.render(ctx)
   }
 
-  // 5. Render emotion bubble (on top of everything)
-  if (character.emotion !== 'none') {
+  // 5. Render emotion bubble (only when not walking)
+  if (character.emotion !== 'none' && character.state !== 'walking') {
     renderEmotionBubble(ctx, character, renderCol, renderRow)
   }
 
-  // 6. Render debug grid if enabled
+  // 6. Debug grid
   if (state.debug.showGrid) {
     renderDebugGrid(ctx, world.width, world.height)
   }
 
   ctx.restore()
 
-  // Render FPS counter outside camera transform
   if (state.debug.showFps) {
     renderFpsCounter(ctx, state)
   }
@@ -158,27 +161,22 @@ function renderFloorTile(
   col: number,
   row: number,
 ): void {
-  const iso = cartesianToIso(col, row)
+  const pos = cartesianToScreen(col, row)
+
+  // Clean solid color floor
   const color = TILE_COLORS[tileType]
-
   ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.moveTo(iso.x, iso.y + TILE_HEIGHT / 2) // left
-  ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y) // top
-  ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2) // right
-  ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT) // bottom
-  ctx.closePath()
-  ctx.fill()
+  ctx.fillRect(pos.x, pos.y, TILE_WIDTH, TILE_HEIGHT)
 
-  // Tile outline
-  ctx.strokeStyle = tileType === TileType.DOOR ? '#aa9a6a' : '#00000020'
+  // Subtle grid line
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)'
   ctx.lineWidth = 0.5
-  ctx.stroke()
+  ctx.strokeRect(pos.x, pos.y, TILE_WIDTH, TILE_HEIGHT)
 
-  // Door indicator
+  // Door highlight
   if (tileType === TileType.DOOR) {
-    ctx.fillStyle = '#aa9a6a40'
-    ctx.fill()
+    ctx.fillStyle = 'rgba(255,255,200,0.08)'
+    ctx.fillRect(pos.x, pos.y, TILE_WIDTH, TILE_HEIGHT)
   }
 }
 
@@ -188,65 +186,12 @@ function renderWall(
   ctx: CanvasRenderingContext2D,
   col: number,
   row: number,
-  wallType: 'front' | 'side',
 ): void {
-  const iso = cartesianToIso(col, row)
-
-  // Wall base (isometric diamond, same as floor)
-  ctx.fillStyle = WALL_COLOR
-  ctx.beginPath()
-  ctx.moveTo(iso.x, iso.y + TILE_HEIGHT / 2)
-  ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y)
-  ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2)
-  ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT)
-  ctx.closePath()
-  ctx.fill()
-
-  // Wall height (raised portion)
-  if (wallType === 'front') {
-    // Front wall — raised rectangle on the bottom-left and bottom-right edges
-    ctx.fillStyle = '#3a3a5a'
-    ctx.beginPath()
-    ctx.moveTo(iso.x, iso.y + TILE_HEIGHT / 2)
-    ctx.lineTo(iso.x, iso.y + TILE_HEIGHT / 2 - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT)
-    ctx.closePath()
-    ctx.fill()
-
-    ctx.fillStyle = '#4a4a6a'
-    ctx.beginPath()
-    ctx.moveTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2 - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2)
-    ctx.closePath()
-    ctx.fill()
-  } else {
-    // Side wall
-    ctx.fillStyle = '#3a3a5a'
-    ctx.beginPath()
-    ctx.moveTo(iso.x, iso.y + TILE_HEIGHT / 2)
-    ctx.lineTo(iso.x, iso.y + TILE_HEIGHT / 2 - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y)
-    ctx.closePath()
-    ctx.fill()
-
-    ctx.fillStyle = '#4a4a6a'
-    ctx.beginPath()
-    ctx.moveTo(iso.x + TILE_WIDTH / 2, iso.y)
-    ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2 - WALL_HEIGHT)
-    ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2)
-    ctx.closePath()
-    ctx.fill()
-  }
-
-  // Wall outline
-  ctx.strokeStyle = '#2a2a4a'
-  ctx.lineWidth = 0.5
-  ctx.stroke()
+  const pos = cartesianToScreen(col, row)
+  const isTopWall = row === 0
+  // Add windows on top walls at certain intervals
+  const hasWindow = isTopWall && col % 4 === 2 && col > 0 && col < 23
+  drawPixelWall(ctx, pos.x, pos.y, isTopWall, hasWindow)
 }
 
 // ── Furniture Rendering ─────────────────────────────────────────────────────
@@ -255,51 +200,24 @@ function renderFurniture(
   ctx: CanvasRenderingContext2D,
   item: FurniturePlacement,
 ): void {
-  const iso = cartesianToIso(item.col, item.row)
+  const pos = cartesianToScreen(item.col, item.row)
+
+  // Use programmatic pixel furniture
+  if (drawPixelFurniture(ctx, item.type, pos.x, pos.y, item.col, item.row)) {
+    return
+  }
+
+  // Fallback: colored rectangle with label
   const color = FURNITURE_COLORS[item.type] || '#666'
-  const centerX = iso.x + TILE_WIDTH / 2
-  const centerY = iso.y + TILE_HEIGHT / 2
-
-  // Draw a simple isometric box for furniture
-  const boxWidth = TILE_WIDTH * 0.6
-  const boxHeight = TILE_HEIGHT * 0.6
-  const boxRise = 16 + item.zOffset
-
-  // Top face
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.moveTo(centerX, centerY - boxRise)
-  ctx.lineTo(centerX + boxWidth / 2, centerY - boxRise + boxHeight / 2)
-  ctx.lineTo(centerX, centerY - boxRise + boxHeight)
-  ctx.lineTo(centerX - boxWidth / 2, centerY - boxRise + boxHeight / 2)
-  ctx.closePath()
-  ctx.fill()
-
-  // Left face
-  ctx.fillStyle = adjustBrightness(color, -30)
-  ctx.beginPath()
-  ctx.moveTo(centerX - boxWidth / 2, centerY - boxRise + boxHeight / 2)
-  ctx.lineTo(centerX, centerY - boxRise + boxHeight)
-  ctx.lineTo(centerX, centerY + boxHeight)
-  ctx.lineTo(centerX - boxWidth / 2, centerY + boxHeight / 2)
-  ctx.closePath()
-  ctx.fill()
-
-  // Right face
-  ctx.fillStyle = adjustBrightness(color, -15)
-  ctx.beginPath()
-  ctx.moveTo(centerX + boxWidth / 2, centerY - boxRise + boxHeight / 2)
-  ctx.lineTo(centerX, centerY - boxRise + boxHeight)
-  ctx.lineTo(centerX, centerY + boxHeight)
-  ctx.lineTo(centerX + boxWidth / 2, centerY + boxHeight / 2)
-  ctx.closePath()
-  ctx.fill()
-
-  // Label
-  ctx.fillStyle = '#fff'
-  ctx.font = '6px monospace'
-  ctx.textAlign = 'center'
-  ctx.fillText(item.type.split('-')[0], centerX, centerY - boxRise - 2)
+  drawFallbackRect(
+    ctx,
+    pos.x + 2,
+    pos.y + 2,
+    TILE_WIDTH - 4,
+    TILE_HEIGHT - 4,
+    color,
+    item.type.split('-')[0],
+  )
 }
 
 // ── Character Rendering ─────────────────────────────────────────────────────
@@ -310,19 +228,62 @@ function renderCharacter(
   col: number,
   row: number,
 ): void {
-  const iso = cartesianToIso(col, row)
-  const centerX = iso.x + TILE_WIDTH / 2
-  const baseY = iso.y + TILE_HEIGHT / 2
+  const pos = cartesianToScreen(col, row)
+  const charDrawW = TILE_WIDTH
+  const charDrawH = TILE_WIDTH * 2 // LPC characters are tall
+  const centerX = pos.x + TILE_WIDTH / 2
+  const baseY = pos.y + TILE_HEIGHT
 
-  // Character dimensions
+  // Try spritesheet
+  const spritesheet = getCharacterSpritesheet()
+  if (spritesheet.isLoaded) {
+    const dirMap: Record<string, string> = {
+      se: 'down',
+      sw: 'left',
+      ne: 'up',
+      nw: 'right',
+    }
+    const dir = dirMap[character.direction] || 'down'
+
+    let animName: string
+    if (character.state === 'walking') {
+      animName = `walk_${dir}`
+    } else if (character.state === 'idle') {
+      animName = `idle_${dir}`
+    } else {
+      const stateAnimMap: Record<string, string> = {
+        typing: 'type',
+        sleeping: 'sleep',
+        sitting: 'sit',
+        thinking: 'think',
+        celebrating: 'celebrate',
+      }
+      animName = stateAnimMap[character.state] || `idle_${dir}`
+    }
+
+    if (
+      spritesheet.drawFrame(
+        ctx,
+        animName,
+        character.animationFrame,
+        centerX - charDrawW / 2,
+        baseY - charDrawH,
+        charDrawW,
+        charDrawH,
+      )
+    ) {
+      // Draw state effects on top of sprite
+      renderCharacterStateEffects(ctx, character, centerX, baseY)
+      return
+    }
+  }
+
+  // Fallback: programmatic character
   const bodyWidth = 16
   const bodyHeight = 20
   const headSize = 12
-
-  // Breathing animation (subtle vertical offset)
   const breathOffset = Math.sin(character.animationTimer * 2) * 1
 
-  // Body
   ctx.fillStyle = CHARACTER_BODY_COLOR
   ctx.fillRect(
     centerX - bodyWidth / 2,
@@ -331,7 +292,6 @@ function renderCharacter(
     bodyHeight,
   )
 
-  // Head
   ctx.fillStyle = CHARACTER_HEAD_COLOR
   ctx.beginPath()
   ctx.arc(
@@ -343,12 +303,10 @@ function renderCharacter(
   )
   ctx.fill()
 
-  // Lobster Hat!
   const hatY = baseY - bodyHeight - headSize + breathOffset
   drawLobsterHat(ctx, centerX, hatY)
 
-  // State-specific rendering
-  renderCharacterState(ctx, character, centerX, baseY, breathOffset)
+  renderCharacterStateEffects(ctx, character, centerX, baseY)
 }
 
 function drawLobsterHat(
@@ -356,13 +314,11 @@ function drawLobsterHat(
   centerX: number,
   topY: number,
 ): void {
-  // Main hat body (red dome)
   ctx.fillStyle = LOBSTER_HAT_COLOR
   ctx.beginPath()
   ctx.ellipse(centerX, topY, 8, 5, 0, Math.PI, 0)
   ctx.fill()
 
-  // Left claw
   ctx.fillStyle = LOBSTER_HAT_CLAW_COLOR
   ctx.beginPath()
   ctx.moveTo(centerX - 6, topY - 2)
@@ -373,7 +329,6 @@ function drawLobsterHat(
   ctx.closePath()
   ctx.fill()
 
-  // Right claw
   ctx.beginPath()
   ctx.moveTo(centerX + 6, topY - 2)
   ctx.lineTo(centerX + 12, topY - 6)
@@ -383,7 +338,6 @@ function drawLobsterHat(
   ctx.closePath()
   ctx.fill()
 
-  // Eyes on hat (small white dots)
   ctx.fillStyle = '#fff'
   ctx.beginPath()
   ctx.arc(centerX - 3, topY - 2, 1.5, 0, Math.PI * 2)
@@ -392,7 +346,6 @@ function drawLobsterHat(
   ctx.arc(centerX + 3, topY - 2, 1.5, 0, Math.PI * 2)
   ctx.fill()
 
-  // Pupils
   ctx.fillStyle = '#000'
   ctx.beginPath()
   ctx.arc(centerX - 3, topY - 2, 0.8, 0, Math.PI * 2)
@@ -402,16 +355,14 @@ function drawLobsterHat(
   ctx.fill()
 }
 
-function renderCharacterState(
+function renderCharacterStateEffects(
   ctx: CanvasRenderingContext2D,
   character: CharacterState,
   centerX: number,
   baseY: number,
-  breathOffset: number,
 ): void {
   switch (character.state) {
     case 'typing': {
-      // Show typing hands
       const handOffset = Math.sin(character.animationTimer * 12) * 2
       ctx.fillStyle = CHARACTER_HEAD_COLOR
       ctx.fillRect(centerX - 10 + handOffset, baseY - 8, 4, 3)
@@ -419,8 +370,7 @@ function renderCharacterState(
       break
     }
     case 'sleeping': {
-      // ZZZ
-      const zzY = baseY - 35 + breathOffset
+      const zzY = baseY - 45
       ctx.fillStyle = '#aaa'
       ctx.font = 'bold 8px monospace'
       ctx.textAlign = 'left'
@@ -433,7 +383,6 @@ function renderCharacterState(
       break
     }
     case 'thinking': {
-      // Thought dots
       const dotPhase = character.animationTimer * 3
       for (let i = 0; i < 3; i++) {
         const alpha = (Math.sin(dotPhase + i * 0.8) + 1) / 2
@@ -441,7 +390,7 @@ function renderCharacterState(
         ctx.beginPath()
         ctx.arc(
           centerX + 10 + i * 5,
-          baseY - 30 - i * 4,
+          baseY - 40 - i * 4,
           2 - i * 0.3,
           0,
           Math.PI * 2,
@@ -451,12 +400,11 @@ function renderCharacterState(
       break
     }
     case 'celebrating': {
-      // Confetti particles
       for (let i = 0; i < 5; i++) {
         const angle = (i / 5) * Math.PI * 2 + character.animationTimer * 3
         const r = 15 + Math.sin(character.animationTimer * 4 + i) * 5
         const px = centerX + Math.cos(angle) * r
-        const py = baseY - 25 + Math.sin(angle) * r * 0.5
+        const py = baseY - 35 + Math.sin(angle) * r * 0.5
         ctx.fillStyle = ['#ff6b6b', '#ffd93d', '#6bff6b', '#6b9fff', '#ff6bff'][
           i
         ]
@@ -475,24 +423,30 @@ function renderEmotionBubble(
   col: number,
   row: number,
 ): void {
-  const iso = cartesianToIso(col, row)
-  const centerX = iso.x + TILE_WIDTH / 2
-  const baseY = iso.y + TILE_HEIGHT / 2
+  const pos = cartesianToScreen(col, row)
+  const centerX = pos.x + TILE_WIDTH / 2
+  const baseY = pos.y
 
-  // Bubble position (floating above character)
   const floatOffset = Math.sin(character.animationTimer * 2) * 2
-  const bubbleY = baseY - 52 + floatOffset
+  const bubbleY = baseY - 20 + floatOffset
 
+  // Try spritesheet
+  const emotionSheet = getEmotionSpritesheet()
+  if (
+    emotionSheet.drawFrame(ctx, character.emotion, 0, centerX - 8, bubbleY - 8)
+  ) {
+    return
+  }
+
+  // Fallback: colored bubble
   const config = EMOTION_COLORS[character.emotion] || EMOTION_COLORS.none
   if (config.bg === 'transparent') return
 
-  // Bubble background
   ctx.fillStyle = config.bg
   ctx.beginPath()
   ctx.roundRect(centerX - 8, bubbleY - 8, 16, 14, 4)
   ctx.fill()
 
-  // Connection triangle
   ctx.beginPath()
   ctx.moveTo(centerX - 3, bubbleY + 6)
   ctx.lineTo(centerX, bubbleY + 10)
@@ -500,7 +454,6 @@ function renderEmotionBubble(
   ctx.closePath()
   ctx.fill()
 
-  // Icon text
   ctx.fillStyle = '#fff'
   ctx.font = 'bold 7px monospace'
   ctx.textAlign = 'center'
@@ -521,24 +474,16 @@ function renderDebugGrid(
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const iso = cartesianToIso(col, row)
+      const pos = cartesianToScreen(col, row)
+      ctx.strokeRect(pos.x, pos.y, TILE_WIDTH, TILE_HEIGHT)
 
-      ctx.beginPath()
-      ctx.moveTo(iso.x, iso.y + TILE_HEIGHT / 2)
-      ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y)
-      ctx.lineTo(iso.x + TILE_WIDTH, iso.y + TILE_HEIGHT / 2)
-      ctx.lineTo(iso.x + TILE_WIDTH / 2, iso.y + TILE_HEIGHT)
-      ctx.closePath()
-      ctx.stroke()
-
-      // Coordinate labels
       ctx.fillStyle = '#ffffff40'
-      ctx.font = '5px monospace'
+      ctx.font = '6px monospace'
       ctx.textAlign = 'center'
       ctx.fillText(
         `${col},${row}`,
-        iso.x + TILE_WIDTH / 2,
-        iso.y + TILE_HEIGHT / 2 + 2,
+        pos.x + TILE_WIDTH / 2,
+        pos.y + TILE_HEIGHT / 2 + 2,
       )
     }
   }
@@ -587,14 +532,4 @@ export function setupCanvas(
   ctx.imageSmoothingEnabled = false
 
   return ctx
-}
-
-// ── Helper ──────────────────────────────────────────────────────────────────
-
-function adjustBrightness(hex: string, amount: number): string {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.min(255, ((num >> 16) & 0xff) + amount))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + amount))
-  const b = Math.max(0, Math.min(255, (num & 0xff) + amount))
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }

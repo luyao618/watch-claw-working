@@ -8,7 +8,7 @@ import { setupCanvas, renderFrame } from '@/engine/renderer.ts'
 import { GameLoop } from '@/engine/gameLoop.ts'
 import { updateCharacter } from '@/engine/character.ts'
 import { updateCamera, pan, zoomStep, centerOn } from '@/engine/camera.ts'
-import { getTileAtScreen } from '@/engine/isometric.ts'
+import { getTileAtScreen } from '@/engine/coordinates.ts'
 import type { GameState } from '@/engine/gameState.ts'
 
 interface CanvasViewProps {
@@ -152,15 +152,13 @@ export default function CanvasView({
     }
   }, [initCanvas, onFpsUpdate])
 
-  // Mouse event handlers
+  // Mouse event handlers — left click drag to pan the view
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || e.button === 2) {
-      // Middle or right click — pan
-      isDraggingRef.current = true
-      setIsDragging(true)
-      lastMouseRef.current = { x: e.clientX, y: e.clientY }
-      e.preventDefault()
-    }
+    // Any mouse button can pan (left, middle, right)
+    isDraggingRef.current = true
+    setIsDragging(true)
+    lastMouseRef.current = { x: e.clientX, y: e.clientY }
+    e.preventDefault()
   }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {

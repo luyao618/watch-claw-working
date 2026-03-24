@@ -141,22 +141,22 @@ function makeModelChange(): SessionLogEvent {
 
 describe('mapToolToRoom', () => {
   it.each([
-    ['write', 'office', 'type', 'focused'],
-    ['edit', 'office', 'type', 'focused'],
-    ['exec', 'office', 'type', 'serious'],
-    ['read', 'living-room', 'sit', 'thinking'],
-    ['grep', 'living-room', 'sit', 'curious'],
-    ['glob', 'living-room', 'sit', 'curious'],
-    ['web_search', 'living-room', 'think', 'curious'],
-    ['memory_search', 'living-room', 'think', 'thinking'],
-    ['memory_get', 'living-room', 'sit', 'thinking'],
-    ['task', 'living-room', 'think', 'thinking'],
-    ['todowrite', 'office', 'type', 'focused'],
-    ['process', 'office', 'type', 'serious'],
-    ['sessions_spawn', 'living-room', 'think', 'thinking'],
-    ['sessions_send', 'living-room', 'think', 'thinking'],
-    ['sessions_list', 'living-room', 'sit', 'curious'],
-    ['sessions_history', 'living-room', 'sit', 'curious'],
+    ['write', 'workshop', 'type', 'focused'],
+    ['edit', 'workshop', 'type', 'focused'],
+    ['exec', 'workshop', 'type', 'serious'],
+    ['read', 'workshop', 'type', 'thinking'],
+    ['grep', 'workshop', 'type', 'curious'],
+    ['glob', 'workshop', 'type', 'curious'],
+    ['web_search', 'workshop', 'type', 'curious'],
+    ['memory_search', 'workshop', 'type', 'thinking'],
+    ['memory_get', 'workshop', 'type', 'thinking'],
+    ['task', 'workshop', 'type', 'thinking'],
+    ['todowrite', 'workshop', 'type', 'focused'],
+    ['process', 'workshop', 'type', 'serious'],
+    ['sessions_spawn', 'workshop', 'type', 'thinking'],
+    ['sessions_send', 'workshop', 'type', 'thinking'],
+    ['sessions_list', 'workshop', 'type', 'curious'],
+    ['sessions_history', 'workshop', 'type', 'curious'],
   ])(
     'maps %s → room=%s, animation=%s, emotion=%s',
     (tool, room, animation, emotion) => {
@@ -167,9 +167,9 @@ describe('mapToolToRoom', () => {
     },
   )
 
-  it('maps unknown tool to default (office)', () => {
+  it('maps unknown tool to default (workshop)', () => {
     const result = mapToolToRoom('unknown_tool_xyz')
-    expect(result.room).toBe('office')
+    expect(result.room).toBe('workshop')
     expect(result.animation).toBe('type')
     expect(result.emotion).toBe('focused')
   })
@@ -184,9 +184,15 @@ describe('parseSessionLogEvent', () => {
   })
 
   describe('user messages', () => {
-    it('returns WAKE_UP for user message', () => {
+    it('returns GOTO_ROOM(study) for user message', () => {
       const action = parseSessionLogEvent(makeUserMessage())
-      expect(action).toEqual({ type: 'WAKE_UP' })
+      expect(action).toEqual({
+        type: 'GOTO_ROOM',
+        room: 'study',
+        animation: 'type',
+        emotion: 'focused',
+        speed: 'fast',
+      })
     })
   })
 
@@ -195,9 +201,10 @@ describe('parseSessionLogEvent', () => {
       const action = parseSessionLogEvent(makeAssistantToolCall('write'))
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'type',
         emotion: 'focused',
+        speed: 'fast',
       })
     })
 
@@ -205,9 +212,10 @@ describe('parseSessionLogEvent', () => {
       const action = parseSessionLogEvent(makeAssistantToolCall('read'))
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'living-room',
-        animation: 'sit',
+        room: 'workshop',
+        animation: 'type',
         emotion: 'thinking',
+        speed: 'fast',
       })
     })
 
@@ -217,9 +225,10 @@ describe('parseSessionLogEvent', () => {
       )
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'type',
         emotion: 'focused',
+        speed: 'fast',
       })
     })
   })
@@ -235,27 +244,29 @@ describe('parseSessionLogEvent', () => {
       const action = parseSessionLogEvent(makeAssistantToolCall('edit', 'stop'))
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'type',
         emotion: 'focused',
+        speed: 'fast',
       })
     })
   })
 
   describe('assistant messages with thinking only', () => {
-    it('returns GOTO_ROOM(living-room, think, thinking)', () => {
+    it('returns GOTO_ROOM(study, think, thinking)', () => {
       const action = parseSessionLogEvent(makeAssistantThinking())
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'living-room',
+        room: 'study',
         animation: 'think',
         emotion: 'thinking',
+        speed: 'fast',
       })
     })
   })
 
   describe('assistant messages with text', () => {
-    it('returns GOTO_ROOM(office, type, focused) for text reply', () => {
+    it('returns GOTO_ROOM(study, type, focused) for text reply', () => {
       const event: SessionLogEvent = {
         type: 'message',
         id: 'test',
@@ -270,9 +281,10 @@ describe('parseSessionLogEvent', () => {
       const action = parseSessionLogEvent(event)
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'study',
         animation: 'type',
         emotion: 'focused',
+        speed: 'fast',
       })
     })
   })

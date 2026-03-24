@@ -47,10 +47,16 @@ function formatEvent(event: SessionLogEvent): string {
       if (Array.isArray(msg.content)) {
         const toolCall = msg.content.find((c) => c.type === 'toolCall')
         if (toolCall && toolCall.type === 'toolCall') {
-          return `${time}  ${toolCall.name}`
+          return `${time}  [tool] ${toolCall.name}`
+        }
+        const textItem = msg.content.find(
+          (c) => c.type === 'text' && c.text.trim().length > 0,
+        )
+        if (textItem && textItem.type === 'text') {
+          return `${time}  [reply] [message]`
         }
         const hasThinking = msg.content.some((c) => c.type === 'thinking')
-        if (hasThinking) return `${time}  [thinking]`
+        if (hasThinking) return `${time}  [thinking...]`
       }
       if (msg.stopReason === 'stop') return `${time}  [done]`
       return `${time}  [assistant]`

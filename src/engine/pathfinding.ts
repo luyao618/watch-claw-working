@@ -4,7 +4,7 @@
  * Uses 4-directional movement (N, S, E, W) on the walkability grid.
  */
 
-import type { TileCoord } from './isometric.ts'
+import type { TileCoord } from './coordinates.ts'
 
 interface PathNode {
   col: number

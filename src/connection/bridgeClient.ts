@@ -21,6 +21,7 @@ import type {
 
 type EventHandler = (event: SessionLogEvent) => void
 type StateHandler = (state: ConnectionState) => void
+type SessionSwitchHandler = () => void
 
 export class BridgeClient {
   private ws: WebSocket | null = null
@@ -34,6 +35,7 @@ export class BridgeClient {
 
   private eventHandlers = new Set<EventHandler>()
   private stateHandlers = new Set<StateHandler>()
+  private sessionSwitchHandlers = new Set<SessionSwitchHandler>()
 
   constructor(options?: Partial<BridgeClientOptions>) {
     this.url = options?.url ?? BRIDGE_WS_URL
@@ -102,6 +104,15 @@ export class BridgeClient {
     return () => this.stateHandlers.delete(handler)
   }
 
+  /**
+   * Register a handler for session switch events from Bridge Server.
+   * Returns an unsubscribe function.
+   */
+  onSessionSwitch(handler: SessionSwitchHandler): () => void {
+    this.sessionSwitchHandlers.add(handler)
+    return () => this.sessionSwitchHandlers.delete(handler)
+  }
+
   // ── Private ─────────────────────────────────────────────────────────────
 
   private doConnect(): void {
@@ -135,8 +146,21 @@ export class BridgeClient {
       try {
         const data = JSON.parse(evt.data as string)
 
-        // Skip bridge-internal messages (status, session_switch)
-        if (data._bridge) return
+        // Handle bridge-internal messages
+        if (data._bridge) {
+          if (data.type === 'session_switch') {
+            console.log('[BridgeClient] Session switch:', data.file)
+            for (const handler of this.sessionSwitchHandlers) {
+              try {
+                handler()
+              } catch (e) {
+                console.error('[BridgeClient] Session switch handler error:', e)
+              }
+            }
+          }
+          // Skip other bridge-internal messages (status, etc.)
+          return
+        }
 
         // Emit parsed session log event to all handlers
         for (const handler of this.eventHandlers) {

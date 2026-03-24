@@ -1,8 +1,7 @@
 // Connection Layer
-// WebSocket client, event parsing, mock provider, connection management
+// WebSocket client, event parsing, connection management
 
 export { BridgeClient } from './bridgeClient.ts'
-export { MockProvider } from './mockProvider.ts'
 export { ConnectionManager } from './connectionManager.ts'
 export { ActionQueue } from './actionQueue.ts'
 export {

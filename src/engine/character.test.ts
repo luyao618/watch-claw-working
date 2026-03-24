@@ -5,14 +5,19 @@ import {
   type WorldState,
   type CharacterState,
 } from './gameState.ts'
-import { buildWalkabilityGrid, FLOOR_LAYOUT } from '@/world/tileMap.ts'
+import {
+  buildWalkabilityGrid,
+  FLOOR_LAYOUT,
+  MAP_COLS,
+  MAP_ROWS,
+} from '@/world/tileMap.ts'
 import { ROOMS } from '@/world/rooms.ts'
 import { ALL_FURNITURE } from '@/world/furniture.ts'
 
 function makeWorld(): WorldState {
   return {
-    width: 16,
-    height: 12,
+    width: MAP_COLS,
+    height: MAP_ROWS,
     tiles: FLOOR_LAYOUT,
     walkabilityGrid: buildWalkabilityGrid(FLOOR_LAYOUT, ALL_FURNITURE),
     rooms: ROOMS,
@@ -30,7 +35,7 @@ describe('Character FSM', () => {
     it('GOTO_ROOM sets walking state and path', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 3, row: 6 },
         state: 'idle',
       })
 
@@ -38,7 +43,7 @@ describe('Character FSM', () => {
         character,
         {
           type: 'GOTO_ROOM',
-          room: 'living-room',
+          room: 'study',
           animation: 'sit',
           emotion: 'curious',
         },
@@ -54,7 +59,7 @@ describe('Character FSM', () => {
 
     it('GOTO_ROOM transitions directly if already at destination', () => {
       const world = makeWorld()
-      const activityZone = ROOMS.office.activityZone
+      const activityZone = ROOMS.workshop.activityZone
       const character = makeCharacter({
         position: { col: activityZone.col, row: activityZone.row },
         state: 'idle',
@@ -64,7 +69,7 @@ describe('Character FSM', () => {
         character,
         {
           type: 'GOTO_ROOM',
-          room: 'office',
+          room: 'workshop',
           animation: 'type',
           emotion: 'focused',
         },
@@ -94,20 +99,18 @@ describe('Character FSM', () => {
       expect(character.state).toBe('typing')
     })
 
-    it('GO_SLEEP routes to bedroom', () => {
+    it('GO_SLEEP sets idle with sleep delay', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 3, row: 6 },
         state: 'idle',
       })
 
       processAction(character, { type: 'GO_SLEEP' }, world)
 
-      expect(character.state).toBe('walking')
-      // Should be heading to bedroom
-      const lastPathTile = character.path![character.path!.length - 1]
-      expect(lastPathTile.col).toBe(ROOMS.bedroom.activityZone.col)
-      expect(lastPathTile.row).toBe(ROOMS.bedroom.activityZone.row)
+      expect(character.state).toBe('idle')
+      expect(character.emotion).toBe('sleepy')
+      expect(character.sleepDelayTimer).toBeGreaterThan(0)
     })
 
     it('CELEBRATE sets celebrating state', () => {
@@ -135,7 +138,7 @@ describe('Character FSM', () => {
     it('processes pending actions when idle', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 4, row: 5 },
         state: 'idle',
         pendingActions: [{ type: 'CELEBRATE' }],
       })
@@ -149,26 +152,29 @@ describe('Character FSM', () => {
     it('auto-sleeps after idle threshold', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 4, row: 5 },
         state: 'idle',
         idleTimer: 29,
+        sleepDelayTimer: 0,
+        currentSpeed: 3,
       })
 
       // Push past threshold (30s)
       updateCharacter(character, 2, world)
 
-      expect(character.state).toBe('walking')
-      // Should be heading to bedroom
+      // Should now be idle with sleepDelay set (waiting before going to bed)
+      expect(character.state).toBe('idle')
+      expect(character.sleepDelayTimer).toBeGreaterThan(0)
     })
 
     it('advances along path when walking', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 2, row: 5 },
         state: 'walking',
         path: [
-          { col: 3, row: 5 },
-          { col: 4, row: 5 },
+          { col: 2, row: 6 },
+          { col: 3, row: 6 },
         ],
         pathIndex: 0,
         targetState: 'typing',
@@ -189,7 +195,7 @@ describe('Character FSM', () => {
     it('can be interrupted while typing', () => {
       const world = makeWorld()
       const character = makeCharacter({
-        position: { col: 3, row: 4 },
+        position: { col: 4, row: 5 },
         state: 'typing',
         pendingActions: [{ type: 'CELEBRATE' }],
       })

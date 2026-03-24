@@ -136,7 +136,7 @@ export type BridgeMessage = BridgeStatusMessage | BridgeSessionSwitchMessage
 
 // ── Character Actions ───────────────────────────────────────────────────────
 
-export type RoomId = 'office' | 'living-room' | 'bedroom'
+export type RoomId = 'workshop' | 'study' | 'bedroom'
 
 export type AnimationId =
   | 'idle'
@@ -164,6 +164,7 @@ export type CharacterAction =
       room: RoomId
       animation: AnimationId
       emotion: EmotionId
+      speed?: 'fast' | 'slow' | 'normal'
     }
   | { type: 'CHANGE_EMOTION'; emotion: EmotionId }
   | { type: 'CHANGE_ANIMATION'; animation: AnimationId }
@@ -171,6 +172,7 @@ export type CharacterAction =
   | { type: 'GO_SLEEP' }
   | { type: 'CELEBRATE' }
   | { type: 'CONFUSED' }
+  | { type: 'RESET' }
 
 // ── Bridge Client Options ───────────────────────────────────────────────────
 

@@ -1,5 +1,9 @@
 /**
- * Room Definitions — defines the three rooms in the single-floor house.
+ * Room Definitions — defines the three rooms in the horizontal layout.
+ *
+ * Layout (1-tile-thick walls):
+ *   Workshop (cols 1-6) | Study (cols 8-14) | Bedroom (cols 16-22)
+ *   Doors at row 4, cols 7 and 15
  */
 
 import type { Room } from '@/engine/gameState.ts'
@@ -8,43 +12,43 @@ import type { RoomId } from '@/connection/types.ts'
 // ── Room Definitions ────────────────────────────────────────────────────────
 
 export const ROOMS: Record<RoomId, Room> = {
-  office: {
-    id: 'office',
-    name: 'Office',
+  workshop: {
+    id: 'workshop',
+    name: 'Workshop',
     bounds: {
-      startCol: 2,
-      startRow: 2,
-      endCol: 4,
+      startCol: 1,
+      startRow: 1,
+      endCol: 6,
       endRow: 7,
     },
-    entryTile: { col: 4, row: 5 }, // Door position
-    activityZone: { col: 3, row: 4 }, // Chair position (where character sits to type)
+    entryTile: { col: 6, row: 4 },
+    activityZone: { col: 4, row: 5 }, // Clear tile in front of workbench
     furnitureItems: [],
   },
-  'living-room': {
-    id: 'living-room',
-    name: 'Living Room',
+  study: {
+    id: 'study',
+    name: 'Study',
     bounds: {
-      startCol: 6,
-      startRow: 2,
-      endCol: 9,
+      startCol: 8,
+      startRow: 1,
+      endCol: 14,
       endRow: 7,
     },
-    entryTile: { col: 6, row: 5 }, // Door position
-    activityZone: { col: 7, row: 5 }, // Sofa position
+    entryTile: { col: 8, row: 4 },
+    activityZone: { col: 11, row: 4 }, // In front of the centered computer
     furnitureItems: [],
   },
   bedroom: {
     id: 'bedroom',
     name: 'Bedroom',
     bounds: {
-      startCol: 11,
-      startRow: 2,
-      endCol: 13,
+      startCol: 16,
+      startRow: 1,
+      endCol: 22,
       endRow: 7,
     },
-    entryTile: { col: 11, row: 5 }, // Door position
-    activityZone: { col: 12, row: 4 }, // Bed position
+    entryTile: { col: 16, row: 4 },
+    activityZone: { col: 19, row: 3 }, // On the bed
     furnitureItems: [],
   },
 }

@@ -92,13 +92,13 @@ describe('ActionQueue', () => {
 
       const goto1: CharacterAction = {
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'type',
         emotion: 'focused',
       }
       const goto2: CharacterAction = {
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'sit',
         emotion: 'thinking',
       }
@@ -120,13 +120,13 @@ describe('ActionQueue', () => {
 
       q.push({
         type: 'GOTO_ROOM',
-        room: 'office',
+        room: 'workshop',
         animation: 'type',
         emotion: 'focused',
       })
       q.push({
         type: 'GOTO_ROOM',
-        room: 'living-room',
+        room: 'study',
         animation: 'sit',
         emotion: 'curious',
       })

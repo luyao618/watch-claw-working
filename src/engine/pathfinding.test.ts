@@ -9,27 +9,27 @@ const grid = buildWalkabilityGrid(FLOOR_LAYOUT, ALL_FURNITURE)
 
 describe('findPath', () => {
   it('returns empty array when already at destination', () => {
-    const path = findPath({ col: 3, row: 4 }, { col: 3, row: 4 }, grid)
+    const path = findPath({ col: 4, row: 5 }, { col: 4, row: 5 }, grid)
     expect(path).toEqual([])
   })
 
   it('returns null for unreachable destination (wall)', () => {
-    const path = findPath({ col: 3, row: 4 }, { col: 0, row: 0 }, grid)
+    const path = findPath({ col: 4, row: 5 }, { col: 0, row: 0 }, grid)
     expect(path).toBeNull()
   })
 
-  it('finds path from office to living room through doors', () => {
-    const officeTile = ROOMS.office.activityZone
-    const livingTile = ROOMS['living-room'].activityZone
+  it('finds path from workshop to study through doors', () => {
+    const workshopTile = ROOMS.workshop.activityZone
+    const studyTile = ROOMS.study.activityZone
 
-    const path = findPath(officeTile, livingTile, grid)
+    const path = findPath(workshopTile, studyTile, grid)
     expect(path).not.toBeNull()
     expect(path!.length).toBeGreaterThan(0)
 
-    // Path should end at living room activity zone
+    // Path should end at study activity zone
     const last = path![path!.length - 1]
-    expect(last.col).toBe(livingTile.col)
-    expect(last.row).toBe(livingTile.row)
+    expect(last.col).toBe(studyTile.col)
+    expect(last.row).toBe(studyTile.row)
 
     // All tiles in path should be walkable
     for (const tile of path!) {
@@ -37,11 +37,11 @@ describe('findPath', () => {
     }
   })
 
-  it('finds path from office to bedroom through doors', () => {
-    const officeTile = ROOMS.office.activityZone
+  it('finds path from workshop to bedroom through doors', () => {
+    const workshopTile = ROOMS.workshop.activityZone
     const bedroomTile = ROOMS.bedroom.activityZone
 
-    const path = findPath(officeTile, bedroomTile, grid)
+    const path = findPath(workshopTile, bedroomTile, grid)
     expect(path).not.toBeNull()
     expect(path!.length).toBeGreaterThan(0)
 
@@ -50,20 +50,20 @@ describe('findPath', () => {
     expect(last.row).toBe(bedroomTile.row)
   })
 
-  it('finds path from bedroom to office', () => {
+  it('finds path from bedroom to workshop', () => {
     const bedroomTile = ROOMS.bedroom.activityZone
-    const officeTile = ROOMS.office.activityZone
+    const workshopTile = ROOMS.workshop.activityZone
 
-    const path = findPath(bedroomTile, officeTile, grid)
+    const path = findPath(bedroomTile, workshopTile, grid)
     expect(path).not.toBeNull()
     expect(path!.length).toBeGreaterThan(0)
   })
 
   it('never routes through walls', () => {
-    const officeTile = ROOMS.office.activityZone
+    const workshopTile = ROOMS.workshop.activityZone
     const bedroomTile = ROOMS.bedroom.activityZone
 
-    const path = findPath(officeTile, bedroomTile, grid)
+    const path = findPath(workshopTile, bedroomTile, grid)
     expect(path).not.toBeNull()
 
     for (const tile of path!) {
@@ -73,10 +73,10 @@ describe('findPath', () => {
   })
 
   it('never routes through non-walkable furniture', () => {
-    const officeTile = ROOMS.office.activityZone
-    const livingTile = ROOMS['living-room'].activityZone
+    const workshopTile = ROOMS.workshop.activityZone
+    const studyTile = ROOMS.study.activityZone
 
-    const path = findPath(officeTile, livingTile, grid)
+    const path = findPath(workshopTile, studyTile, grid)
     expect(path).not.toBeNull()
 
     for (const tile of path!) {

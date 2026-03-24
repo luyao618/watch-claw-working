@@ -1,7 +1,7 @@
 /**
  * Event Parser — maps session log events to character actions.
  *
- * Parses incoming SessionLogEvent objects (from Bridge or Mock) and returns
+ * Parses incoming SessionLogEvent objects (from Bridge Server) and returns
  * CharacterAction objects that drive the character FSM.
  */
 
@@ -24,60 +24,28 @@ interface ToolMapping {
 }
 
 const TOOL_ROOM_MAP: Record<string, ToolMapping> = {
-  // Write/edit tools → Office (typing)
-  write: { room: 'office', animation: 'type', emotion: 'focused' },
-  edit: { room: 'office', animation: 'type', emotion: 'focused' },
-
-  // Execute tools → Office (typing, serious)
-  exec: { room: 'office', animation: 'type', emotion: 'serious' },
-
-  // Read/search tools → Living Room (sitting)
-  read: { room: 'living-room', animation: 'sit', emotion: 'thinking' },
-  grep: { room: 'living-room', animation: 'sit', emotion: 'curious' },
-  glob: { room: 'living-room', animation: 'sit', emotion: 'curious' },
-
-  // Web/search → Living Room (thinking)
-  web_search: { room: 'living-room', animation: 'think', emotion: 'curious' },
-
-  // Memory → Living Room
-  memory_search: {
-    room: 'living-room',
-    animation: 'think',
-    emotion: 'thinking',
-  },
-  memory_get: { room: 'living-room', animation: 'sit', emotion: 'thinking' },
-
-  // Process → Office
-  process: { room: 'office', animation: 'type', emotion: 'serious' },
-
-  // Task/session tools → Living Room (thinking/planning)
-  task: { room: 'living-room', animation: 'think', emotion: 'thinking' },
-  todowrite: { room: 'office', animation: 'type', emotion: 'focused' },
-  sessions_spawn: {
-    room: 'living-room',
-    animation: 'think',
-    emotion: 'thinking',
-  },
-  sessions_send: {
-    room: 'living-room',
-    animation: 'think',
-    emotion: 'thinking',
-  },
-  sessions_list: {
-    room: 'living-room',
-    animation: 'sit',
-    emotion: 'curious',
-  },
-  sessions_history: {
-    room: 'living-room',
-    animation: 'sit',
-    emotion: 'curious',
-  },
+  // All tool executions → Workshop (doing work)
+  write: { room: 'workshop', animation: 'type', emotion: 'focused' },
+  edit: { room: 'workshop', animation: 'type', emotion: 'focused' },
+  exec: { room: 'workshop', animation: 'type', emotion: 'serious' },
+  read: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  grep: { room: 'workshop', animation: 'type', emotion: 'curious' },
+  glob: { room: 'workshop', animation: 'type', emotion: 'curious' },
+  web_search: { room: 'workshop', animation: 'type', emotion: 'curious' },
+  memory_search: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  memory_get: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  process: { room: 'workshop', animation: 'type', emotion: 'serious' },
+  task: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  todowrite: { room: 'workshop', animation: 'type', emotion: 'focused' },
+  sessions_spawn: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  sessions_send: { room: 'workshop', animation: 'type', emotion: 'thinking' },
+  sessions_list: { room: 'workshop', animation: 'type', emotion: 'curious' },
+  sessions_history: { room: 'workshop', animation: 'type', emotion: 'curious' },
 }
 
 // Default mapping for unknown tools
 const DEFAULT_TOOL_MAPPING: ToolMapping = {
-  room: 'office',
+  room: 'workshop',
   animation: 'type',
   emotion: 'focused',
 }
@@ -135,9 +103,15 @@ export function parseSessionLogEvent(
 
   const { message } = event
 
-  // User message → wake up
+  // User message → fast run to computer (study)
   if (message.role === 'user') {
-    return { type: 'WAKE_UP' }
+    return {
+      type: 'GOTO_ROOM',
+      room: 'study',
+      animation: 'type',
+      emotion: 'focused',
+      speed: 'fast',
+    }
   }
 
   // Assistant message
@@ -145,7 +119,7 @@ export function parseSessionLogEvent(
     const msg = message as AssistantMessage
     const contents = msg.content
 
-    // Check for toolCalls
+    // Check for toolCalls → fast run to appropriate room
     const toolCalls = contents.filter((c: ContentItem) => c.type === 'toolCall')
     if (toolCalls.length > 0) {
       // Use first toolCall to determine target
@@ -157,11 +131,12 @@ export function parseSessionLogEvent(
           room: mapping.room,
           animation: mapping.animation,
           emotion: mapping.emotion,
+          speed: 'fast',
         }
       }
     }
 
-    // Turn end → go to sleep (check after toolCalls)
+    // Turn end → go to sleep (slow, with delay handled in character FSM)
     if (msg.stopReason === 'stop') {
       return { type: 'GO_SLEEP' }
     }
@@ -175,9 +150,10 @@ export function parseSessionLogEvent(
     if (hasThinking && !hasText) {
       return {
         type: 'GOTO_ROOM',
-        room: 'living-room',
+        room: 'study',
         animation: 'think',
         emotion: 'thinking',
+        speed: 'fast',
       }
     }
 
@@ -185,9 +161,10 @@ export function parseSessionLogEvent(
       if (!assistantThrottle.shouldThrottle()) {
         return {
           type: 'GOTO_ROOM',
-          room: 'office',
+          room: 'study',
           animation: 'type',
           emotion: 'focused',
+          speed: 'fast',
         }
       }
       return null

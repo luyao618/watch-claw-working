@@ -1,9 +1,9 @@
 /**
- * Isometric coordinate math utilities.
+ * 3/4 Top-Down coordinate math utilities.
  *
- * Uses standard 2:1 isometric projection:
- *   TILE_WIDTH  = 64px (diamond width)
- *   TILE_HEIGHT = 32px (diamond height)
+ * Uses simple rectangular tile grid (Stardew Valley style):
+ *   TILE_WIDTH  = 32px
+ *   TILE_HEIGHT = 32px
  */
 
 import { TILE_WIDTH, TILE_HEIGHT } from '@/utils/constants.ts'
@@ -24,12 +24,12 @@ export interface TileCoord {
 
 /**
  * Convert cartesian grid position (col, row) to screen pixel position.
- * Returns the top-center of the isometric diamond.
+ * Returns the top-left corner of the tile.
  */
-export function cartesianToIso(col: number, row: number): ScreenPos {
+export function cartesianToScreen(col: number, row: number): ScreenPos {
   return {
-    x: (col - row) * (TILE_WIDTH / 2),
-    y: (col + row) * (TILE_HEIGHT / 2),
+    x: col * TILE_WIDTH,
+    y: row * TILE_HEIGHT,
   }
 }
 
@@ -37,14 +37,10 @@ export function cartesianToIso(col: number, row: number): ScreenPos {
  * Convert screen pixel position to cartesian grid position.
  * Useful for mouse hit-testing.
  */
-export function isoToCartesian(screenX: number, screenY: number): TileCoord {
+export function screenToCartesian(screenX: number, screenY: number): TileCoord {
   return {
-    col: Math.floor(
-      (screenX / (TILE_WIDTH / 2) + screenY / (TILE_HEIGHT / 2)) / 2,
-    ),
-    row: Math.floor(
-      (screenY / (TILE_HEIGHT / 2) - screenX / (TILE_WIDTH / 2)) / 2,
-    ),
+    col: Math.floor(screenX / TILE_WIDTH),
+    row: Math.floor(screenY / TILE_HEIGHT),
   }
 }
 
@@ -61,16 +57,15 @@ export function getTileAtScreen(
   // Remove camera transform to get world coordinates
   const worldX = (screenX - cameraOffsetX) / zoom
   const worldY = (screenY - cameraOffsetY) / zoom
-  return isoToCartesian(worldX, worldY)
+  return screenToCartesian(worldX, worldY)
 }
 
 /**
- * Get the center screen position of a tile (center of the diamond).
+ * Get the center screen position of a tile.
  */
 export function tileCenter(col: number, row: number): ScreenPos {
-  const iso = cartesianToIso(col, row)
   return {
-    x: iso.x,
-    y: iso.y + TILE_HEIGHT / 2,
+    x: col * TILE_WIDTH + TILE_WIDTH / 2,
+    y: row * TILE_HEIGHT + TILE_HEIGHT / 2,
   }
 }

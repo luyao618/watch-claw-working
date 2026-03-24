@@ -11,7 +11,8 @@ import type {
   RoomId,
   CharacterAction,
 } from '@/connection/types.ts'
-import type { TileCoord } from './isometric.ts'
+import type { TileCoord } from './coordinates.ts'
+import { CHARACTER_SPEED } from '@/utils/constants.ts'
 
 // ── Character State ─────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ export interface CharacterState {
   animationTimer: number
   direction: Direction
   idleTimer: number
+  sleepDelayTimer: number // Delay before going to sleep after done
+  currentSpeed: number // Current movement speed
   pendingActions: CharacterAction[]
 }
 
@@ -104,7 +107,7 @@ export interface CameraState {
 // ── Connection Info ─────────────────────────────────────────────────────────
 
 export interface ConnectionInfo {
-  status: 'live' | 'mock' | 'connecting' | 'disconnected'
+  status: 'live' | 'connecting' | 'disconnected'
   lastEventTime: number | null
   model: string | null
   provider: string | null
@@ -119,7 +122,6 @@ export interface DebugState {
   showGrid: boolean
   showFps: boolean
   showDashboard: boolean
-  forceMock: boolean
   currentFps: number
 }
 
@@ -137,7 +139,7 @@ export interface GameState {
 
 export function createInitialCharacterState(): CharacterState {
   return {
-    position: { col: 12, row: 5 }, // Start in bedroom
+    position: { col: 18.5, row: 3.5 }, // Start in bedroom (center of bed)
     prevPosition: null,
     state: 'sleeping',
     emotion: 'sleepy',
@@ -151,6 +153,8 @@ export function createInitialCharacterState(): CharacterState {
     animationTimer: 0,
     direction: 'sw',
     idleTimer: 0,
+    sleepDelayTimer: 0,
+    currentSpeed: CHARACTER_SPEED,
     pendingActions: [],
   }
 }
@@ -159,10 +163,10 @@ export function createInitialCameraState(): CameraState {
   return {
     offsetX: 0,
     offsetY: 0,
-    zoom: 2,
+    zoom: 1,
     targetOffsetX: 0,
     targetOffsetY: 0,
-    targetZoom: 2,
+    targetZoom: 1,
   }
 }
 
@@ -183,7 +187,6 @@ export function createInitialDebugState(): DebugState {
     showGrid: false,
     showFps: true,
     showDashboard: true,
-    forceMock: false,
     currentFps: 0,
   }
 }

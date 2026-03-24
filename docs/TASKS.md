@@ -1,9 +1,9 @@
 # Watch Claw - Task Breakdown
 
-> **Version**: 0.1.0 (Draft)
-> **Date**: 2026-03-22
+> **Version**: 0.2.0
+> **Date**: 2026-03-23
 > **Granularity**: ~half-day per task
-> **Total estimated tasks**: 20 tasks across 6 phases
+> **Total estimated tasks**: 28 tasks across 7 phases
 
 ---
 
@@ -13,14 +13,15 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### Phase Summary
 
-| Phase | Name                 | Tasks | Scope                                                          |
-| ----- | -------------------- | ----- | -------------------------------------------------------------- |
-| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation |
-| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                    |
-| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                          |
-| P3    | World Building       | 3     | Tile map, rooms, furniture                                     |
-| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                            |
-| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                           |
+| Phase | Name                 | Tasks | Scope                                                                    |
+| ----- | -------------------- | ----- | ------------------------------------------------------------------------ |
+| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation           |
+| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                              |
+| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                                    |
+| P3    | World Building       | 3     | Tile map, rooms, furniture                                               |
+| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                                      |
+| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                                     |
+| P6    | v0.2 Improvements    | 8     | Remove mock, Bridge enhancements, pixel art, renderer refactor, Electron |
 
 ---
 
@@ -1168,3 +1169,294 @@ This order prioritizes **visual feedback early** (seeing the isometric grid on s
 - [x] P3: One-floor house visible with 3 rooms, walls, doors, furniture
 - [x] P4: Lobster-hat character walks between rooms, plays animations, shows emotions
 - [x] P5: Events drive character behavior end-to-end, dashboard shows status, app is polished
+- [ ] P6: Mock removed, Bridge enhanced, 3/4 top-down pixel art redone, Electron desktop app
+
+---
+
+## Phase 6: v0.2 Improvements
+
+### T6.1 — Remove Mock Data Logic (0.5 day)
+
+> Fully remove Mock mode, only support real Bridge Server data.
+
+**Depends on**: T5.3
+
+**Delete:**
+
+- `src/connection/mockProvider.ts`
+- `src/connection/mockProvider.test.ts`
+
+**Modify:**
+
+- `src/connection/connectionManager.ts` — Remove `MockProvider` references, `switchToMock()`, `MOCK_SWITCH_DELAY_MS`, `mock` state
+- `src/connection/index.ts` — Remove MockProvider export
+- `src/App.tsx` — Remove `forceMock` keyboard shortcut (M key)
+- `src/engine/gameState.ts` — Remove `forceMock` from `DebugState`; remove `'mock'` from `ConnectionInfo.status`
+- `src/ui/ConnectionBadge.tsx` — Remove "Mock" status, keep only Live / Connecting / Disconnected
+- `package.json` — Remove `dev:mock` script
+
+**New ConnectionManager behavior:**
+
+- Start → Connect Bridge → Success = `'live'`, Failure = keep retrying (exponential backoff), status = `'connecting'`
+- Never generate fake data
+
+**Acceptance criteria:**
+
+- [ ] No `mock` / `Mock` / `MockProvider` references in code
+- [ ] `pnpm test` passes (after removing mock tests)
+- [ ] UI shows "Connecting..." when Bridge unavailable, never "Mock"
+- [ ] Character does not auto-move without real events
+
+---
+
+### T6.2 — Bridge Server Enhancements (0.5 day)
+
+> Improve session monitoring sensitivity and session switch notifications.
+
+**Depends on**: T6.1
+
+**Modify:** `bridge/server.ts`
+
+- Shorten `SESSION_CHECK_INTERVAL_MS` from 5000 → 2000
+- Add `fs.watch` on `sessions.json` itself, trigger `checkForSessionChange()` immediately on file change
+- Session switch broadcasts `session_switch` message (already exists), frontend `BridgeClient` dispatches `RESET` on receipt
+- Confirm `pnpm dev` script correctly starts Vite + Bridge Server concurrently
+
+**Modify:** `src/connection/bridgeClient.ts`
+
+- On receiving `_bridge: true, type: 'session_switch'` message, emit a special event to notify ConnectionManager (currently `_bridge` messages are skipped)
+
+**Modify:** `src/connection/connectionManager.ts`
+
+- On session switch notification, dispatch `RESET` action to reset character
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev` starts Vite + Bridge Server together
+- [ ] Bridge Server detects session switch within 2s
+- [ ] Character auto-resets to bedroom/sleeping on session switch
+- [ ] `sessions.json` modifications immediately trigger check
+
+---
+
+### T6.3 — Pixel Art Asset Directory Structure (0.5 day)
+
+> Set up sprite loading framework and asset directory for Stardew Valley style pixel assets.
+
+**Depends on**: T6.1
+
+**User provides**: Download Stardew Valley style pixel assets from itch.io / OpenGameArt
+
+**Developer provides**: Directory structure and sprite loading framework
+
+```
+public/assets/
+├── tilesets/
+│   └── interior.png          # Floor, wall tileset (16x16 or 32x32)
+├── furniture/
+│   ├── desk-computer.png     # Computer desk
+│   ├── bookshelf.png         # Bookshelf
+│   ├── bed.png               # Bed
+│   ├── sofa.png              # Sofa
+│   ├── lamp.png              # Desk lamp
+│   └── ...
+├── character/
+│   └── character.png         # Character spritesheet (walk/idle/sit/type/sleep)
+└── ui/
+    └── emotion-bubbles.png   # Emotion bubble sprites
+```
+
+**New files:**
+
+- `src/engine/spritesheet.ts` — Spritesheet loading, frame cutting, animation frame definitions
+
+**Modify:**
+
+- `src/world/sprites.ts` — Rewrite to spritesheet-based loading (replacing placeholder logic)
+
+**Acceptance criteria:**
+
+- [ ] Spritesheet loader correctly cuts frames
+- [ ] Missing images have clear fallback (colored placeholder blocks + console warning)
+
+---
+
+### T6.4 — Coordinate System and Rendering Refactor (1 day)
+
+> Switch from isometric (diamond tiles) to 3/4 top-down (Stardew Valley style rectangular tiles).
+
+**Depends on**: T6.3
+
+**Current**: Isometric rendering (diamond tiles, z-sorting by col+row)
+**Target**: 3/4 top-down sprite-based rendering (rectangular tiles, y-sorting)
+
+**Rewrite:**
+
+- `src/engine/isometric.ts` → `src/engine/coordinates.ts`
+  - `cartesianToScreen(col, row)` — Grid position → screen pixels (simple tile size multiplication)
+  - `screenToCartesian(x, y, camera)` — Mouse position → grid position
+  - Remove all isometric diamond calculations
+- `src/engine/isometric.test.ts` → `src/engine/coordinates.test.ts`
+- `src/engine/renderer.ts` — Full rewrite
+  - Render layers: floor tiles → walls → furniture → character → emotion bubbles → UI
+  - Use `ctx.drawImage()` for sprites (replacing `ctx.fillRect` / `ctx.beginPath`)
+  - Y-coordinate sorting for correct occlusion (standard 3/4 view approach)
+- `src/engine/camera.ts` — Simplify to top-down camera
+- Update all files referencing isometric: `gameState.ts`, `character.ts`, `pathfinding.ts`, `CanvasView.tsx`, etc.
+
+**Acceptance criteria:**
+
+- [ ] Floor tiles render as rectangular grid (not diamonds)
+- [ ] Sprite assets display correctly if available; colored placeholders if missing
+- [ ] Camera pan/zoom works correctly in new perspective
+
+---
+
+### T6.5 — Rebuild World Map and Rooms (0.5 day)
+
+> Rebuild map with new room names and horizontal layout.
+
+**Depends on**: T6.4
+
+**Room layout (horizontal row):**
+
+```
+┌─────────────┬─────────────┬─────────────┐
+│             │             │             │
+│  Workshop   │   Study     │  Bedroom    │
+│  (工作室)    │   (书房)    │  (卧室)     │
+│             │             │             │
+└─────────────┴─────────────┴─────────────┘
+```
+
+**Modify:**
+
+- `src/connection/types.ts` — `RoomId` from `'office' | 'living-room' | 'bedroom'` to `'workshop' | 'study' | 'bedroom'`
+- `src/connection/eventParser.ts` — Update `TOOL_ROOM_MAP` room references
+- `src/world/tileMap.ts` — Horizontal 3-room tile map (~24x10 tiles)
+- `src/world/rooms.ts` — Update room definitions: Workshop, Study, Bedroom
+- `src/world/furniture.ts` — Define furniture placement with sprite references (position + spriteKey)
+- `src/engine/pathfinding.ts` — BFS unchanged, only update grid size
+- `src/engine/character.ts` — Update RESET action bedroom coordinates
+
+**Furniture configuration:**
+| Room | Furniture |
+| -------- | -------------------------------------------- |
+| Workshop | Computer desk (dual monitors), office chair, small bookshelf |
+| Study | Large bookshelf, sofa, coffee table, desk lamp |
+| Bedroom | Bed, nightstand, desk lamp |
+
+**Acceptance criteria:**
+
+- [ ] Three rooms display horizontally, separated by walls and doors
+- [ ] Furniture displays in correct positions (sprites or placeholder blocks)
+- [ ] Character can move between all three rooms through doors (pathfinding correct)
+
+---
+
+### T6.6 — Character Sprite Integration (0.5 day)
+
+> Switch character rendering from programmatic drawing to spritesheet-driven.
+
+**Depends on**: T6.5
+
+**Modify:**
+
+- `src/engine/character.ts` — Animation system uses spritesheet frame indices
+- `src/engine/renderer.ts` — Character rendering uses `drawImage()` to cut frames from spritesheet
+
+**Character animation frames:**
+| Animation | Frames | Directions | Trigger |
+| --------- | ------ | -------------- | ---------------- |
+| idle | 2-4 | 4-directional | Default |
+| walk | 4-6 | 4-directional | GOTO_ROOM |
+| type | 2-4 | 1-dir (facing desk) | Workshop activity |
+| read | 2 | 1-dir (facing shelf) | Study activity |
+| sleep | 2-4 | 1-dir (facing bed) | Bedroom/idle timeout |
+
+**Emotion bubbles:** sprite-based, floating above character head
+
+**Acceptance criteria:**
+
+- [ ] Character rendered with spritesheet (not programmatic rectangles)
+- [ ] Smooth frame animation when walking
+- [ ] Different state animations play in different rooms
+- [ ] Emotion bubbles display correctly
+
+---
+
+### T6.7 — Electron Desktop App Integration (1 day)
+
+> Wrap the web project as an Electron desktop app with system tray and always-on-top support.
+
+**Depends on**: T6.6
+
+**New files:**
+
+- `electron/main.ts` — Electron main process entry
+  - Create BrowserWindow, load Vite dev server (dev) or bundled files (production)
+  - Window options: borderless or semi-transparent, always-on-top, resizable
+  - System tray icon and menu (show/hide, quit)
+- `electron/preload.ts` — Preload script (secure IPC channels)
+- `electron/tray.ts` — System tray management
+
+**Modify:**
+
+- `package.json` — Add Electron dependencies (`electron`, `electron-builder`), new scripts:
+  - `"dev:electron"` — Start Vite + Bridge Server + Electron concurrently
+  - `"build:electron"` — Package as macOS .app / .dmg
+  - `"pack"` — electron-builder packaging
+- `vite.config.ts` — Adapt for Electron renderer build (base path etc.)
+- Bridge Server integration — Bridge Server can run in two modes:
+  - As standalone process (same as v0.1)
+  - Forked by Electron main process (recommended, unified lifecycle management)
+
+**Window features:**
+
+- Default window size: 1100x700 (canvas + dashboard)
+- Always-on-top toggle (tray menu or keyboard shortcut)
+- Window position and size memory (restore on next launch)
+- macOS: Dock icon support, click Dock icon to restore window
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev:electron` opens Electron window with full UI
+- [ ] Bridge Server forked and managed by Electron main process
+- [ ] System tray icon visible, right-click menu has show/hide/quit
+- [ ] Always-on-top toggleable
+- [ ] Window can be reopened via tray icon after closing
+- [ ] `pnpm build:electron` produces distributable macOS app
+
+---
+
+### T6.8 — End-to-End Verification and Polish (0.5 day)
+
+> Full pipeline verification of v0.2 changes and experience polish.
+
+**Depends on**: T6.7
+
+**Verification items:**
+
+- Bridge Server connection → Event parsing → Character FSM → Renderer full pipeline
+- Character stays quiet in bedroom sleeping when no events
+- OpenClaw `write`/`edit`/`exec` → Character goes to Workshop and types
+- OpenClaw `read`/`grep`/`web_search` → Character goes to Study
+- OpenClaw `stopReason: 'stop'` → Character returns to Bedroom and sleeps
+- Session switch → Character resets
+- Electron desktop window runs stably
+
+**Polish:**
+
+- Adjust walking speed (not too fast, not too slow)
+- Adjust animation frame rates
+- Dashboard removes Mock-related displays
+- Update README
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev:electron` → Electron + Bridge Server + Vite start together
+- [ ] Window shows "Live", character quietly sleeping (no events)
+- [ ] Character correctly responds to real events
+- [ ] `pnpm test` passes, `pnpm typecheck` zero errors, `pnpm build` succeeds
+- [ ] 10-minute stable run with no errors
+- [ ] Electron app packages successfully (macOS .app)

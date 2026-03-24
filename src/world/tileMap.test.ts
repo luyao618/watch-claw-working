@@ -12,8 +12,8 @@ import { TileType } from '@/engine/gameState.ts'
 
 describe('tileMap', () => {
   it('has correct dimensions', () => {
-    expect(MAP_COLS).toBe(16)
-    expect(MAP_ROWS).toBe(12)
+    expect(MAP_COLS).toBe(24)
+    expect(MAP_ROWS).toBe(10)
   })
 
   it('getFloorLayout returns the layout', () => {
@@ -36,9 +36,9 @@ describe('buildWalkabilityGrid', () => {
   })
 
   it('marks carpet tiles as walkable', () => {
-    // Row 3, col 7 should be FLOOR_CARPET (living room)
-    expect(FLOOR_LAYOUT[3][7]).toBe(TileType.FLOOR_CARPET)
-    expect(grid[3][7]).toBe(true)
+    // Row 3, col 9 should be FLOOR_CARPET (study)
+    expect(FLOOR_LAYOUT[3][9]).toBe(TileType.FLOOR_CARPET)
+    expect(grid[3][9]).toBe(true)
   })
 
   it('marks wall tiles as non-walkable', () => {
@@ -48,9 +48,9 @@ describe('buildWalkabilityGrid', () => {
   })
 
   it('marks empty tiles as non-walkable', () => {
-    // Row 0, col 0 should be EMPTY
-    expect(FLOOR_LAYOUT[0][0]).toBe(TileType.EMPTY)
-    expect(grid[0][0]).toBe(false)
+    // Row 9, col 0 should be EMPTY
+    expect(FLOOR_LAYOUT[9][0]).toBe(TileType.EMPTY)
+    expect(grid[9][0]).toBe(false)
   })
 
   it('marks door tiles as walkable', () => {

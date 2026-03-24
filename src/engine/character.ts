@@ -3,7 +3,7 @@
  */
 
 import { findPath, getDirection } from './pathfinding.ts'
-import type { TileCoord } from './isometric.ts'
+import type { TileCoord } from './coordinates.ts'
 import type {
   CharacterState,
   CharacterFSMState,
@@ -16,7 +16,13 @@ import type {
   EmotionId,
 } from '@/connection/types.ts'
 import { ANIMATIONS } from '@/world/sprites.ts'
-import { CHARACTER_SPEED, IDLE_SLEEP_THRESHOLD_S } from '@/utils/constants.ts'
+import {
+  CHARACTER_SPEED,
+  CHARACTER_SPEED_FAST,
+  CHARACTER_SPEED_SLOW,
+  IDLE_SLEEP_THRESHOLD_S,
+  SLEEP_DELAY_S,
+} from '@/utils/constants.ts'
 
 // ── Animation Helpers ───────────────────────────────────────────────────────
 
@@ -106,8 +112,8 @@ function moveAlongPath(character: CharacterState, dt: number): void {
       character.direction = getDirection(character.position, next) as Direction
     }
   } else {
-    // Move toward target
-    const speed = CHARACTER_SPEED * dt
+    // Move toward target using current speed
+    const speed = character.currentSpeed * dt
     character.position.col += (dx / distance) * speed
     character.position.row += (dy / distance) * speed
   }
@@ -126,6 +132,27 @@ export function updateCharacter(
 ): void {
   switch (character.state) {
     case 'idle':
+      // Check sleep delay (waiting at computer before going to bed)
+      if (character.sleepDelayTimer > 0) {
+        character.sleepDelayTimer -= dt
+        if (character.sleepDelayTimer <= 0) {
+          character.sleepDelayTimer = 0
+          // Now slowly walk to bedroom
+          character.currentSpeed = CHARACTER_SPEED_SLOW
+          processAction(
+            character,
+            {
+              type: 'GOTO_ROOM',
+              room: 'bedroom',
+              animation: 'sleep',
+              emotion: 'sleepy',
+              speed: 'slow',
+            },
+            world,
+          )
+        }
+        break
+      }
       // Check pending actions
       if (character.pendingActions.length > 0) {
         processAction(character, character.pendingActions.shift()!, world)
@@ -152,6 +179,14 @@ export function updateCharacter(
 
         // Update current room based on final position
         updateCurrentRoom(character, world)
+
+        // If arrived at bedroom to sleep, snap to bed center
+        if (
+          character.currentRoom === 'bedroom' &&
+          character.emotion === 'sleepy'
+        ) {
+          character.position = { col: 18.5, row: 3.5 }
+        }
       }
       break
 
@@ -185,6 +220,18 @@ export function processAction(
         console.warn(`[Character] Unknown room: ${action.room}`)
         return
       }
+
+      // Set speed based on action
+      if (action.speed === 'fast') {
+        character.currentSpeed = CHARACTER_SPEED_FAST
+      } else if (action.speed === 'slow') {
+        character.currentSpeed = CHARACTER_SPEED_SLOW
+      } else {
+        character.currentSpeed = CHARACTER_SPEED
+      }
+
+      // Cancel any pending sleep delay
+      character.sleepDelayTimer = 0
 
       const targetTile = room.activityZone
       const fromTile: TileCoord = {
@@ -222,16 +269,9 @@ export function processAction(
       break
 
     case 'GO_SLEEP':
-      processAction(
-        character,
-        {
-          type: 'GOTO_ROOM',
-          room: 'bedroom',
-          animation: 'sleep',
-          emotion: 'sleepy',
-        },
-        world,
-      )
+      // Set a delay timer — character waits at current position before going to bed
+      character.sleepDelayTimer = SLEEP_DELAY_S
+      transitionTo(character, 'idle', 'sleepy')
       break
 
     case 'CELEBRATE':
@@ -249,6 +289,20 @@ export function processAction(
     case 'CHANGE_ANIMATION':
       character.currentAnimation = action.animation
       character.animationFrame = 0
+      break
+
+    case 'RESET':
+      // Full reset — used when session switches or reconnecting.
+      // Clears all pending actions and returns character to bedroom/sleeping.
+      character.pendingActions.length = 0
+      character.path = null
+      character.pathIndex = 0
+      character.targetState = null
+      character.targetEmotion = null
+      character.prevPosition = null
+      transitionTo(character, 'sleeping', 'sleepy')
+      character.currentRoom = 'bedroom'
+      character.position = { col: 18.5, row: 3.5 } // Center of bed
       break
   }
 }

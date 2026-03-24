@@ -1,7 +1,7 @@
 # Watch Claw - Technical Design Document
 
-> **Version**: 0.1.0 (Draft)
-> **Date**: 2026-03-22
+> **Version**: 0.2.0
+> **Date**: 2026-03-23
 > **Status**: In Progress
 
 ---
@@ -2091,21 +2091,21 @@ Errors are handled at each layer with the principle: **never crash the visualiza
 
 ### 8.1 Error Layers
 
-| Layer                | Error Type                       | Handling                                            | User Impact                                          |
-| -------------------- | -------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
-| **Bridge Server**    | Session log file not found       | Wait for file to appear, retry periodically         | Badge shows "Waiting", character stays idle          |
-| **Bridge Server**    | sessions.json read failure       | Use last known session, log warning                 | None — continue monitoring current session           |
-| **Bridge WebSocket** | Connection refused (Bridge down) | Auto-reconnect with backoff; switch to MockProvider | Badge shows "Mock", character continues in mock mode |
-| **Bridge WebSocket** | Connection dropped               | Reconnect; buffer events during reconnect           | Brief "Reconnecting..." badge, then resume           |
-| **Bridge WebSocket** | Malformed message (invalid JSON) | Log warning, skip line, continue                    | None — silently ignored                              |
-| **EventParser**      | Unknown event type               | Return `null`, log debug message                    | None — event ignored                                 |
-| **EventParser**      | Unknown tool name                | Map to default room (office), log warning           | Character goes to office (sensible default)          |
-| **ActionQueue**      | Queue overflow                   | Drop lowest-priority action                         | Character skips less important animations            |
-| **Pathfinding**      | No path found                    | Character stays in current room, log warning        | Character doesn't move (safe fallback)               |
-| **Character FSM**    | Invalid state transition         | Ignore transition, log error                        | Character stays in current state                     |
-| **Renderer**         | Sprite load failure              | Use colored rectangle placeholder                   | Slightly degraded visuals, still functional          |
-| **Renderer**         | Canvas context lost              | Re-acquire context, re-initialize                   | Brief flicker, then resume                           |
-| **GameLoop**         | Excessively large dt             | Cap at MAX_FRAME_DT (100ms)                         | Prevents spiral of death                             |
+| Layer                | Error Type                       | Handling                                          | User Impact                                       |
+| -------------------- | -------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| **Bridge Server**    | Session log file not found       | Wait for file to appear, retry periodically       | Badge shows "Waiting", character stays idle       |
+| **Bridge Server**    | sessions.json read failure       | Use last known session, log warning               | None — continue monitoring current session        |
+| **Bridge WebSocket** | Connection refused (Bridge down) | Auto-reconnect with backoff; stay in 'connecting' | Badge shows "Connecting...", character stays idle |
+| **Bridge WebSocket** | Connection dropped               | Reconnect; buffer events during reconnect         | Brief "Reconnecting..." badge, then resume        |
+| **Bridge WebSocket** | Malformed message (invalid JSON) | Log warning, skip line, continue                  | None — silently ignored                           |
+| **EventParser**      | Unknown event type               | Return `null`, log debug message                  | None — event ignored                              |
+| **EventParser**      | Unknown tool name                | Map to default room (office), log warning         | Character goes to office (sensible default)       |
+| **ActionQueue**      | Queue overflow                   | Drop lowest-priority action                       | Character skips less important animations         |
+| **Pathfinding**      | No path found                    | Character stays in current room, log warning      | Character doesn't move (safe fallback)            |
+| **Character FSM**    | Invalid state transition         | Ignore transition, log error                      | Character stays in current state                  |
+| **Renderer**         | Sprite load failure              | Use colored rectangle placeholder                 | Slightly degraded visuals, still functional       |
+| **Renderer**         | Canvas context lost              | Re-acquire context, re-initialize                 | Brief flicker, then resume                        |
+| **GameLoop**         | Excessively large dt             | Cap at MAX_FRAME_DT (100ms)                       | Prevents spiral of death                          |
 
 ### 8.2 Error Reporting
 
@@ -2138,7 +2138,7 @@ const logger: ErrorLogger = {
 
 1. Connection lost → state transitions to `reconnecting`
 2. Exponential backoff retry (1s, 2s, 4s, ..., 30s max)
-3. After 5 failed retries → switch to MockProvider, keep retrying in background
+3. After 5 failed retries → keep retrying with max backoff (30s)
 4. On successful reconnect → Bridge Server continues pushing new events from current file position
 5. Resume event processing from current state (no history replay)
 
@@ -2172,7 +2172,6 @@ canvas.addEventListener('webglcontextrestored', () => {
 1. Character is always visible (even as a colored rectangle)
 2. Character always responds to events (even if animations degrade)
 3. Dashboard always shows connection status
-4. Mock mode is always available as a fallback
 
 ---
 
@@ -2215,9 +2214,107 @@ pnpm test
 
 ### 9.3 Dev Mode Features
 
-- **Mock mode indicator**: Clear visual badge showing "MOCK" when using simulated data
-- **Debug grid overlay**: Toggle isometric grid lines for tile alignment
+- **Debug grid overlay**: Toggle grid lines for tile alignment
 - **FPS counter**: Shows current frame rate
 - **Event log**: Console-style log of all incoming Session Log events
 - **Hot reload**: Vite HMR for instant feedback on code changes
 - **Bridge status**: Shows Bridge Server connection status and currently monitored session ID
+
+---
+
+## 10. v0.2 Architecture Changes
+
+### 10.1 Mock Provider Removal
+
+The `MockProvider` class and all related mock fallback logic are removed in v0.2. The `ConnectionManager` no longer has a `'mock'` state. When the Bridge Server is unavailable, the system stays in `'connecting'` state with exponential backoff retry, and the character remains idle/sleeping. No fake data is ever generated.
+
+**Removed files:**
+
+- `src/connection/mockProvider.ts`
+- `src/connection/mockProvider.test.ts`
+
+**Modified ConnectionManager state machine:**
+
+```
+DISCONNECTED → CONNECTING → CONNECTED ('live')
+                    ↑            ↓ (on close)
+                    └── RECONNECTING (exp. backoff, status stays 'connecting')
+```
+
+### 10.2 Rendering: Isometric → 3/4 Top-Down
+
+The rendering engine switches from isometric (2:1 diamond tiles) to 3/4 top-down (Stardew Valley style rectangular tiles).
+
+**Key changes:**
+
+- `isometric.ts` → `coordinates.ts` — Simple cartesian-to-screen multiplication replaces diamond math
+- Tile shape: Rectangle (e.g. 32x32 or 16x16) instead of 64x32 diamond
+- Depth sorting: Y-coordinate based (lower y = further back) instead of col+row
+- Sprites rendered with `ctx.drawImage()` from spritesheets instead of programmatic `ctx.fillRect()`/`ctx.beginPath()`
+- Camera simplified to top-down pan/zoom (no isometric offset math)
+
+### 10.3 Room Naming
+
+| v0.1        | v0.2              | RoomId       |
+| ----------- | ----------------- | ------------ |
+| Office      | Workshop (工作室) | `'workshop'` |
+| Living Room | Study (书房)      | `'study'`    |
+| Bedroom     | Bedroom (卧室)    | `'bedroom'`  |
+
+### 10.4 Sprite-Based Rendering
+
+v0.2 replaces all programmatic drawing (colored rectangles, geometric shapes) with sprite-based rendering:
+
+- **Tiles**: Loaded from tileset PNGs, cut into individual tile frames
+- **Furniture**: Individual sprite PNGs per furniture item
+- **Character**: Spritesheet with animation frames (walk/idle/type/sleep/sit)
+- **Emotions**: Sprite-based emotion bubbles
+
+Fallback: If sprite files are missing, colored placeholder blocks are rendered with a console warning.
+
+### 10.5 Electron Desktop App
+
+v0.2 wraps the web application in an Electron shell for a standalone desktop experience.
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Electron Main Process                       │
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────────────────────────┐  │
+│  │  BrowserWindow   │  │  Bridge Server (forked child)       │  │
+│  │  (loads renderer │  │  - fs.watch session JSONL            │  │
+│  │   via Vite or    │  │  - WebSocket server :18790           │  │
+│  │   bundled files) │  │  - Session discovery/swap            │  │
+│  └────────┬─────────┘  └────────────────────────┬────────────┘  │
+│           │ IPC                                  │               │
+│  ┌────────▼─────────────────────────────────────▼────────────┐  │
+│  │                   System Tray                              │  │
+│  │  - Show/Hide window                                        │  │
+│  │  - Always-on-top toggle                                    │  │
+│  │  - Quit                                                    │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key design decisions:**
+
+- Bridge Server is forked by the Electron main process for unified lifecycle management
+- Window position/size is remembered across sessions
+- Always-on-top is togglable via tray menu
+- Closing the window hides it to tray (not quit); quit via tray menu
+
+**New project structure additions:**
+
+```
+electron/
+├── main.ts        # Electron main process entry
+├── preload.ts     # Preload script (secure IPC)
+└── tray.ts        # System tray management
+```
+
+**New scripts:**
+
+- `pnpm dev:electron` — Start Vite + Bridge Server + Electron concurrently
+- `pnpm build:electron` — Package as macOS .app / .dmg

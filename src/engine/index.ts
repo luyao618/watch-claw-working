@@ -1,13 +1,13 @@
 // Game Engine Layer
-// Game loop, renderer, character FSM, pathfinding, camera, isometric math
+// Game loop, renderer, character FSM, pathfinding, camera, coordinate math
 
 export {
-  cartesianToIso,
-  isoToCartesian,
+  cartesianToScreen,
+  screenToCartesian,
   getTileAtScreen,
   tileCenter,
-} from './isometric.ts'
-export type { ScreenPos, TileCoord } from './isometric.ts'
+} from './coordinates.ts'
+export type { ScreenPos, TileCoord } from './coordinates.ts'
 
 export { GameLoop } from './gameLoop.ts'
 
@@ -49,3 +49,5 @@ export {
   MIN_ZOOM,
   MAX_ZOOM,
 } from './camera.ts'
+
+export { Spritesheet, loadSprite, drawFallbackRect } from './spritesheet.ts'

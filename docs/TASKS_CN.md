@@ -1,9 +1,9 @@
 # Watch Claw - 任务分解
 
-> **Version**: 0.1.0 (Draft)
-> **Date**: 2026-03-22
+> **Version**: 0.2.0
+> **Date**: 2026-03-23
 > **粒度**：每个任务约半天
-> **预估总任务数**：6 个阶段共 20 个任务
+> **预估总任务数**：7 个阶段共 28 个任务
 
 ---
 
@@ -13,14 +13,15 @@
 
 ### 阶段总结
 
-| 阶段 | 名称                 | 任务数 | 范围                                     |
-| ---- | -------------------- | ------ | ---------------------------------------- |
-| P0   | Project Bootstrap    | 3      | 脚手架、工具链、开发环境、架构适配       |
-| P1   | Connection Layer     | 4      | Bridge client、event 解析、mock provider |
-| P2   | Engine Foundation    | 3      | Game loop、isometric renderer、camera    |
-| P3   | World Building       | 3      | Tile map、rooms、furniture               |
-| P4   | Character System     | 4      | Sprites、FSM、pathfinding、emotions      |
-| P5   | Integration & Polish | 3      | 端到端串联、dashboard、打磨              |
+| 阶段 | 名称                 | 任务数 | 范围                                                    |
+| ---- | -------------------- | ------ | ------------------------------------------------------- |
+| P0   | Project Bootstrap    | 3      | 脚手架、工具链、开发环境、架构适配                      |
+| P1   | Connection Layer     | 4      | Bridge client、event 解析、mock provider                |
+| P2   | Engine Foundation    | 3      | Game loop、isometric renderer、camera                   |
+| P3   | World Building       | 3      | Tile map、rooms、furniture                              |
+| P4   | Character System     | 4      | Sprites、FSM、pathfinding、emotions                     |
+| P5   | Integration & Polish | 3      | 端到端串联、dashboard、打磨                             |
+| P6   | v0.2 改进            | 8      | 移除 Mock、Bridge 增强、像素美术、渲染重构、Electron 化 |
 
 ---
 
@@ -1168,3 +1169,294 @@ graph TD
 - [x] P3：单层楼房屋可见，包含 3 个房间、墙壁、门、家具
 - [x] P4：龙虾帽角色在房间间行走、播放动画、显示情绪
 - [x] P5：Events 端到端驱动角色行为、dashboard 显示状态、应用已打磨
+- [x] P6：Mock 已移除、Bridge 增强、3/4 俯视角像素风重做、Electron 桌面应用
+
+---
+
+## Phase 6: v0.2 改进
+
+### T6.1 — 移除 Mock 数据逻辑（0.5 天）
+
+> 完全移除 Mock 模式，只保留真实 Bridge Server 数据。
+
+**依赖**：T5.3
+
+**删除：**
+
+- `src/connection/mockProvider.ts`
+- `src/connection/mockProvider.test.ts`
+
+**修改：**
+
+- `src/connection/connectionManager.ts` — 移除 `MockProvider` 引用、`switchToMock()`、`MOCK_SWITCH_DELAY_MS`、`mock` 状态
+- `src/connection/index.ts` — 移除 MockProvider 导出
+- `src/App.tsx` — 移除 `forceMock` 快捷键 (M 键)
+- `src/engine/gameState.ts` — `DebugState` 移除 `forceMock` 字段；`ConnectionInfo.status` 移除 `'mock'`
+- `src/ui/ConnectionBadge.tsx` — 移除 "Mock" 状态，只保留 Live / Connecting / Disconnected
+- `package.json` — 移除 `dev:mock` script
+
+**ConnectionManager 新行为：**
+
+- 启动 → 连接 Bridge → 成功则 `'live'`，失败则持续重连（指数退避），状态为 `'connecting'`
+- 永不生成假数据
+
+**验收标准：**
+
+- [x] 代码中无任何 `mock` / `Mock` / `MockProvider` 引用
+- [x] `pnpm test` 通过（移除 mock 测试后）
+- [x] Bridge Server 不可用时 UI 显示 "Connecting..."，不显示 "Mock"
+- [x] 角色不会在无真实事件时自动移动
+
+---
+
+### T6.2 — Bridge Server 增强（0.5 天）
+
+> 提升 Bridge Server 的 session 监控灵敏度，增加 session 切换通知。
+
+**依赖**：T6.1
+
+**修改：** `bridge/server.ts`
+
+- 缩短 `SESSION_CHECK_INTERVAL_MS` 从 5000 → 2000
+- 用 `fs.watch` 监控 `sessions.json` 文件本身，文件变化时立即触发 `checkForSessionChange()`
+- Session 切换时广播 `session_switch` 消息（已有），前端 `BridgeClient` 收到后 dispatch `RESET` action
+- 确认 `pnpm dev` script 已正确配置同时启动 Vite + Bridge Server
+
+**修改：** `src/connection/bridgeClient.ts`
+
+- 收到 `_bridge: true, type: 'session_switch'` 消息时，emit 一个特殊事件通知 ConnectionManager（当前是直接跳过 `_bridge` 消息）
+
+**修改：** `src/connection/connectionManager.ts`
+
+- 收到 session switch 通知时 dispatch `RESET` action 重置角色
+
+**验收标准：**
+
+- [x] `pnpm dev` 一站式启动 Vite + Bridge Server
+- [x] Bridge Server 在 2s 内检测到 session 切换
+- [x] Session 切换时角色自动重置到卧室睡觉
+- [x] `sessions.json` 被修改时立即触发检查
+
+---
+
+### T6.3 — 准备像素风美术资源目录结构（0.5 天）
+
+> 搭建 sprite 加载框架和资源目录，支持星露谷风格像素资源。
+
+**依赖**：T6.1
+
+**用户负责**：从 itch.io / OpenGameArt 下载星露谷风格的像素资源
+
+**开发者负责**：准备目录结构和 sprite 加载框架
+
+```
+public/assets/
+├── tilesets/
+│   └── interior.png          # 地板、墙壁 tileset (16x16 或 32x32)
+├── furniture/
+│   ├── desk-computer.png     # 电脑桌
+│   ├── bookshelf.png         # 书架
+│   ├── bed.png               # 床
+│   ├── sofa.png              # 沙发
+│   ├── lamp.png              # 台灯
+│   └── ...
+├── character/
+│   └── character.png         # 角色 spritesheet (walk/idle/sit/type/sleep)
+└── ui/
+    └── emotion-bubbles.png   # 情绪气泡 sprites
+```
+
+**新增文件：**
+
+- `src/engine/spritesheet.ts` — spritesheet 加载、帧切割、动画帧定义
+
+**修改：**
+
+- `src/world/sprites.ts` — 重写为基于 spritesheet 的加载（替代之前的占位逻辑）
+
+**验收标准：**
+
+- [x] spritesheet 加载器能正确切割帧
+- [x] 缺少图片时有清晰的 fallback（彩色占位方块 + console 警告）
+
+---
+
+### T6.4 — 坐标系和渲染重构（1 天）
+
+> 从 isometric（等轴测菱形）切换到 3/4 俯视角（星露谷物语风格矩形 tiles）。
+
+**依赖**：T6.3
+
+**当前**：isometric 等轴测渲染（菱形 tiles，z-sorting by col+row）
+**目标**：3/4 俯视角 sprite-based 渲染（矩形 tiles，y-sorting）
+
+**重写：**
+
+- `src/engine/isometric.ts` → `src/engine/coordinates.ts`
+  - `cartesianToScreen(col, row)` — grid 位置 → 屏幕像素（简单乘以 tile 尺寸）
+  - `screenToCartesian(x, y, camera)` — 鼠标位置 → grid 位置
+  - 移除所有 isometric 菱形计算
+- `src/engine/isometric.test.ts` → `src/engine/coordinates.test.ts`
+- `src/engine/renderer.ts` — 完全重写
+  - 渲染分层：地板 tiles → 墙壁 → 家具 → 角色 → 情绪气泡 → UI
+  - 使用 `ctx.drawImage()` 绘制 sprites（替代 `ctx.fillRect` / `ctx.beginPath`）
+  - 按 y 坐标排序实现正确遮挡（3/4 视角标准做法）
+- `src/engine/camera.ts` — 简化为 top-down camera
+- 更新所有引用 isometric 的文件：`gameState.ts`、`character.ts`、`pathfinding.ts`、`CanvasView.tsx` 等
+
+**验收标准：**
+
+- [x] 地板 tiles 以矩形网格渲染（非菱形）
+- [x] 如有 sprite 资源则正确显示；无资源时显示彩色占位
+- [x] Camera 平移/缩放在新视角下工作正常
+
+---
+
+### T6.5 — 重建世界地图和房间（0.5 天）
+
+> 按新的房间命名和横排布局重建地图。
+
+**依赖**：T6.4
+
+**房间定义（横排一行）：**
+
+```
+┌─────────────┬─────────────┬─────────────┐
+│             │             │             │
+│   工作室     │    书房      │    卧室     │
+│  (Workshop) │   (Study)   │  (Bedroom)  │
+│             │             │             │
+└─────────────┴─────────────┴─────────────┘
+```
+
+**修改：**
+
+- `src/connection/types.ts` — `RoomId` 从 `'office' | 'living-room' | 'bedroom'` 改为 `'workshop' | 'study' | 'bedroom'`
+- `src/connection/eventParser.ts` — `TOOL_ROOM_MAP` 中 room 引用更新
+- `src/world/tileMap.ts` — 横排 3 房间 tile map（约 24x10 tiles）
+- `src/world/rooms.ts` — 更新房间定义：Workshop、Study、Bedroom
+- `src/world/furniture.ts` — 用 sprite 引用定义家具放置（位置 + spriteKey）
+- `src/engine/pathfinding.ts` — BFS 保持不变，仅更新 grid 尺寸
+- `src/engine/character.ts` — 更新 RESET action 中的卧室坐标
+
+**家具配置：**
+| 房间 | 家具 |
+| ------ | -------------------------------- |
+| 工作室 | 电脑桌（双显示器）、办公椅、小书架 |
+| 书房 | 大书架、沙发、茶几、台灯 |
+| 卧室 | 床、床头柜、台灯 |
+
+**验收标准：**
+
+- [x] 三个房间横排显示，有墙壁和门分隔
+- [x] 家具在正确位置显示（sprite 或占位色块）
+- [x] 角色可以通过门在三个房间间移动（pathfinding 正确）
+
+---
+
+### T6.6 — 角色精灵图集成（0.5 天）
+
+> 角色渲染从程序化绘制改为 spritesheet 驱动。
+
+**依赖**：T6.5
+
+**修改：**
+
+- `src/engine/character.ts` — 动画系统改用 spritesheet 帧索引
+- `src/engine/renderer.ts` — 角色渲染改用 `drawImage()` 从 spritesheet 切割帧
+
+**角色动画帧：**
+| 动画 | 帧数 | 方向 | 触发 |
+| ------ | ---- | ------------- | --------------- |
+| idle | 2-4 | 4向 | 默认 |
+| walk | 4-6 | 4向 | GOTO_ROOM |
+| type | 2-4 | 1向(面向桌子) | 工作室活动 |
+| read | 2 | 1向(面向书架) | 书房活动 |
+| sleep | 2-4 | 1向(面向床) | 卧室/idle超时 |
+
+**情绪气泡：** sprite-based，浮在角色头顶
+
+**验收标准：**
+
+- [x] 角色用 spritesheet 渲染（非程序化矩形）
+- [x] 行走时有流畅的帧动画
+- [x] 不同房间播放不同的状态动画
+- [x] 情绪气泡正确显示
+
+---
+
+### T6.7 — Electron 桌面应用集成（1 天）
+
+> 将 Web 项目包装为 Electron 桌面应用，支持系统托盘和置顶。
+
+**依赖**：T6.6
+
+**新增文件：**
+
+- `electron/main.ts` — Electron 主进程入口
+  - 创建 BrowserWindow，加载 Vite dev server（开发时）或打包文件（生产时）
+  - 窗口选项：无边框或半透明、置顶、可调整大小
+  - 系统托盘图标和菜单（显示/隐藏、退出）
+- `electron/preload.ts` — 预加载脚本（安全 IPC 通道）
+- `electron/tray.ts` — 系统托盘管理
+
+**修改：**
+
+- `package.json` — 添加 Electron 依赖（`electron`、`electron-builder`）、新 scripts：
+  - `"dev:electron"` — 同时启动 Vite + Bridge Server + Electron
+  - `"build:electron"` — 打包为 macOS .app / .dmg
+  - `"pack"` — electron-builder 打包
+- `vite.config.ts` — 适配 Electron renderer 构建（base 路径等）
+- Bridge Server 集成 — Bridge Server 可选两种模式：
+  - 作为独立进程启动（同 v0.1）
+  - 由 Electron 主进程 fork 启动（推荐，生命周期统一管理）
+
+**窗口特性：**
+
+- 默认窗口大小：1100x700（canvas + dashboard）
+- 支持 always-on-top 切换（托盘菜单或快捷键）
+- 窗口位置和大小记忆（下次启动恢复）
+- macOS：支持 Dock 图标、点击 Dock 图标恢复窗口
+
+**验收标准：**
+
+- [x] `pnpm dev:electron` 启动 Electron 窗口显示完整 UI
+- [x] Bridge Server 由 Electron 主进程 fork 启动和管理
+- [x] 系统托盘图标可见，右键菜单有显示/隐藏/退出选项
+- [x] Always-on-top 可切换
+- [x] 关闭窗口后可通过托盘图标重新打开
+- [x] `pnpm build:electron` 生成可分发的 macOS 应用
+
+---
+
+### T6.8 — 端到端验证和打磨（0.5 天）
+
+> 全链路验证 v0.2 改动，打磨体验。
+
+**依赖**：T6.7
+
+**验证项：**
+
+- Bridge Server 连接 → Event 解析 → Character FSM → Renderer 全链路
+- 无事件时角色安静待在卧室睡觉
+- OpenClaw `write`/`edit`/`exec` → 角色去工作室打字
+- OpenClaw `read`/`grep`/`web_search` → 角色去书房
+- OpenClaw `stopReason: 'stop'` → 角色回卧室睡觉
+- Session 切换 → 角色重置
+- Electron 桌面窗口稳定运行
+
+**打磨：**
+
+- 调整行走速度（不过快不过慢）
+- 调整动画帧率
+- Dashboard 移除 Mock 相关显示
+- 更新 README
+
+**验收标准：**
+
+- [x] `pnpm dev:electron` → Electron + Bridge Server + Vite 同时启动
+- [x] 窗口显示 "Live"，角色安静睡觉（无事件时）
+- [x] 有真实事件时角色正确响应
+- [x] `pnpm test` 通过、`pnpm typecheck` 零错误、`pnpm build` 成功
+- [x] 10 分钟稳定运行无错误
+- [x] Electron 应用打包成功（macOS .app）

@@ -1,13 +1,15 @@
 {
   "name": "watch-claw",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently --names vite,bridge --prefix-colors cyan,yellow \"vite\" \"tsx bridge/server.ts\"",
     "dev:vite": "vite",
-    "dev:mock": "FORCE_MOCK=1 vite",
+    "dev:electron": "concurrently --kill-others --names vite,electron --prefix-colors cyan,green \"vite\" \"node scripts/wait-for-vite.cjs\"",
     "build": "tsc -b && vite build",
+    "build:electron": "pnpm build && node scripts/build-electron.cjs && electron-builder",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint .",
@@ -17,6 +19,36 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "husky"
+  },
+  "build": {
+    "appId": "com.watchclaw.app",
+    "productName": "Watch Claw",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*.js",
+      "bridge/**/*.js",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -40,6 +72,8 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.0",
     "concurrently": "^9.2.1",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -55,5 +89,10 @@
     "vite": "^8.0.1",
     "vitest": "^4.1.0",
     "ws": "^8.20.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }

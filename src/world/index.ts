@@ -26,5 +26,10 @@ export {
   loadSprite,
   getCachedSprite,
   clearSpriteCache,
+  preloadAllSprites,
+  getCharacterSpritesheet,
+  getTilesetSpritesheet,
+  getEmotionSpritesheet,
+  FURNITURE_SPRITE_PATHS,
 } from './sprites.ts'
 export type { AnimationConfig } from './sprites.ts'

@@ -1,10 +1,12 @@
 /**
- * Tile Map — defines the single-floor house layout.
+ * Tile Map — defines the horizontal three-room house layout.
  *
- * Layout: 16 columns x 12 rows with 3 rooms:
- *   - Office (left)
- *   - Living Room (center)
- *   - Bedroom (right)
+ * Layout: 24 columns x 10 rows with 3 rooms in a row:
+ *   - Workshop (left)   cols 1-7
+ *   - Study (center)    cols 9-15
+ *   - Bedroom (right)   cols 17-22
+ *
+ * Walls are 1 tile thick. Doors connect rooms at row 5.
  */
 
 import { TileType } from '@/engine/gameState.ts'
@@ -17,24 +19,22 @@ const D = TileType.DOOR
 const E = TileType.EMPTY
 
 /**
- * The main floor layout (12 rows x 16 cols).
- * Row 0 is the top (north), row 11 is the bottom (south).
+ * The main floor layout (10 rows x 24 cols).
+ * Three rooms in a horizontal row: Workshop | Study | Bedroom
  */
 // prettier-ignore
 export const FLOOR_LAYOUT: TileType[][] = [
-  //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
-  [E, E, W, W, W, W, W, W, W, W, W, W, W, W, E, E],  // row 0
-  [E, W, W, W, W, W, W, W, W, W, W, W, W, W, W, E],  // row 1
-  [W, W, F, F, F, W, D, C, C, C, W, D, C, C, W, W],  // row 2
-  [W, W, F, F, F, W, C, C, C, C, W, C, C, C, W, W],  // row 3
-  [W, W, F, F, F, W, C, C, C, C, W, C, C, C, W, W],  // row 4
-  [W, W, F, F, F, D, C, C, C, C, D, C, C, C, W, W],  // row 5
-  [W, W, F, F, F, W, C, C, C, C, W, C, C, C, W, W],  // row 6
-  [W, W, F, F, F, W, C, C, C, C, W, C, C, C, W, W],  // row 7
-  [E, W, W, W, W, W, W, W, W, W, W, W, W, W, W, E],  // row 8
-  [E, E, W, W, W, W, W, W, W, W, W, W, W, W, E, E],  // row 9
-  [E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E],  // row 10
-  [E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E],  // row 11
+  //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+  [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],  // row 0: top wall
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 1
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 2
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 3
+  [W, F, F, F, F, F, F, D, C, C, C, C, C, C, C, D, C, C, C, C, C, C, C, W],  // row 4: doors
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 5
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 6
+  [W, F, F, F, F, F, F, W, C, C, C, C, C, C, C, W, C, C, C, C, C, C, C, W],  // row 7
+  [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],  // row 8: bottom wall
+  [E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E],  // row 9: empty
 ]
 
 export const MAP_COLS = FLOOR_LAYOUT[0].length

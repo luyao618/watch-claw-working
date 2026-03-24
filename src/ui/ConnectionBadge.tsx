@@ -13,7 +13,6 @@ const STATUS_CONFIG: Record<
   { color: string; label: string; pulse: boolean }
 > = {
   live: { color: '#22c55e', label: 'Live', pulse: false },
-  mock: { color: '#f59e0b', label: 'Mock', pulse: false },
   connecting: { color: '#3b82f6', label: 'Connecting...', pulse: true },
   disconnected: { color: '#ef4444', label: 'Disconnected', pulse: false },
 }

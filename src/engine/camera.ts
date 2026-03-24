@@ -1,12 +1,12 @@
 /**
- * Camera — viewport pan and zoom for isometric view navigation.
+ * Camera — viewport pan and zoom for 3/4 top-down view navigation.
  *
  * The camera defines an offset and zoom level applied to all rendering.
  * Smooth interpolation is used for transitions.
  */
 
 import { clamp, lerp } from '@/utils/helpers.ts'
-import { cartesianToIso } from './isometric.ts'
+import { cartesianToScreen } from './coordinates.ts'
 import type { CameraState } from './gameState.ts'
 import { TILE_WIDTH, TILE_HEIGHT } from '@/utils/constants.ts'
 
@@ -79,10 +79,11 @@ export function centerOn(
   canvasWidth: number,
   canvasHeight: number,
 ): void {
-  const iso = cartesianToIso(col, row)
-  camera.targetOffsetX = canvasWidth / 2 - iso.x * camera.targetZoom
+  const screen = cartesianToScreen(col, row)
+  camera.targetOffsetX =
+    canvasWidth / 2 - (screen.x + TILE_WIDTH / 2) * camera.targetZoom
   camera.targetOffsetY =
-    canvasHeight / 2 - (iso.y + TILE_HEIGHT / 2) * camera.targetZoom
+    canvasHeight / 2 - (screen.y + TILE_HEIGHT / 2) * camera.targetZoom
 }
 
 /**
@@ -95,7 +96,7 @@ export function resetCamera(
   canvasWidth: number,
   canvasHeight: number,
 ): void {
-  camera.targetZoom = 2
+  camera.targetZoom = 1
   centerOn(camera, mapCols / 2, mapRows / 2, canvasWidth, canvasHeight)
 }
 
@@ -129,21 +130,14 @@ export function screenToWorld(
 
 /**
  * Update camera state with smooth interpolation toward target values.
- * Uses frame-rate-independent smoothing so behavior is consistent
- * regardless of whether the game runs at 30fps or 60fps.
- *
- * @param dt — delta time in seconds (from the fixed-timestep update)
  */
 export function updateCamera(camera: CameraState, dt = 1 / 60): void {
-  // Frame-rate-independent exponential smoothing:
-  // factor = 1 - (1 - BASE_SPEED)^(dt * 60)
   const t = 1 - Math.pow(1 - CAMERA_LERP_SPEED, dt * 60)
 
   camera.offsetX = lerp(camera.offsetX, camera.targetOffsetX, t)
   camera.offsetY = lerp(camera.offsetY, camera.targetOffsetY, t)
   camera.zoom = lerp(camera.zoom, camera.targetZoom, t)
 
-  // Snap if close enough
   if (Math.abs(camera.offsetX - camera.targetOffsetX) < 0.5) {
     camera.offsetX = camera.targetOffsetX
   }

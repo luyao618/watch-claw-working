@@ -29,6 +29,7 @@ import {
   ROOMS,
   ALL_FURNITURE,
   buildWalkabilityGrid,
+  preloadAllSprites,
 } from '@/world'
 
 // ── Build World State ───────────────────────────────────────────────────────
@@ -91,6 +92,11 @@ function App() {
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 })
 
   const connectionRef = useRef<ConnectionManager | null>(null)
+
+  // Preload sprite assets
+  useEffect(() => {
+    preloadAllSprites()
+  }, [])
 
   // Initialize ConnectionManager
   useEffect(() => {
@@ -156,9 +162,6 @@ function App() {
           break
         case 'f':
           gameState.debug.showFps = !gameState.debug.showFps
-          break
-        case 'm':
-          gameState.debug.forceMock = !gameState.debug.forceMock
           break
       }
     }
