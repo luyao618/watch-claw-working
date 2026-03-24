@@ -4,139 +4,168 @@
 
 > 一个像素风小屋，你的 OpenClaw AI 就住在里面 -- 实时观看它写代码、思考、休息和庆祝。
 
-> **状态**：正在积极开发中 -- 目前处于 MVP (v0.1) 规划阶段。
+![Watch Claw v0.2 截图](./docs/assets/V0.2-demo.jpg)
+_v0.2 运行中，使用程序化生成的占位素材 -- 新的前端界面和像素美术素材正在开发中。_
 
-![Watch Claw 演示](./docs/assets/ClawHomeDemo.jpg)
+**Watch Claw** 是 [OpenClaw](https://github.com/openclaw/openclaw) AI 代理工作状态的实时像素风可视化工具。一个戴着龙虾帽的角色 -- 代表 OpenClaw 代理 -- 住在一个温馨的小屋里，根据代理的实际运行事件在房间之间移动、执行活动并表达情感。
 
-**Watch Claw** 是 [OpenClaw](https://github.com/openclaw/openclaw) AI 代理工作状态的实时像素风可视化工具。它以等距视角渲染一个温馨的三层小屋剖面图，一个戴着龙虾帽的角色 -- 代表 OpenClaw 代理 -- 会根据代理的实际运行状态在房间之间移动、执行活动并表达情感。
-
-### 目标用户
-
-- 希望以趣味方式观察 AI 代理活动的 OpenClaw 用户
-- 喜欢像素风美学和"电子宠物"风格伴侣的开发者
+当前版本 (v0.2) 使用 Canvas 2D 渲染单层三房的小屋。项目正在向 **Phaser 3** 迁移，采用横版平台跳跃风格，扩展为三层九房的小屋 (v1.0)。
 
 ## 工作原理
 
 ```
-OpenClaw 执行操作 --> 事件通过 WebSocket 传入 --> 角色移动到对应房间 --> 播放动画
+OpenClaw 执行工具
+       |
+       v
+Session JSONL 文件追加新行
+       |
+       v
+Bridge Server (fs.watch) 检测变化，通过 WebSocket 广播
+       |
+       v
+Watch Claw 接收事件，映射为 CharacterAction
+       |
+       v
+角色走到对应房间，播放动画，显示情绪
 ```
 
-Watch Claw 通过 WebSocket (`ws://127.0.0.1:18789`) 连接到 OpenClaw Gateway，解析实时代理事件（工具调用、生命周期阶段、在线状态），并将它们转化为角色行为：走到办公室写代码、坐在沙发上思考、闲置时躺在床上睡觉。
+轻量级 **Bridge Server**（Node.js）监控 OpenClaw 的会话日志文件（`~/.openclaw/agents/main/sessions/<session-id>.jsonl`），通过 `fs.watch` 检测新条目，并通过 WebSocket（`ws://127.0.0.1:18790`）推送到浏览器。前端解析这些事件并转化为角色行为。
 
-## 功能特性
+## 当前状态 (v0.2)
 
-### MVP (v0.1) -- 一层楼，三个房间
+v0.2 已完全可用，具有单层三房布局：
 
-| 房间       | 代理活动                                 | 角色行为     | 情绪 |
-| ---------- | ---------------------------------------- | ------------ | ---- |
-| **办公室** | `Write`、`Edit`、`Bash`、助手文本流      | 坐在桌前打字 | 专注 |
-| **客厅**   | `Read`、`Grep`、`Glob`、`WebFetch`、思考 | 坐在沙发上   | 思考 |
-| **卧室**   | 空闲、等待输入、会话结束                 | 躺在床上睡觉 | 困倦 |
+| 房间       | 代理活动                             | 角色行为     | 情绪 |
+| ---------- | ------------------------------------ | ------------ | ---- |
+| **工作室** | `write`、`edit`、`exec`、助手文本流  | 坐在桌前打字 | 专注 |
+| **书房**   | `read`、`grep`、`glob`、`web_search` | 浏览书架     | 思考 |
+| **卧室**   | 空闲 > 30 秒、会话结束               | 躺在床上睡觉 | 困倦 |
 
-### 核心能力
+### 已实现功能
 
-- **实时 WebSocket 连接** -- 连接 OpenClaw Gateway，处理握手，指数退避自动重连
-- **智能事件解析** -- 将代理工具调用和生命周期事件映射为角色动作，支持优先级队列
-- **模拟模式** -- Gateway 不可用时，生成模拟事件用于开发和演示
-- **等距 Canvas 2D 渲染** -- 像素级精确的等距视图，画家算法处理 Z 轴排序
-- **角色状态机** -- MVP 5 种状态（空闲、行走、坐下、打字、睡觉），v1.0 扩展至 7 种（+ 思考、庆祝）
-- **BFS 寻路** -- 基于瓦片的寻路算法，角色在房间之间自然移动
-- **情绪气泡** -- 角色头顶的视觉反馈：专注、思考、困倦、开心、困惑
-- **状态面板** -- 连接状态与模式（实时 / 模拟）、当前代理状态、Token 用量、会话信息、活动日志
+- **Bridge Server** -- 监控最近活跃的会话 JSONL，自动检测会话切换（每 2 秒轮询），通过 WebSocket 推送事件，支持自动重连
+- **事件解析** -- 将工具调用（`write`、`edit`、`exec`、`read`、`grep`、`glob`、`web_search`、`task`）和生命周期事件映射为 `CharacterAction` 对象，支持优先级队列
+- **Canvas 2D 渲染** -- 3/4 俯视等距视角，画家算法处理 Z 轴排序，程序化生成像素风家具
+- **角色状态机** -- idle、walk、sit、type、sleep、think、celebrate 状态，BFS 瓦片寻路
+- **情绪气泡** -- 专注、思考、困倦、开心、困惑、好奇、严肃、满足
+- **状态面板** -- 连接状态、当前代理状态、会话信息、事件日志、FPS 计数器
+- **Electron 桌面应用** -- 独立窗口，系统托盘，置顶选项，macOS/Windows/Linux 构建
 
-### 完整版 (v1.0) -- 三层楼，九个房间
+## v1.0 路线图（Phaser 3 迁移）
+
+v1.0 将手写的 Canvas 2D 渲染器替换为 **Phaser 3**，从 3/4 俯视视角切换为 **横版平台跳跃** 风格，支持基于物理的移动（重力、跳跃、爬梯子）。
+
+### 三层小屋（9 个房间）
 
 ```
-              阁楼 (3F)
-    +--------+--------+--------+
-    | 阅览室  |  实验室 |  阳台  |
-    +--------+--------+--------+
-              主楼层 (2F)
-    +--------+--------+--------+
-    | 办公室  |  客厅  |  卧室  |
-    +--------+--------+--------+
-              地下室 (1F)
-    +--------+--------+--------+
-    | 工具间  |  储藏室 |  厨房  |
-    +--------+--------+--------+
+         +-------------------------------------------------+
+  3F     |  仓库            书房            阳台             |
+  阁楼   |  (glob/文件)     (read/grep)    (web_search)     |
+         |      |--|            |--|                        |
+         +------+  +------------+  +------------------------+
+  2F     |  工具间          办公室          卧室             |
+  主楼层 |  (exec)          (write/edit)   (idle/sleep)     |
+         |      |--|            |--|                        |
+         +------+  +------------+  +------------------------+
+  1F     |  地下室          机房            垃圾桶           |
+  底层   |  (task/agents)   (code)         (cleanup)        |
+         +-------------------------------------------------+
+              ^ 楼梯/梯子连接各楼层 ^
 ```
 
-v1.0 关键新增功能：
+### 迁移阶段
 
-- **楼梯导航** -- 角色在楼层之间行走，带有过渡动画
-- **音效** -- 脚步声、打字声、鼾声、烹饪声、通知提示音
-- **Electron 桌面应用** -- 独立窗口、系统托盘、置顶选项
-- **子代理可视化** -- OpenClaw 生成子代理时，出现伴随角色
-- **活动历史** -- 带时间戳的近期代理活动时间线
-- **自定义主题** -- 明暗模式、季节性主题
-- **宠物伴侣** -- 会对代理情绪做出反应的像素小宠物
+| 阶段 | 范围                                | 状态   |
+| ---- | ----------------------------------- | ------ |
+| P0   | Phaser 引导、React 挂载、加载进度条 | 待开始 |
+| P1   | Tiled 瓦片地图、碰撞层、房间检测    | 待开始 |
+| P2   | 角色精灵、状态机、物理、自动导航    | 待开始 |
+| P3   | 事件桥接、情绪系统、粒子效果        | 待开始 |
+| P4   | 面板更新、音效、Electron 优化       | 待开始 |
+| P5   | 三层扩展、完整事件映射              | 待开始 |
 
-### 路线图
+### v1.0 关键变化
 
-MVP 之后的计划功能 (P1)：
-
-- 缩放控制（鼠标滚轮 / +/- 按钮）
-- 视口平移（点击拖拽）
-- 角色点击交互（详细代理信息弹窗）
-- 基于时间的日夜环境光照
+- **Phaser 3 Arcade Physics** -- 重力、速度、平台碰撞器、梯子攀爬区域
+- **Tiled 瓦片地图** -- 可视化地图编辑，包含碰撞层和对象层（房间区域、出生点、活动点）
+- **横版平台移动** -- 行走、跳跃、攀爬（替代 BFS 寻路）
+- **三层 9 个房间** -- 每个工具映射到特定房间
+- **音效** -- 脚步声、打字声、鼾声、庆祝提示音
+- **粒子效果** -- 庆祝彩纸、错误火花、睡眠浮动 Z 字符
 
 ## 技术栈
 
-| 层级     | 技术选型                                | 选型理由                                |
-| -------- | --------------------------------------- | --------------------------------------- |
-| 语言     | TypeScript 5.x（严格模式）              | 为游戏状态、事件和协议提供类型安全      |
-| UI 框架  | React 18                                | 仅用于覆盖层 UI；游戏状态独立于 React   |
-| 渲染     | Canvas 2D API                           | 像素级精确控制，整数缩放，打包体积小    |
-| 构建工具 | Vite 6                                  | 快速 HMR，原生 TS 支持，配置简单        |
-| 通信     | 原生 WebSocket                          | 直连 OpenClaw Gateway                   |
-| 状态管理 | 命令式游戏状态 + React useReducer（UI） | 60fps 游戏世界更新，无 React 重渲染开销 |
-| 包管理器 | pnpm                                    | 快速、节省磁盘、严格依赖解析            |
-| 代码规范 | ESLint + Prettier                       | 统一代码风格，类型感知的 Lint           |
-| 测试     | Vitest                                  | 快速单元测试，兼容 Vite                 |
+| 层级       | 技术选型                          | 用途                               |
+| ---------- | --------------------------------- | ---------------------------------- |
+| 语言       | TypeScript 5.x（严格模式）        | 为游戏状态、事件和协议提供类型安全 |
+| 游戏引擎   | Canvas 2D (v0.2)、Phaser 3 (v1.0) | 渲染与物理                         |
+| UI 框架    | React 19                          | 仅用于覆盖层 UI（面板、控件）      |
+| 构建工具   | Vite 8                            | 快速 HMR，原生 TS 支持             |
+| 桌面应用   | Electron                          | 独立桌面应用，系统托盘             |
+| 通信       | WebSocket（Bridge Server）        | 会话日志监控 + 实时推送            |
+| 地图编辑器 | Tiled (v1.0)                      | 可视化瓦片地图编辑，碰撞层和对象层 |
+| 包管理器   | pnpm                              | 快速、节省磁盘、严格依赖解析       |
+| 测试       | Vitest                            | 快速单元测试，兼容 Vite            |
+| 代码规范   | ESLint + Prettier                 | 统一代码风格，Husky 预提交钩子     |
 
 ## 架构设计
 
 ```
-+----------------------------------------------------------------+
-|                        Browser (Web App)                        |
-|                                                                 |
-|   React Shell (CanvasView + Dashboard)                          |
-|       |                          |                              |
-|       | ref                      | subscribe (EventBus, 4Hz)    |
-|       v                          v                              |
-|   Game Engine (imperative, 60fps)                               |
-|   [GameLoop] -> [Renderer] [Character FSM] [Pathfinding BFS]   |
-|       |                                                         |
-|       v                                                         |
-|   GameState (plain TS object, mutated imperatively)             |
-|       ^                                                         |
-|       | dispatch(action)                                        |
-|   Connection Layer                                              |
-|   [GatewayClient (WS)] -> [EventParser] -> [MockProvider]      |
-+----------------------------------------------------------------+
++------------------------------------------------------------------+
+|                     Electron 桌面应用                              |
+|                                                                   |
+|  React Shell                                                      |
+|  +---------------------------+  +------------------------------+  |
+|  | PhaserContainer (v1.0)    |  | Dashboard.tsx                |  |
+|  | 或 CanvasView (v0.2)      |  | (状态、Token、事件日志)      |  |
+|  +------------+--------------+  +------------------------------+  |
+|               |                                                   |
+|               v                                                   |
+|  游戏引擎                                                         |
+|  [Phaser Scene / Canvas 2D] <-- [角色状态机]                      |
+|               ^                                                   |
+|               | dispatch(CharacterAction)                         |
+|  连接层（稳定，v0.2 和 v1.0 共用）                                 |
+|  [BridgeClient] --> [EventParser] --> [ActionQueue]               |
+|  [ConnectionManager 统一调度]                                     |
++------------------------------------------------------------------+
                           |
-                          | WebSocket
+                          | WebSocket (ws://127.0.0.1:18790)
                           v
-               OpenClaw Gateway
-               ws://127.0.0.1:18789
+                   Bridge Server (Node.js)
+                          |
+                          | fs.watch
+                          v
+              OpenClaw 会话日志 (JSONL)
+              ~/.openclaw/agents/main/sessions/
 ```
 
-> 架构图中组件名保留英文原名以保持代码一致性，描述性文字见下方说明。
+### 连接层（跨版本稳定）
 
-**四层架构**：
+连接层已完全可用，在 v0.2 和 v1.0 之间共享：
 
-| 层级                    | 职责                                       | 是否感知 React |
-| ----------------------- | ------------------------------------------ | -------------- |
-| **连接层 (Connection)** | WebSocket 生命周期、事件解析、模拟数据生成 | 否             |
-| **引擎层 (Engine)**     | 游戏循环、渲染、角色 FSM、寻路、相机       | 否             |
-| **世界层 (World)**      | 瓦片地图数据、房间定义、精灵数据、家具目录 | 否             |
-| **UI 层**               | Canvas DOM 挂载、仪表盘覆盖层、控件        | 是             |
+- **BridgeClient** -- WebSocket 客户端，支持指数退避自动重连（1s 至 30s）
+- **EventParser** -- 将会话日志事件（工具调用、生命周期、模型切换）映射为 `CharacterAction` 对象
+- **ActionQueue** -- 优先级队列（高 > 中 > 低），队列满时丢弃最低优先级动作
+- **ConnectionManager** -- 统一调度 BridgeClient + EventParser，提供 `onAction()`、`onStatusChange()`、`onEventLog()` 订阅接口
 
-### 关键设计决策
+## 事件映射
 
-1. **游戏状态独立于 React** -- 60fps 更新不会触发重渲染。React 组件通过 EventBus 订阅特定切片，限流至 4Hz。
-2. **单一 Canvas，无 DOM 瓦片** -- 像素级精确的等距渲染，通过画家算法实现正确的 Z 轴排序。
-3. **WebSocket 优先** -- 实时推送，结构化事件类型，无轮询延迟。
+| OpenClaw 事件                | 工具 / 阶段 | 目标房间     | 动画 | 情绪 | 优先级 |
+| ---------------------------- | ----------- | ------------ | ---- | ---- | ------ |
+| 会话开始 (`type: session`)   | --          | 书房         | 起床 | 思考 | 高     |
+| 会话结束 (`stopReason`)      | --          | 卧室         | 躺下 | 困倦 | 高     |
+| 工具执行失败 (exitCode != 0) | --          | （当前房间） | 抱头 | 困惑 | 高     |
+| `tool: write`                | write       | 工作室       | 打字 | 专注 | 中     |
+| `tool: edit`                 | edit        | 工作室       | 打字 | 专注 | 中     |
+| `tool: exec`                 | exec        | 工作室       | 打字 | 严肃 | 中     |
+| `tool: read`                 | read        | 书房         | 阅读 | 好奇 | 中     |
+| `tool: grep`                 | grep        | 书房         | 搜索 | 好奇 | 中     |
+| `tool: glob`                 | glob        | 书房         | 浏览 | 忙碌 | 中     |
+| `tool: web_search`           | web_search  | 书房         | 浏览 | 好奇 | 中     |
+| `tool: task`                 | task        | 书房         | 白板 | 兴奋 | 中     |
+| 助手文本流                   | --          | 工作室       | 打字 | 专注 | 低     |
+| 空闲 > 30 秒                 | --          | 卧室         | 睡觉 | 困倦 | 低     |
 
 ## 快速开始
 
@@ -144,87 +173,75 @@ MVP 之后的计划功能 (P1)：
 
 - [Node.js](https://nodejs.org/) >= 18
 - [pnpm](https://pnpm.io/) >= 8
-- [OpenClaw](https://github.com/openclaw/openclaw)（可选 -- 不可用时自动切换到模拟模式）
+- [OpenClaw](https://github.com/openclaw/openclaw) 已安装并配置
 
-### 安装
+### 运行
 
 ```bash
-# 克隆仓库
 git clone https://github.com/luyao618/watch-claw-working.git
 cd watch-claw-working
-
-# 安装依赖
 pnpm install
-
-# 启动开发服务器
 pnpm dev
 ```
 
-应用在 `http://localhost:5173` 打开。如果 OpenClaw Gateway 在 `ws://127.0.0.1:18789` 运行，将自动连接。否则，将切换到模拟模式生成模拟事件。
+这会同时启动 Vite 开发服务器和 Bridge Server。在浏览器中打开 `http://localhost:5173`。
 
-### 构建
+Bridge Server 会自动定位 `~/.openclaw/agents/main/sessions/` 中最近活跃的 OpenClaw 会话并实时推送事件。在另一个终端启动 OpenClaw 会话即可看到角色反应。
+
+### 其他命令
 
 ```bash
-# 生产构建
-pnpm build
-
-# 预览生产构建
-pnpm preview
-
-# 类型检查
-pnpm typecheck
-
-# 代码检查
-pnpm lint
-
-# 运行测试
-pnpm test
+pnpm build          # 生产构建
+pnpm preview        # 预览生产构建
+pnpm typecheck      # 类型检查
+pnpm lint           # 代码检查
+pnpm test           # 运行测试
+pnpm dev:electron   # 以 Electron 桌面应用运行
+pnpm build:electron # 构建 Electron 可分发包
 ```
 
-## 事件映射
+## 项目结构
 
-Watch Claw 将 OpenClaw 事件转化为角色动作：
-
-| OpenClaw 事件          | 目标房间     | 动画 | 情绪 | 优先级 |
-| ---------------------- | ------------ | ---- | ---- | ------ |
-| `lifecycle.start`      | 客厅         | 起床 | 思考 | 高     |
-| `lifecycle.end`        | 卧室         | 躺下 | 困倦 | 高     |
-| `lifecycle.error`      | （当前房间） | 抱头 | 困惑 | 高     |
-| `tool: Write/Edit`     | 办公室       | 打字 | 专注 | 中     |
-| `tool: Bash`           | 办公室       | 打字 | 严肃 | 中     |
-| `tool: Read/Grep/Glob` | 客厅         | 坐着 | 好奇 | 中     |
-| `tool: WebFetch`       | 客厅         | 浏览 | 好奇 | 中     |
-| `tool: Task`           | 客厅         | 思考 | 思考 | 中     |
-| 任务完成               | 客厅         | 庆祝 | 满足 | 中     |
-| 助手文本流             | 办公室       | 打字 | 专注 | 低     |
-| 空闲 > 30 秒           | 卧室         | 睡觉 | 困倦 | 低     |
-
-## 非功能性需求
-
-| 需求           | 目标                                          |
-| -------------- | --------------------------------------------- |
-| 帧率           | 60fps (requestAnimationFrame)                 |
-| 包体积         | < 500KB (gzip 后)                             |
-| 浏览器支持     | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+ |
-| 响应式         | 最小 800x600，支持 4K                         |
-| 启动时间       | < 2 秒 First Meaningful Paint                 |
-| WebSocket 重连 | 指数退避 (1s-30s)                             |
-| 模拟模式切换   | < 100ms                                       |
-| 内存占用       | < 100MB                                       |
-| 无障碍         | 支持 `prefers-reduced-motion` 减少动画        |
+```
+watch-claw/
+├── bridge/              # Bridge Server (Node.js, WebSocket 中继)
+│   └── server.ts        #   监控会话 JSONL -> WS 推送
+├── electron/            # Electron 桌面外壳
+│   ├── main.cjs
+│   └── preload.cjs
+├── src/
+│   ├── connection/      # 连接层（稳定，请勿修改）
+│   │   ├── bridgeClient.ts       # WebSocket 客户端，自动重连
+│   │   ├── eventParser.ts        # 会话日志 -> CharacterAction
+│   │   ├── actionQueue.ts        # 优先级队列
+│   │   ├── connectionManager.ts  # 统一调度连接
+│   │   └── types.ts              # 所有共享类型
+│   ├── engine/          # Canvas 2D 游戏引擎 (v0.2, 待替换)
+│   ├── world/           # 瓦片地图和房间定义 (v0.2, 待替换)
+│   ├── ui/              # React 覆盖层组件
+│   │   ├── CanvasView.tsx        # 游戏画布挂载
+│   │   └── Dashboard.tsx         # 状态面板
+│   ├── utils/           # 共享工具（eventBus, constants, helpers）
+│   ├── App.tsx
+│   └── main.tsx
+├── public/assets/       # 游戏资源（精灵、瓦片集、瓦片地图）
+├── docs/                # 文档（PRD、技术设计、任务分解）
+└── scripts/             # 开发辅助脚本
+```
 
 ## 灵感来源
 
-| 项目                                                              | 借鉴之处                            | 差异之处                                            |
-| ----------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------- |
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL 文件监听、角色 FSM、Canvas 2D | WebSocket（非文件尾随）、等距视角（非俯视）、单角色 |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | 事件驱动架构、个性引擎              | 温馨小屋（非办公室）、高保真像素风（非 DOM 瓦片）   |
+| 项目                                                              | 借鉴之处                 | 差异之处                                                                     |
+| ----------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL 文件监听、角色 FSM | Bridge Server 推送（非文件尾随）、横版平台跳跃 (v1.0)、单角色、Electron 应用 |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | 事件驱动架构             | 温馨小屋（非办公室）、基于物理的移动 (v1.0)、高保真像素风                    |
 
 ## 文档
 
-- [产品需求文档 (PRD)](./docs/PRD.md)
-- [技术设计文档](./docs/TECHNICAL.md)
-- [任务分解](./docs/TASKS.md)
+- [产品需求文档 (PRD)](./docs/PRD.md)（[中文](./docs/PRD_CN.md)）
+- [技术设计文档](./docs/TECHNICAL.md)（[中文](./docs/TECHNICAL_CN.md)）
+- [任务分解 (v1.0)](./docs/TASKS.md)（[中文](./docs/TASKS_CN.md)）
+- [已归档任务 (v0.2)](./docs/TASKS_v0.2_ARCHIVED.md)（[中文](./docs/TASKS_v0.2_ARCHIVED_CN.md)）
 
 ## 贡献
 
@@ -238,4 +255,4 @@ Watch Claw 将 OpenClaw 事件转化为角色动作：
 
 ## 开源协议
 
-本项目基于 [MIT 协议](./LICENSE) 开源。
+[MIT](./LICENSE) -- Copyright 2026 luyao618
