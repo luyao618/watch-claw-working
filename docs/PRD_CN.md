@@ -4,6 +4,8 @@
 > **Author**: luyao618
 > **Date**: 2026-03-23
 > **Status**: In Progress
+>
+> ⚠️ **注意**：本 PRD 编写于 v0.2 版本（Canvas 2D，3/4 俯视角）。项目已迁移到 **Phaser 3 横版平台跳跃风格**（v1.0）。房间名称和架构已变更。当前架构请见 [TECHNICAL.md](./TECHNICAL.md) / [TECHNICAL_CN.md](./TECHNICAL_CN.md)，当前任务请见 [TASKS.md](./TASKS.md) / [TASKS_CN.md](./TASKS_CN.md)。
 
 ---
 

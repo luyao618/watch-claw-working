@@ -4,6 +4,8 @@
 > **Author**: luyao618
 > **Date**: 2026-03-23
 > **Status**: In Progress
+>
+> ⚠️ **Note**: This PRD was written for v0.2 (Canvas 2D, 3/4 top-down view). The project has since migrated to **Phaser 3 side-view platformer** (v1.0). Room names and architecture have changed. See [TECHNICAL.md](./TECHNICAL.md) for the current architecture and [TASKS.md](./TASKS.md) for the current task plan.
 
 ---
 
