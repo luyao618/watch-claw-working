@@ -15,7 +15,7 @@ import {
   readSync,
   closeSync,
 } from 'node:fs'
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
 import { homedir } from 'node:os'
 import { WebSocket, WebSocketServer } from 'ws'
 
@@ -23,8 +23,10 @@ import { WebSocket, WebSocketServer } from 'ws'
 const PORT = 18790
 const SESSIONS_DIR = resolve(homedir(), '.openclaw/agents/main/sessions')
 const SESSIONS_INDEX = resolve(SESSIONS_DIR, 'sessions.json')
-const SESSION_CHECK_INTERVAL_MS = 5_000 // re-check sessions.json every 5s
+const SESSION_CHECK_INTERVAL_MS = 2_000 // re-check sessions.json every 2s
 const WATCH_DEBOUNCE_MS = 50 // debounce fs.watch events (macOS may fire duplicates)
+const SESSIONS_INDEX_DEBOUNCE_MS = 200 // debounce sessions.json watcher
+const FILE_POLL_INTERVAL_MS = 500 // poll session file for changes (fs.watch fallback)
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface SessionEntry {
@@ -40,8 +42,11 @@ let currentSessionFile: string | null = null
 let fileSize = 0
 let trailingPartial = '' // buffer for incomplete lines across fs.watch events
 let currentWatcher: ReturnType<typeof watch> | null = null
+let sessionsIndexWatcher: ReturnType<typeof watch> | null = null
 let sessionCheckTimer: ReturnType<typeof setInterval> | null = null
+let filePollTimer: ReturnType<typeof setInterval> | null = null
 let watchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+let sessionsIndexDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 // ── Session discovery ────────────────────────────────────────────────────────
 
@@ -137,10 +142,14 @@ function processFileChanges(filePath: string): void {
 }
 
 function watchSession(filePath: string): void {
-  // Clean up previous watcher and debounce timer
+  // Clean up previous watcher, poll timer, and debounce timer
   if (currentWatcher) {
     currentWatcher.close()
     currentWatcher = null
+  }
+  if (filePollTimer) {
+    clearInterval(filePollTimer)
+    filePollTimer = null
   }
   if (watchDebounceTimer) {
     clearTimeout(watchDebounceTimer)
@@ -169,17 +178,26 @@ function watchSession(filePath: string): void {
     }),
   )
 
-  currentWatcher = watch(filePath, (eventType) => {
-    if (eventType !== 'change') return
+  // Primary: fs.watch for instant notifications
+  try {
+    currentWatcher = watch(filePath, (eventType) => {
+      if (eventType !== 'change') return
 
-    // Debounce: macOS FSEvents may fire duplicate change events.
-    // Coalesce them into a single read after a short delay.
-    if (watchDebounceTimer) clearTimeout(watchDebounceTimer)
-    watchDebounceTimer = setTimeout(() => {
-      watchDebounceTimer = null
-      processFileChanges(filePath)
-    }, WATCH_DEBOUNCE_MS)
-  })
+      // Debounce: macOS FSEvents may fire duplicate change events.
+      if (watchDebounceTimer) clearTimeout(watchDebounceTimer)
+      watchDebounceTimer = setTimeout(() => {
+        watchDebounceTimer = null
+        processFileChanges(filePath)
+      }, WATCH_DEBOUNCE_MS)
+    })
+  } catch (e) {
+    console.warn('[bridge] fs.watch failed, relying on polling:', e)
+  }
+
+  // Fallback: poll file size every 500ms (fs.watch is unreliable on some macOS setups)
+  filePollTimer = setInterval(() => {
+    processFileChanges(filePath)
+  }, FILE_POLL_INTERVAL_MS)
 }
 
 // ── Session check loop ───────────────────────────────────────────────────────
@@ -189,6 +207,37 @@ function checkForSessionChange(): void {
   if (latest && latest !== currentSessionFile) {
     console.log(`[bridge] Session switch detected → ${latest}`)
     watchSession(latest)
+  }
+}
+
+// ── sessions.json file watcher ──────────────────────────────────────────────
+
+function startSessionsIndexWatcher(): void {
+  if (sessionsIndexWatcher) {
+    sessionsIndexWatcher.close()
+    sessionsIndexWatcher = null
+  }
+
+  // Watch the directory containing sessions.json (more reliable than watching the file)
+  const dir = dirname(SESSIONS_INDEX)
+  if (!existsSync(dir)) return
+
+  try {
+    sessionsIndexWatcher = watch(dir, (_eventType, filename) => {
+      // Only react to changes to sessions.json
+      if (filename !== 'sessions.json') return
+
+      // Debounce — sessions.json may be written in bursts
+      if (sessionsIndexDebounceTimer) clearTimeout(sessionsIndexDebounceTimer)
+      sessionsIndexDebounceTimer = setTimeout(() => {
+        sessionsIndexDebounceTimer = null
+        console.log('[bridge] sessions.json changed — checking for new session')
+        checkForSessionChange()
+      }, SESSIONS_INDEX_DEBOUNCE_MS)
+    })
+    console.log('[bridge] Watching sessions.json for changes')
+  } catch (e) {
+    console.warn('[bridge] Could not watch sessions dir:', e)
   }
 }
 
@@ -226,7 +275,10 @@ if (initial) {
   )
 }
 
-// Periodically check for new sessions
+// Watch sessions.json for immediate change detection
+startSessionsIndexWatcher()
+
+// Periodically check for new sessions (fallback in case fs.watch misses changes)
 sessionCheckTimer = setInterval(
   checkForSessionChange,
   SESSION_CHECK_INTERVAL_MS,
@@ -237,8 +289,11 @@ sessionCheckTimer = setInterval(
 function shutdown(): void {
   console.log('\n[bridge] Shutting down...')
   if (sessionCheckTimer) clearInterval(sessionCheckTimer)
+  if (filePollTimer) clearInterval(filePollTimer)
   if (watchDebounceTimer) clearTimeout(watchDebounceTimer)
+  if (sessionsIndexDebounceTimer) clearTimeout(sessionsIndexDebounceTimer)
   if (currentWatcher) currentWatcher.close()
+  if (sessionsIndexWatcher) sessionsIndexWatcher.close()
   wss.close(() => process.exit(0))
 }
 

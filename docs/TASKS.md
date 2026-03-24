@@ -1,9 +1,9 @@
 # Watch Claw - Task Breakdown
 
-> **Version**: 0.1.0 (Draft)
-> **Date**: 2026-03-22
+> **Version**: 0.2.0
+> **Date**: 2026-03-23
 > **Granularity**: ~half-day per task
-> **Total estimated tasks**: 20 tasks across 6 phases
+> **Total estimated tasks**: 28 tasks across 7 phases
 
 ---
 
@@ -13,14 +13,15 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 ### Phase Summary
 
-| Phase | Name                 | Tasks | Scope                                                          |
-| ----- | -------------------- | ----- | -------------------------------------------------------------- |
-| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation |
-| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                    |
-| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                          |
-| P3    | World Building       | 3     | Tile map, rooms, furniture                                     |
-| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                            |
-| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                           |
+| Phase | Name                 | Tasks | Scope                                                                    |
+| ----- | -------------------- | ----- | ------------------------------------------------------------------------ |
+| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation           |
+| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                              |
+| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                                    |
+| P3    | World Building       | 3     | Tile map, rooms, furniture                                               |
+| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                                      |
+| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                                     |
+| P6    | v0.2 Improvements    | 8     | Remove mock, Bridge enhancements, pixel art, renderer refactor, Electron |
 
 ---
 
@@ -56,10 +57,10 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] `pnpm dev` starts without errors
-- [ ] Browser shows "Watch Claw" text
-- [ ] `pnpm build` produces a clean production build
-- [ ] Path alias `@/` resolves correctly in imports
+- [x] `pnpm dev` starts without errors
+- [x] Browser shows "Watch Claw" text
+- [x] `pnpm build` produces a clean production build
+- [x] Path alias `@/` resolves correctly in imports
 
 ---
 
@@ -101,12 +102,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] `pnpm lint` runs without errors
-- [ ] `pnpm format` formats all files
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm test` runs and the trivial test passes
-- [ ] Git commit triggers lint-staged hook
-- [ ] `eventBus.ts` works: subscribe, emit, unsubscribe
+- [x] `pnpm lint` runs without errors
+- [x] `pnpm format` formats all files
+- [x] `pnpm typecheck` passes
+- [x] `pnpm test` runs and the trivial test passes
+- [x] Git commit triggers lint-staged hook
+- [x] `eventBus.ts` works: subscribe, emit, unsubscribe
 
 ---
 
@@ -144,12 +145,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] `pnpm dev` starts both Vite and Bridge Server simultaneously
-- [ ] Bridge Server listens for connections on `ws://127.0.0.1:18790`
-- [ ] Bridge Server finds the most recently active session and monitors its JSONL file
-- [ ] New JSONL lines are correctly parsed and broadcast
-- [ ] Session switches are automatically tracked
-- [ ] Constants in `constants.ts` have been renamed
+- [x] `pnpm dev` starts both Vite and Bridge Server simultaneously
+- [x] Bridge Server listens for connections on `ws://127.0.0.1:18790`
+- [x] Bridge Server finds the most recently active session and monitors its JSONL file
+- [x] New JSONL lines are correctly parsed and broadcast
+- [x] Session switches are automatically tracked
+- [x] Constants in `constants.ts` have been renamed
 
 ---
 
@@ -198,12 +199,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Client connects to `ws://127.0.0.1:18790` when Bridge Server is running (or fails gracefully)
-- [ ] Reconnection attempts follow exponential backoff pattern
-- [ ] State changes are emitted correctly (4 states, no handshaking)
-- [ ] Event handlers receive parsed `SessionLogEvent` objects
-- [ ] `disconnect()` cleanly tears down all timers and the WebSocket
-- [ ] Unit tests cover the state machine transitions
+- [x] Client connects to `ws://127.0.0.1:18790` when Bridge Server is running (or fails gracefully)
+- [x] Reconnection attempts follow exponential backoff pattern
+- [x] State changes are emitted correctly (4 states, no handshaking)
+- [x] Event handlers receive parsed `SessionLogEvent` objects
+- [x] `disconnect()` cleanly tears down all timers and the WebSocket
+- [x] Unit tests cover the state machine transitions
 
 ---
 
@@ -260,13 +261,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] All lowercase tool names from the TOOL_ROOM_MAP produce correct CharacterActions
-- [ ] `type: 'session'` → `WAKE_UP`; `stopReason: 'stop'` → `GO_SLEEP`
-- [ ] A single assistant message with multiple toolCalls produces independent actions per tool
-- [ ] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
-- [ ] Unknown/malformed events return `null` (no crash)
-- [ ] ActionQueue respects max size and deduplication rules
-- [ ] All unit tests pass
+- [x] All lowercase tool names from the TOOL_ROOM_MAP produce correct CharacterActions
+- [x] `type: 'session'` → `WAKE_UP`; `stopReason: 'stop'` → `GO_SLEEP`
+- [x] A single assistant message with multiple toolCalls produces independent actions per tool
+- [x] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
+- [x] Unknown/malformed events return `null` (no crash)
+- [x] ActionQueue respects max size and deduplication rules
+- [x] All unit tests pass
 
 ---
 
@@ -307,12 +308,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Running MockProvider emits a sequence of session, user message, assistant (toolCall), and toolResult events
-- [ ] Events are correctly formatted as SessionLogEvents (with id/parentId/timestamp)
-- [ ] Tool names are lowercase: `write`, `edit`, `read`, `exec`, `web_search`, etc.
-- [ ] Tool distribution feels realistic (more write/edit, fewer task/web_search)
-- [ ] `stop()` cleans up all timers (no memory leaks)
-- [ ] Session cycles repeat with idle gaps between them
+- [x] Running MockProvider emits a sequence of session, user message, assistant (toolCall), and toolResult events
+- [x] Events are correctly formatted as SessionLogEvents (with id/parentId/timestamp)
+- [x] Tool names are lowercase: `write`, `edit`, `read`, `exec`, `web_search`, etc.
+- [x] Tool distribution feels realistic (more write/edit, fewer task/web_search)
+- [x] `stop()` cleans up all timers (no memory leaks)
+- [x] Session cycles repeat with idle gaps between them
 
 ---
 
@@ -350,12 +351,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] App starts and shows "Mock" badge (since Bridge Server is not running)
-- [ ] ConnectionManager attempts Bridge Server connection on startup, falls back to mock
-- [ ] Events from mock provider can be observed (console.log or debug UI)
-- [ ] If Bridge Server were available, switching would happen automatically
-- [ ] Connection badge accurately reflects current state
-- [ ] No dangling timers or WebSocket connections on cleanup
+- [x] App starts and shows "Mock" badge (since Bridge Server is not running)
+- [x] ConnectionManager attempts Bridge Server connection on startup, falls back to mock
+- [x] Events from mock provider can be observed (console.log or debug UI)
+- [x] If Bridge Server were available, switching would happen automatically
+- [x] Connection badge accurately reflects current state
+- [x] No dangling timers or WebSocket connections on cleanup
 
 ---
 
@@ -401,11 +402,11 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Opening the app shows a visible isometric diamond grid
-- [ ] Grid renders crisp on retina displays (no blurring)
-- [ ] Canvas resizes correctly when browser window changes size
-- [ ] Isometric math unit tests all pass (round-trip, edge cases)
-- [ ] Mouse position can be translated to tile coordinates (console.log on hover)
+- [x] Opening the app shows a visible isometric diamond grid
+- [x] Grid renders crisp on retina displays (no blurring)
+- [x] Canvas resizes correctly when browser window changes size
+- [x] Isometric math unit tests all pass (round-trip, edge cases)
+- [x] Mouse position can be translated to tile coordinates (console.log on hover)
 
 ---
 
@@ -453,11 +454,11 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Game loop runs stably (check FPS counter shows ~60)
-- [ ] Debug grid renders each frame without flickering
-- [ ] `pause()` and `resume()` work correctly
-- [ ] Game state object is accessible and mutable
-- [ ] Delta time capping prevents frame spikes from cascading
+- [x] Game loop runs stably (check FPS counter shows ~60)
+- [x] Debug grid renders each frame without flickering
+- [x] `pause()` and `resume()` work correctly
+- [x] Game state object is accessible and mutable
+- [x] Delta time capping prevents frame spikes from cascading
 
 ---
 
@@ -497,12 +498,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Mouse wheel zooms in/out with float steps (±0.25, range 0.5x through 5x)
-- [ ] Right-click drag pans the view smoothly
-- [ ] Zoom controls (+/-/reset) work correctly
-- [ ] Camera smoothly interpolates to target position
-- [ ] Grid renders correctly at all zoom levels (no gaps, no jitter)
-- [ ] `centerOn()` correctly frames a given tile
+- [x] Mouse wheel zooms in/out with float steps (±0.25, range 0.5x through 5x)
+- [x] Right-click drag pans the view smoothly
+- [x] Zoom controls (+/-/reset) work correctly
+- [x] Camera smoothly interpolates to target position
+- [x] Grid renders correctly at all zoom levels (no gaps, no jitter)
+- [x] `centerOn()` correctly frames a given tile
 
 ---
 
@@ -566,12 +567,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Tile map renders as an isometric floor plan (using debug renderer from T2.1)
-- [ ] Three distinct rooms are visible with walls between them
-- [ ] Doors connect the rooms
-- [ ] Walkability grid correctly marks walls as blocked
-- [ ] Room activityZones and entryTiles are on walkable tiles
-- [ ] Unit tests pass
+- [x] Tile map renders as an isometric floor plan (using debug renderer from T2.1)
+- [x] Three distinct rooms are visible with walls between them
+- [x] Doors connect the rooms
+- [x] Walkability grid correctly marks walls as blocked
+- [x] Room activityZones and entryTiles are on walkable tiles
+- [x] Unit tests pass
 
 ---
 
@@ -611,12 +612,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Floor renders with correct isometric alignment (no gaps between tiles)
-- [ ] Walls render with correct height (taller than floor)
-- [ ] Two different floor types are visually distinct (office vs living/bedroom)
-- [ ] Doors are visually open/passable
-- [ ] Sprites load without errors; fallback to colored shapes if files missing
-- [ ] Draw order is correct (no visual glitches at tile boundaries)
+- [x] Floor renders with correct isometric alignment (no gaps between tiles)
+- [x] Walls render with correct height (taller than floor)
+- [x] Two different floor types are visually distinct (office vs living/bedroom)
+- [x] Doors are visually open/passable
+- [x] Sprites load without errors; fallback to colored shapes if files missing
+- [x] Draw order is correct (no visual glitches at tile boundaries)
 
 ---
 
@@ -663,12 +664,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Office has a desk with computer and chair visible
-- [ ] Living room has sofa and fireplace visible
-- [ ] Bedroom has bed and lamp visible
-- [ ] Character cannot walk through furniture (walkability check)
-- [ ] Character CAN walk to occupiable tiles (chair, sofa, bed)
-- [ ] Depth sorting: character behind furniture is visually occluded correctly
+- [x] Office has a desk with computer and chair visible
+- [x] Living room has sofa and fireplace visible
+- [x] Bedroom has bed and lamp visible
+- [x] Character cannot walk through furniture (walkability check)
+- [x] Character CAN walk to occupiable tiles (chair, sofa, bed)
+- [x] Depth sorting: character behind furniture is visually occluded correctly
 
 ---
 
@@ -722,12 +723,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Character is visible on the isometric floor
-- [ ] Idle animation plays continuously (subtle bobbing)
-- [ ] Character has a recognizable lobster hat (even if simple)
-- [ ] Switching animations works correctly (idle → walk → type → etc.)
-- [ ] Frame rates are correct per animation (walk is faster than idle)
-- [ ] Character depth-sorts correctly with furniture
+- [x] Character is visible on the isometric floor
+- [x] Idle animation plays continuously (subtle bobbing)
+- [x] Character has a recognizable lobster hat (even if simple)
+- [x] Switching animations works correctly (idle → walk → type → etc.)
+- [x] Frame rates are correct per animation (walk is faster than idle)
+- [x] Character depth-sorts correctly with furniture
 
 ---
 
@@ -764,12 +765,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] `findPath(office, bedroom)` returns a path that goes through door tiles
-- [ ] `findPath` never routes through walls or furniture
-- [ ] Returns `null` for unreachable destinations
-- [ ] `moveAlongPath` produces smooth per-frame movement
-- [ ] Direction is correctly determined from movement vector
-- [ ] All unit tests pass
+- [x] `findPath(office, bedroom)` returns a path that goes through door tiles
+- [x] `findPath` never routes through walls or furniture
+- [x] Returns `null` for unreachable destinations
+- [x] `moveAlongPath` produces smooth per-frame movement
+- [x] Direction is correctly determined from movement vector
+- [x] All unit tests pass
 
 ---
 
@@ -811,14 +812,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Dispatching `GOTO_ROOM('office')` makes character walk to the office desk
-- [ ] Character walks through doors (not through walls)
-- [ ] Character faces the correct direction while walking
-- [ ] Walk animation plays during movement, target animation plays on arrival
-- [ ] If character is already in the target room, it transitions directly (no walk)
-- [ ] Auto-sleep triggers after 30s of idle
-- [ ] Pathfinding handles cases where character is already at the destination
-- [ ] All unit tests pass
+- [x] Dispatching `GOTO_ROOM('office')` makes character walk to the office desk
+- [x] Character walks through doors (not through walls)
+- [x] Character faces the correct direction while walking
+- [x] Walk animation plays during movement, target animation plays on arrival
+- [x] If character is already in the target room, it transitions directly (no walk)
+- [x] Auto-sleep triggers after 30s of idle
+- [x] Pathfinding handles cases where character is already at the destination
+- [x] All unit tests pass
 
 ---
 
@@ -851,12 +852,12 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Emotion bubble is visible above the character's head
-- [ ] Bubble floats gently (sine wave bobbing)
-- [ ] Emotion changes when character transitions states (e.g., typing → focused, sleeping → sleepy)
-- [ ] Different emotions are visually distinguishable
-- [ ] Bubble fades in smoothly when emotion changes
-- [ ] Bubble renders correctly at all zoom levels
+- [x] Emotion bubble is visible above the character's head
+- [x] Bubble floats gently (sine wave bobbing)
+- [x] Emotion changes when character transitions states (e.g., typing → focused, sleeping → sleepy)
+- [x] Different emotions are visually distinguishable
+- [x] Bubble fades in smoothly when emotion changes
+- [x] Bubble renders correctly at all zoom levels
 
 ---
 
@@ -909,13 +910,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Character moves between rooms in response to mock events
-- [ ] Character plays correct animation in each room (typing in office, sitting in living room, sleeping in bedroom)
-- [ ] Character shows correct emotion for each activity
-- [ ] Rapid events are handled without visual glitches (smooth transitions via queue)
-- [ ] Character sleeps when no events arrive for 30+ seconds
-- [ ] Integration tests pass: event→character pipeline, mock↔live switching, visibility buffering
-- [ ] No JavaScript errors in console during extended running
+- [x] Character moves between rooms in response to mock events
+- [x] Character plays correct animation in each room (typing in office, sitting in living room, sleeping in bedroom)
+- [x] Character shows correct emotion for each activity
+- [x] Rapid events are handled without visual glitches (smooth transitions via queue)
+- [x] Character sleeps when no events arrive for 30+ seconds
+- [x] Integration tests pass: event→character pipeline, mock↔live switching, visibility buffering
+- [x] No JavaScript errors in console during extended running
 
 ---
 
@@ -956,13 +957,13 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] Dashboard shows current connection status (Mock for development)
-- [ ] Agent state updates when character changes rooms/activities
-- [ ] Activity log scrolls and shows recent events with timestamps
-- [ ] Token usage section displays (mock data or real if connected)
-- [ ] Dashboard is toggleable with `D` key
-- [ ] Dashboard doesn't cause canvas rendering to stutter (throttled updates)
-- [ ] Layout is responsive: dashboard shrinks or hides on narrow viewports
+- [x] Dashboard shows current connection status (Mock for development)
+- [x] Agent state updates when character changes rooms/activities
+- [x] Activity log scrolls and shows recent events with timestamps
+- [x] Token usage section displays (mock data or real if connected)
+- [x] Dashboard is toggleable with `D` key
+- [x] Dashboard doesn't cause canvas rendering to stutter (throttled updates)
+- [x] Layout is responsive: dashboard shrinks or hides on narrow viewports
 
 ---
 
@@ -1011,14 +1012,14 @@ This document breaks down the Watch Claw MVP into concrete, sequentially executa
 
 **Acceptance criteria**:
 
-- [ ] App runs smoothly for 10+ minutes without errors
-- [ ] Character behavior feels natural and responsive
-- [ ] Lobster hat is clearly visible and recognizable
-- [ ] README has clear setup instructions
-- [ ] Debug shortcuts all work (G, F, D, M)
-- [ ] `pnpm dev` → working app in under 5 seconds
-- [ ] No console errors during normal operation
-- [ ] Memory usage stable (no growth over 10-minute run)
+- [x] App runs smoothly for 10+ minutes without errors
+- [x] Character behavior feels natural and responsive
+- [x] Lobster hat is clearly visible and recognizable
+- [x] README has clear setup instructions
+- [x] Debug shortcuts all work (G, F, D, M)
+- [x] `pnpm dev` → working app in under 5 seconds
+- [x] No console errors during normal operation
+- [x] Memory usage stable (no growth over 10-minute run)
 
 ---
 
@@ -1162,9 +1163,300 @@ This order prioritizes **visual feedback early** (seeing the isometric grid on s
 
 ## Checklist Summary
 
-- [ ] P0: Project boots, lints, tests, builds, Bridge Server ready
-- [ ] P1: Events flow from Bridge Server (or mock) to parsed CharacterActions
-- [ ] P2: Isometric canvas renders with game loop, camera pans and zooms
-- [ ] P3: One-floor house visible with 3 rooms, walls, doors, furniture
-- [ ] P4: Lobster-hat character walks between rooms, plays animations, shows emotions
-- [ ] P5: Events drive character behavior end-to-end, dashboard shows status, app is polished
+- [x] P0: Project boots, lints, tests, builds, Bridge Server ready
+- [x] P1: Events flow from Bridge Server (or mock) to parsed CharacterActions
+- [x] P2: Isometric canvas renders with game loop, camera pans and zooms
+- [x] P3: One-floor house visible with 3 rooms, walls, doors, furniture
+- [x] P4: Lobster-hat character walks between rooms, plays animations, shows emotions
+- [x] P5: Events drive character behavior end-to-end, dashboard shows status, app is polished
+- [ ] P6: Mock removed, Bridge enhanced, 3/4 top-down pixel art redone, Electron desktop app
+
+---
+
+## Phase 6: v0.2 Improvements
+
+### T6.1 — Remove Mock Data Logic (0.5 day)
+
+> Fully remove Mock mode, only support real Bridge Server data.
+
+**Depends on**: T5.3
+
+**Delete:**
+
+- `src/connection/mockProvider.ts`
+- `src/connection/mockProvider.test.ts`
+
+**Modify:**
+
+- `src/connection/connectionManager.ts` — Remove `MockProvider` references, `switchToMock()`, `MOCK_SWITCH_DELAY_MS`, `mock` state
+- `src/connection/index.ts` — Remove MockProvider export
+- `src/App.tsx` — Remove `forceMock` keyboard shortcut (M key)
+- `src/engine/gameState.ts` — Remove `forceMock` from `DebugState`; remove `'mock'` from `ConnectionInfo.status`
+- `src/ui/ConnectionBadge.tsx` — Remove "Mock" status, keep only Live / Connecting / Disconnected
+- `package.json` — Remove `dev:mock` script
+
+**New ConnectionManager behavior:**
+
+- Start → Connect Bridge → Success = `'live'`, Failure = keep retrying (exponential backoff), status = `'connecting'`
+- Never generate fake data
+
+**Acceptance criteria:**
+
+- [ ] No `mock` / `Mock` / `MockProvider` references in code
+- [ ] `pnpm test` passes (after removing mock tests)
+- [ ] UI shows "Connecting..." when Bridge unavailable, never "Mock"
+- [ ] Character does not auto-move without real events
+
+---
+
+### T6.2 — Bridge Server Enhancements (0.5 day)
+
+> Improve session monitoring sensitivity and session switch notifications.
+
+**Depends on**: T6.1
+
+**Modify:** `bridge/server.ts`
+
+- Shorten `SESSION_CHECK_INTERVAL_MS` from 5000 → 2000
+- Add `fs.watch` on `sessions.json` itself, trigger `checkForSessionChange()` immediately on file change
+- Session switch broadcasts `session_switch` message (already exists), frontend `BridgeClient` dispatches `RESET` on receipt
+- Confirm `pnpm dev` script correctly starts Vite + Bridge Server concurrently
+
+**Modify:** `src/connection/bridgeClient.ts`
+
+- On receiving `_bridge: true, type: 'session_switch'` message, emit a special event to notify ConnectionManager (currently `_bridge` messages are skipped)
+
+**Modify:** `src/connection/connectionManager.ts`
+
+- On session switch notification, dispatch `RESET` action to reset character
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev` starts Vite + Bridge Server together
+- [ ] Bridge Server detects session switch within 2s
+- [ ] Character auto-resets to bedroom/sleeping on session switch
+- [ ] `sessions.json` modifications immediately trigger check
+
+---
+
+### T6.3 — Pixel Art Asset Directory Structure (0.5 day)
+
+> Set up sprite loading framework and asset directory for Stardew Valley style pixel assets.
+
+**Depends on**: T6.1
+
+**User provides**: Download Stardew Valley style pixel assets from itch.io / OpenGameArt
+
+**Developer provides**: Directory structure and sprite loading framework
+
+```
+public/assets/
+├── tilesets/
+│   └── interior.png          # Floor, wall tileset (16x16 or 32x32)
+├── furniture/
+│   ├── desk-computer.png     # Computer desk
+│   ├── bookshelf.png         # Bookshelf
+│   ├── bed.png               # Bed
+│   ├── sofa.png              # Sofa
+│   ├── lamp.png              # Desk lamp
+│   └── ...
+├── character/
+│   └── character.png         # Character spritesheet (walk/idle/sit/type/sleep)
+└── ui/
+    └── emotion-bubbles.png   # Emotion bubble sprites
+```
+
+**New files:**
+
+- `src/engine/spritesheet.ts` — Spritesheet loading, frame cutting, animation frame definitions
+
+**Modify:**
+
+- `src/world/sprites.ts` — Rewrite to spritesheet-based loading (replacing placeholder logic)
+
+**Acceptance criteria:**
+
+- [ ] Spritesheet loader correctly cuts frames
+- [ ] Missing images have clear fallback (colored placeholder blocks + console warning)
+
+---
+
+### T6.4 — Coordinate System and Rendering Refactor (1 day)
+
+> Switch from isometric (diamond tiles) to 3/4 top-down (Stardew Valley style rectangular tiles).
+
+**Depends on**: T6.3
+
+**Current**: Isometric rendering (diamond tiles, z-sorting by col+row)
+**Target**: 3/4 top-down sprite-based rendering (rectangular tiles, y-sorting)
+
+**Rewrite:**
+
+- `src/engine/isometric.ts` → `src/engine/coordinates.ts`
+  - `cartesianToScreen(col, row)` — Grid position → screen pixels (simple tile size multiplication)
+  - `screenToCartesian(x, y, camera)` — Mouse position → grid position
+  - Remove all isometric diamond calculations
+- `src/engine/isometric.test.ts` → `src/engine/coordinates.test.ts`
+- `src/engine/renderer.ts` — Full rewrite
+  - Render layers: floor tiles → walls → furniture → character → emotion bubbles → UI
+  - Use `ctx.drawImage()` for sprites (replacing `ctx.fillRect` / `ctx.beginPath`)
+  - Y-coordinate sorting for correct occlusion (standard 3/4 view approach)
+- `src/engine/camera.ts` — Simplify to top-down camera
+- Update all files referencing isometric: `gameState.ts`, `character.ts`, `pathfinding.ts`, `CanvasView.tsx`, etc.
+
+**Acceptance criteria:**
+
+- [ ] Floor tiles render as rectangular grid (not diamonds)
+- [ ] Sprite assets display correctly if available; colored placeholders if missing
+- [ ] Camera pan/zoom works correctly in new perspective
+
+---
+
+### T6.5 — Rebuild World Map and Rooms (0.5 day)
+
+> Rebuild map with new room names and horizontal layout.
+
+**Depends on**: T6.4
+
+**Room layout (horizontal row):**
+
+```
+┌─────────────┬─────────────┬─────────────┐
+│             │             │             │
+│  Workshop   │   Study     │  Bedroom    │
+│  (工作室)    │   (书房)    │  (卧室)     │
+│             │             │             │
+└─────────────┴─────────────┴─────────────┘
+```
+
+**Modify:**
+
+- `src/connection/types.ts` — `RoomId` from `'office' | 'living-room' | 'bedroom'` to `'workshop' | 'study' | 'bedroom'`
+- `src/connection/eventParser.ts` — Update `TOOL_ROOM_MAP` room references
+- `src/world/tileMap.ts` — Horizontal 3-room tile map (~24x10 tiles)
+- `src/world/rooms.ts` — Update room definitions: Workshop, Study, Bedroom
+- `src/world/furniture.ts` — Define furniture placement with sprite references (position + spriteKey)
+- `src/engine/pathfinding.ts` — BFS unchanged, only update grid size
+- `src/engine/character.ts` — Update RESET action bedroom coordinates
+
+**Furniture configuration:**
+| Room | Furniture |
+| -------- | -------------------------------------------- |
+| Workshop | Computer desk (dual monitors), office chair, small bookshelf |
+| Study | Large bookshelf, sofa, coffee table, desk lamp |
+| Bedroom | Bed, nightstand, desk lamp |
+
+**Acceptance criteria:**
+
+- [ ] Three rooms display horizontally, separated by walls and doors
+- [ ] Furniture displays in correct positions (sprites or placeholder blocks)
+- [ ] Character can move between all three rooms through doors (pathfinding correct)
+
+---
+
+### T6.6 — Character Sprite Integration (0.5 day)
+
+> Switch character rendering from programmatic drawing to spritesheet-driven.
+
+**Depends on**: T6.5
+
+**Modify:**
+
+- `src/engine/character.ts` — Animation system uses spritesheet frame indices
+- `src/engine/renderer.ts` — Character rendering uses `drawImage()` to cut frames from spritesheet
+
+**Character animation frames:**
+| Animation | Frames | Directions | Trigger |
+| --------- | ------ | -------------- | ---------------- |
+| idle | 2-4 | 4-directional | Default |
+| walk | 4-6 | 4-directional | GOTO_ROOM |
+| type | 2-4 | 1-dir (facing desk) | Workshop activity |
+| read | 2 | 1-dir (facing shelf) | Study activity |
+| sleep | 2-4 | 1-dir (facing bed) | Bedroom/idle timeout |
+
+**Emotion bubbles:** sprite-based, floating above character head
+
+**Acceptance criteria:**
+
+- [ ] Character rendered with spritesheet (not programmatic rectangles)
+- [ ] Smooth frame animation when walking
+- [ ] Different state animations play in different rooms
+- [ ] Emotion bubbles display correctly
+
+---
+
+### T6.7 — Electron Desktop App Integration (1 day)
+
+> Wrap the web project as an Electron desktop app with system tray and always-on-top support.
+
+**Depends on**: T6.6
+
+**New files:**
+
+- `electron/main.ts` — Electron main process entry
+  - Create BrowserWindow, load Vite dev server (dev) or bundled files (production)
+  - Window options: borderless or semi-transparent, always-on-top, resizable
+  - System tray icon and menu (show/hide, quit)
+- `electron/preload.ts` — Preload script (secure IPC channels)
+- `electron/tray.ts` — System tray management
+
+**Modify:**
+
+- `package.json` — Add Electron dependencies (`electron`, `electron-builder`), new scripts:
+  - `"dev:electron"` — Start Vite + Bridge Server + Electron concurrently
+  - `"build:electron"` — Package as macOS .app / .dmg
+  - `"pack"` — electron-builder packaging
+- `vite.config.ts` — Adapt for Electron renderer build (base path etc.)
+- Bridge Server integration — Bridge Server can run in two modes:
+  - As standalone process (same as v0.1)
+  - Forked by Electron main process (recommended, unified lifecycle management)
+
+**Window features:**
+
+- Default window size: 1100x700 (canvas + dashboard)
+- Always-on-top toggle (tray menu or keyboard shortcut)
+- Window position and size memory (restore on next launch)
+- macOS: Dock icon support, click Dock icon to restore window
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev:electron` opens Electron window with full UI
+- [ ] Bridge Server forked and managed by Electron main process
+- [ ] System tray icon visible, right-click menu has show/hide/quit
+- [ ] Always-on-top toggleable
+- [ ] Window can be reopened via tray icon after closing
+- [ ] `pnpm build:electron` produces distributable macOS app
+
+---
+
+### T6.8 — End-to-End Verification and Polish (0.5 day)
+
+> Full pipeline verification of v0.2 changes and experience polish.
+
+**Depends on**: T6.7
+
+**Verification items:**
+
+- Bridge Server connection → Event parsing → Character FSM → Renderer full pipeline
+- Character stays quiet in bedroom sleeping when no events
+- OpenClaw `write`/`edit`/`exec` → Character goes to Workshop and types
+- OpenClaw `read`/`grep`/`web_search` → Character goes to Study
+- OpenClaw `stopReason: 'stop'` → Character returns to Bedroom and sleeps
+- Session switch → Character resets
+- Electron desktop window runs stably
+
+**Polish:**
+
+- Adjust walking speed (not too fast, not too slow)
+- Adjust animation frame rates
+- Dashboard removes Mock-related displays
+- Update README
+
+**Acceptance criteria:**
+
+- [ ] `pnpm dev:electron` → Electron + Bridge Server + Vite start together
+- [ ] Window shows "Live", character quietly sleeping (no events)
+- [ ] Character correctly responds to real events
+- [ ] `pnpm test` passes, `pnpm typecheck` zero errors, `pnpm build` succeeds
+- [ ] 10-minute stable run with no errors
+- [ ] Electron app packages successfully (macOS .app)

@@ -1,15 +1,15 @@
 # Watch Claw - Product Requirements Document
 
-> **Version**: 0.1.0 (Draft)
+> **Version**: 0.2.0
 > **Author**: luyao618
-> **Date**: 2026-03-22
+> **Date**: 2026-03-23
 > **Status**: In Progress
 
 ---
 
 ## 1. Overview
 
-**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. It renders an isometric, cross-section view of a cozy three-story house where a lobster-hat character -- representing the OpenClaw agent -- moves between rooms, performs activities, and expresses emotions based on the agent's actual runtime status.
+**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. It renders a 3/4 top-down view (Stardew Valley style) of a cozy house where a lobster-hat character -- representing the OpenClaw agent -- moves between rooms, performs activities, and expresses emotions based on the agent's actual runtime status. v0.2 ships as an Electron desktop application.
 
 The project uses a lightweight Bridge Server to monitor OpenClaw's Session Log files (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`), parses real-time agent events (tool calls, assistant messages, session lifecycle), and pushes them to the browser via WebSocket (`ws://127.0.0.1:18790`), translating them into character behaviors: walking to the office to code, sitting on the couch to think, sleeping in bed when idle.
 
@@ -26,10 +26,10 @@ The project uses a lightweight Bridge Server to monitor OpenClaw's Session Log f
 
 This project draws inspiration from two existing projects:
 
-| Project                                                           | What we borrow                                          | What we do differently                                                                                                 |
-| ----------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D rendering | We use Bridge Server push (not direct file tailing), isometric view (not top-down), single character (not multi-agent) |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine           | We focus on a cozy home (not corporate office), high-fidelity pixel art (not DOM tiles)                                |
+| Project                                                           | What we borrow                                          | What we do differently                                                                                                                  |
+| ----------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM, Canvas 2D rendering | We use Bridge Server push (not direct file tailing), 3/4 top-down view (not top-down), single character (not multi-agent), Electron app |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture, personality engine           | We focus on a cozy home (not corporate office), high-fidelity pixel art (not DOM tiles), Electron desktop app                           |
 
 ---
 
@@ -112,13 +112,22 @@ The MVP focuses on **one floor (main floor) with 3 rooms** to validate the core 
 OpenClaw does something → Bridge Server pushes event → Character moves to room → Animation plays
 ```
 
-### 4.2 MVP Floor Layout: Main Floor
+### 4.2 MVP Floor Layout: Main Floor (3 rooms in a row, 3/4 top-down view)
 
-| Room            | Agent Activity                                                | Character Animation                    | Emotion  |
-| --------------- | ------------------------------------------------------------- | -------------------------------------- | -------- |
-| **Office**      | `write`, `edit`, `exec`, assistant text streaming             | Sitting at desk, typing on keyboard    | Focused  |
-| **Living Room** | `read`, `grep`, `glob`, `web_search`, thinking (no tool call) | Sitting on couch, looking at fireplace | Thinking |
-| **Bedroom**     | Idle (no activity), waiting for user input, session end       | Lying in bed, sleeping                 | Sleepy   |
+```
+┌─────────────┬─────────────┬─────────────┐
+│             │             │             │
+│  Workshop   │   Study     │  Bedroom    │
+│  (工作室)    │   (书房)    │  (卧室)     │
+│             │             │             │
+└─────────────┴─────────────┴─────────────┘
+```
+
+| Room         | Agent Activity                                                | Character Animation                    | Emotion  |
+| ------------ | ------------------------------------------------------------- | -------------------------------------- | -------- |
+| **Workshop** | `write`, `edit`, `exec`, assistant text streaming             | Sitting at desk, typing on keyboard    | Focused  |
+| **Study**    | `read`, `grep`, `glob`, `web_search`, thinking (no tool call) | Sitting on couch, looking at bookshelf | Thinking |
+| **Bedroom**  | Idle (no activity), waiting for user input, session end       | Lying in bed, sleeping                 | Sleepy   |
 
 ### 4.3 MVP Feature List
 
@@ -129,13 +138,13 @@ OpenClaw does something → Bridge Server pushes event → Character moves to ro
 | 1   | **Bridge Server connection**  | Connect to Bridge Server at `ws://127.0.0.1:18790`, monitor most recent Session Log, auto-reconnect        |
 | 2   | **Event parsing**             | Parse Session Log events (`session`, `message`, `model_change`), extract tool calls and assistant messages |
 | 3   | **Event-to-behavior mapping** | Map parsed events to character actions (go to room, play animation, show emotion)                          |
-| 4   | **Mock mode**                 | When Bridge Server is unavailable, generate simulated events for development and demo                      |
-| 5   | **Isometric renderer**        | Canvas 2D isometric tile rendering with proper draw order (painter's algorithm)                            |
-| 6   | **One-floor layout**          | Main floor with 3 rooms: office, living room, bedroom                                                      |
-| 7   | **Lobster-hat character**     | Animated pixel character with states: idle, walk, sit, type, sleep                                         |
-| 8   | **Pathfinding**               | BFS pathfinding on tile grid, smooth character movement between rooms                                      |
-| 9   | **Emotion bubbles**           | Display emotion above character head: focused, thinking, sleepy, happy, confused                           |
-| 10  | **Status dashboard**          | Side panel showing: connection status, current agent state, token usage, session info                      |
+| 4   | **3/4 top-down renderer**     | Canvas 2D 3/4 top-down (Stardew Valley style) sprite-based rendering with y-sort depth ordering            |
+| 5   | **Three-room layout**         | Workshop, Study, Bedroom in a horizontal row                                                               |
+| 6   | **Lobster-hat character**     | Animated pixel character with states: idle, walk, sit, type, sleep                                         |
+| 7   | **Pathfinding**               | BFS pathfinding on tile grid, smooth character movement between rooms                                      |
+| 8   | **Emotion bubbles**           | Display emotion above character head: focused, thinking, sleepy, happy, confused                           |
+| 9   | **Status dashboard**          | Side panel showing: connection status, current agent state, token usage, session info                      |
+| 10  | **Electron desktop app**      | Standalone desktop window, system tray, always-on-top option                                               |
 
 #### Nice to Have (P1)
 
@@ -151,10 +160,10 @@ OpenClaw does something → Bridge Server pushes event → Character moves to ro
 - Second and third floors (attic, basement)
 - Staircase navigation between floors
 - Sound effects / music
-- Electron desktop app packaging
 - Custom layout editing
 - Multiple characters / sub-agent visualization
 - Persistent settings
+- Mock mode (fully removed in v0.2, only real Bridge Server data supported)
 
 ---
 
@@ -220,22 +229,22 @@ This is the definitive mapping table that drives the entire visualization.
 
 ### 6.2 Complete Mapping Table
 
-| OpenClaw Event                         | Tool / Phase     | Target Room                             | Animation                | Emotion   | Priority |
-| -------------------------------------- | ---------------- | --------------------------------------- | ------------------------ | --------- | -------- |
-| `type: "session"` (session start)      | --               | Living Room                             | Wake up, walk to couch   | Thinking  | High     |
-| `stopReason: "stop"` (session end)     | --               | Bedroom                                 | Walk to bed, lie down    | Sleepy    | High     |
-| Tool execution failure (exitCode != 0) | --               | (current room)                          | Sit down, hold head      | Confused  | High     |
-| `tool: write`                          | write            | Office                                  | Typing at keyboard       | Focused   | Medium   |
-| `tool: edit`                           | edit             | Office                                  | Typing at keyboard       | Focused   | Medium   |
-| `tool: exec`                           | exec             | Office (MVP) / Tool Room (v1.0)         | Typing / using tools     | Serious   | Medium   |
-| `tool: read`                           | read             | Living Room (MVP) / Reading Room (v1.0) | Reading, flipping pages  | Curious   | Medium   |
-| `tool: grep`                           | grep             | Living Room (MVP) / Reading Room (v1.0) | Searching through books  | Curious   | Medium   |
-| `tool: glob`                           | glob             | Living Room (MVP) / Storage Room (v1.0) | Browsing shelves         | Busy      | Medium   |
-| `tool: web_search`                     | web_search       | Living Room                             | Browsing on tablet/phone | Curious   | Medium   |
-| `tool: task`                           | task (sub-agent) | Living Room (MVP) / Lab (v1.0)          | Drawing on whiteboard    | Excited   | Medium   |
-| `assistant` streaming                  | --               | Office                                  | Typing at keyboard       | Focused   | Low      |
-| No event (idle > 30s)                  | --               | Bedroom                                 | Sleeping                 | Sleepy    | Low      |
-| Task completed                         | --               | Living Room (MVP) / Balcony (v1.0)      | Celebrating, stretching  | Satisfied | Medium   |
+| OpenClaw Event                         | Tool / Phase     | Target Room                       | Animation                | Emotion   | Priority |
+| -------------------------------------- | ---------------- | --------------------------------- | ------------------------ | --------- | -------- |
+| `type: "session"` (session start)      | --               | Study                             | Wake up, walk to couch   | Thinking  | High     |
+| `stopReason: "stop"` (session end)     | --               | Bedroom                           | Walk to bed, lie down    | Sleepy    | High     |
+| Tool execution failure (exitCode != 0) | --               | (current room)                    | Sit down, hold head      | Confused  | High     |
+| `tool: write`                          | write            | Workshop                          | Typing at keyboard       | Focused   | Medium   |
+| `tool: edit`                           | edit             | Workshop                          | Typing at keyboard       | Focused   | Medium   |
+| `tool: exec`                           | exec             | Workshop (MVP) / Tool Room (v1.0) | Typing / using tools     | Serious   | Medium   |
+| `tool: read`                           | read             | Study (MVP) / Reading Room (v1.0) | Reading, flipping pages  | Curious   | Medium   |
+| `tool: grep`                           | grep             | Study (MVP) / Reading Room (v1.0) | Searching through books  | Curious   | Medium   |
+| `tool: glob`                           | glob             | Study (MVP) / Storage Room (v1.0) | Browsing shelves         | Busy      | Medium   |
+| `tool: web_search`                     | web_search       | Study                             | Browsing on tablet/phone | Curious   | Medium   |
+| `tool: task`                           | task (sub-agent) | Study (MVP) / Lab (v1.0)          | Drawing on whiteboard    | Excited   | Medium   |
+| `assistant` streaming                  | --               | Workshop                          | Typing at keyboard       | Focused   | Low      |
+| No event (idle > 30s)                  | --               | Bedroom                           | Sleeping                 | Sleepy    | Low      |
+| Task completed                         | --               | Study (MVP) / Balcony (v1.0)      | Celebrating, stretching  | Satisfied | Medium   |
 
 ### 6.3 Priority Resolution
 
@@ -266,10 +275,9 @@ A compact side panel (right side or bottom) displaying:
 
 ```
 ┌──────────────────────────┐
-│  Watch Claw  v0.1        │
+│  Watch Claw  v0.2        │
 ├──────────────────────────┤
 │  Connection: Connected   │
-│  Mode: Live / Mock       │
 ├──────────────────────────┤
 │  Agent State: Working    │
 │  Current Tool: write    │
@@ -291,17 +299,16 @@ A compact side panel (right side or bottom) displaying:
 
 ## 8. Non-Functional Requirements
 
-| Requirement            | Target                                                                 |
-| ---------------------- | ---------------------------------------------------------------------- |
-| **Frame rate**         | 60fps Canvas rendering (requestAnimationFrame)                         |
-| **Bundle size**        | < 500KB gzipped (excluding sprite assets)                              |
-| **Browser support**    | Chrome 90+, Firefox 90+, Safari 15+, Edge 90+                          |
-| **Responsive**         | Minimum viewport: 800x600; scales up to 4K                             |
-| **Startup time**       | < 2s to first meaningful paint                                         |
-| **Bridge reconnect**   | Auto-reconnect with exponential backoff (1s, 2s, 4s, ... max 30s)      |
-| **Mock mode fallback** | < 100ms to switch to mock when Bridge Server is unreachable            |
-| **Memory usage**       | < 100MB browser memory footprint                                       |
-| **Accessibility**      | Reduced motion support (disable animations via prefers-reduced-motion) |
+| Requirement          | Target                                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Frame rate**       | 60fps Canvas rendering (requestAnimationFrame)                         |
+| **Bundle size**      | < 500KB gzipped (excluding sprite assets)                              |
+| **Platform**         | Electron desktop app (macOS first, Windows/Linux later)                |
+| **Responsive**       | Minimum viewport: 800x600; scales up to 4K                             |
+| **Startup time**     | < 2s to first meaningful paint                                         |
+| **Bridge reconnect** | Auto-reconnect with exponential backoff (1s, 2s, 4s, ... max 30s)      |
+| **Memory usage**     | < 100MB memory footprint                                               |
+| **Accessibility**    | Reduced motion support (disable animations via prefers-reduced-motion) |
 
 ---
 
