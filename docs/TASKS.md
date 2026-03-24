@@ -1,1462 +1,1416 @@
-# Watch Claw - Task Breakdown
+# Watch Claw - Task Breakdown (v1.0 Phaser Migration)
 
-> **Version**: 0.2.0
-> **Date**: 2026-03-23
-> **Granularity**: ~half-day per task
-> **Total estimated tasks**: 28 tasks across 7 phases
-
----
-
-## Overview
-
-This document breaks down the Watch Claw MVP into concrete, sequentially executable tasks. Each task is designed to take approximately **half a day** (3-4 hours) of focused development work.
-
-### Phase Summary
-
-| Phase | Name                 | Tasks | Scope                                                                    |
-| ----- | -------------------- | ----- | ------------------------------------------------------------------------ |
-| P0    | Project Bootstrap    | 3     | Scaffolding, tooling, dev environment, architecture adaptation           |
-| P1    | Connection Layer     | 4     | Bridge client, event parsing, mock provider                              |
-| P2    | Engine Foundation    | 3     | Game loop, isometric renderer, camera                                    |
-| P3    | World Building       | 3     | Tile map, rooms, furniture                                               |
-| P4    | Character System     | 4     | Sprites, FSM, pathfinding, emotions                                      |
-| P5    | Integration & Polish | 3     | End-to-end wiring, dashboard, polish                                     |
-| P6    | v0.2 Improvements    | 8     | Remove mock, Bridge enhancements, pixel art, renderer refactor, Electron |
+> **Version**: 1.0.0
+> **Date**: 2026-03-24
+> **Audience**: AI coding agent (vibe coding) + human (art assets)
+> **Previous tasks**: See [TASKS_v0.2_ARCHIVED.md](./TASKS_v0.2_ARCHIVED.md)
+>
+> Tasks marked `[AI]` are for AI coding agents to execute directly.
+> Tasks marked `[HUMAN]` require human work (art, audio, design) — with exact specifications.
 
 ---
 
-## Phase 0: Project Bootstrap
+## Context for AI Agent
 
-### T0.1 — Project Scaffolding
+You are working on **Watch Claw**, a Phaser 3 side-view pixel-art game that visualizes an OpenClaw AI agent's real-time working state. The game shows a three-floor house where a lobster-hat character moves between rooms based on the agent's activity.
 
-> Initialize the Vite + React + TypeScript project with the complete directory structure.
+**Project structure you need to know:**
+- `src/connection/` — **DO NOT MODIFY**. This layer handles WebSocket connection to Bridge Server and produces `CharacterAction` objects. It is fully working.
+- `src/engine/` — **TO BE DELETED** after migration. Old Canvas 2D renderer.
+- `src/world/` — **TO BE DELETED** after migration. Old tilemap and room definitions.
+- `src/game/` — **NEW directory you will create**. All Phaser code goes here.
+- `src/ui/` — React overlay. `Dashboard.tsx` stays. `CanvasView.tsx` and `ZoomControls.tsx` will be replaced.
+- `bridge/server.ts` — **DO NOT MODIFY**. Watches OpenClaw session logs and pushes via WebSocket.
+- `electron/` — **DO NOT MODIFY** until T4.4.
+- `public/assets/` — Game assets. Human will provide art; you create placeholder programmatic assets.
 
-**Depends on**: Nothing (starting point)
+**Key types from `src/connection/types.ts` (DO NOT CHANGE yet — will be updated in T5.3):**
+```typescript
+// v0.2 MVP rooms (current code). In T5.3 these will be renamed and expanded.
+// For now, reuse these IDs with new room meanings:
+//   'workshop' → Toolbox (2F, Execute)
+//   'study'    → Office (2F, Chat)
+//   'bedroom'  → Bedroom (2F, Rest)
+type RoomId = 'workshop' | 'study' | 'bedroom'
+type CharacterAction =
+  | { type: 'GOTO_ROOM'; room: RoomId; animation: AnimationId; emotion: EmotionId; speed?: 'fast' | 'slow' | 'normal' }
+  | { type: 'WAKE_UP' }
+  | { type: 'GO_SLEEP' }
+  | { type: 'CELEBRATE' }
+  | { type: 'CONFUSED' }
+  | { type: 'RESET' }
+```
 
-**Work items**:
-
-- Initialize project with `pnpm create vite@latest . --template react-ts`
-- Configure `tsconfig.json` with strict mode, path aliases (`@/` → `src/`)
-- Configure `vite.config.ts` with path alias resolution
-- Create the full directory structure as defined in TECHNICAL.md Section 3:
-  - `src/connection/`
-  - `src/engine/`
-  - `src/world/`
-  - `src/ui/`
-  - `src/utils/`
-  - `public/assets/character/`, `public/assets/tiles/`, `public/assets/furniture/`, `public/assets/ui/`
-- Create stub `index.ts` or placeholder files in each directory
-- Set up `src/main.tsx` → `src/App.tsx` with a basic "Watch Claw" heading
-- Verify `pnpm dev` starts and shows the page
-
-**Output**:
-
-- Working Vite dev server at `http://localhost:5173`
-- All directories created with placeholder files
-- TypeScript compiles without errors
-
-**Acceptance criteria**:
-
-- [x] `pnpm dev` starts without errors
-- [x] Browser shows "Watch Claw" text
-- [x] `pnpm build` produces a clean production build
-- [x] Path alias `@/` resolves correctly in imports
-
----
-
-### T0.2 — Dev Tooling Setup
-
-> Configure ESLint, Prettier, Git hooks, and basic test infrastructure.
-
-**Depends on**: T0.1
-
-**Work items**:
-
-- Install and configure ESLint with TypeScript parser and React plugin
-- Install and configure Prettier (2-space indent, single quotes, trailing comma)
-- Set up `.eslintrc.cjs` and `.prettierrc`
-- Install `husky` + `lint-staged` for pre-commit hooks (lint + format on staged files)
-- Install and configure Vitest (`vitest.config.ts`)
-- Write one trivial test to verify the test pipeline works (e.g., test a utility function)
-- Create `src/utils/constants.ts` with initial constants:
-  ```
-  TILE_WIDTH = 64, TILE_HEIGHT = 32,
-  BRIDGE_WS_URL = 'ws://127.0.0.1:18790',
-  BRIDGE_RECONNECT_BASE_MS = 1000,
-  BRIDGE_RECONNECT_MAX_MS = 30000,
-  CHARACTER_SPEED = 2,
-  ANIMATION_FPS = 8,
-  DASHBOARD_UPDATE_INTERVAL_MS = 250,
-  IDLE_SLEEP_THRESHOLD_S = 30
-  ```
-- Create `src/utils/helpers.ts` with basic utilities: `clamp()`, `lerp()`, `throttle()`, `generateId()`
-- Create `src/utils/eventBus.ts` — lightweight typed pub/sub (on/off/emit)
-- Add npm scripts: `lint`, `format`, `typecheck`, `test`
-- Update `.gitignore` for Vite project (dist/, node_modules/, etc.)
-
-**Output**:
-
-- Linting, formatting, and testing pipelines all functional
-- Core utility modules ready for use
-- Pre-commit hooks working
-
-**Acceptance criteria**:
-
-- [x] `pnpm lint` runs without errors
-- [x] `pnpm format` formats all files
-- [x] `pnpm typecheck` passes
-- [x] `pnpm test` runs and the trivial test passes
-- [x] Git commit triggers lint-staged hook
-- [x] `eventBus.ts` works: subscribe, emit, unsubscribe
+**The `ConnectionManager` class (in `src/connection/connectionManager.ts`) provides:**
+```typescript
+cm.onAction((action: CharacterAction) => { ... })       // subscribe to character actions; returns unsubscribe function () => void
+cm.onStatusChange((status: ConnectionStatus) => { ... }) // returns unsubscribe function () => void
+cm.onEventLog((event: SessionLogEvent) => { ... })       // returns unsubscribe function () => void
+cm.session  // { model, provider, sessionId, totalTokens, totalCost }
+```
 
 ---
 
-### T0.3 — Session Log Architecture Adaptation
+## Phase Summary
 
-> Adapt the completed T0.1/T0.2 work to add the Bridge Server and session log monitoring directory and configuration.
-
-**Depends on**: T0.2
-
-**Work items**:
-
-- Create the `bridge/` directory in the project:
-  - `bridge/server.ts` — Bridge Server entry point (~50-80 lines Node.js script)
-  - `bridge/README.md` — Bridge Server purpose documentation
-- Implement the Bridge Server (`bridge/server.ts`):
-  - Read `~/.openclaw/agents/main/sessions/sessions.json`, find the most recently active session (sort by `updatedAt`)
-  - Use `fs.watch` to monitor the session's JSONL file (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`)
-  - Start a WebSocket server listening on `ws://127.0.0.1:18790`
-  - When the JSONL file appends new lines, parse and broadcast them to all connected WebSocket clients
-  - Periodically re-read `sessions.json` (every 5s) to detect session switches
-  - On session switch: stop watching old file, start watching new file, notify clients
-- Update `src/utils/constants.ts`:
-  - `WS_URL` → `BRIDGE_WS_URL = 'ws://127.0.0.1:18790'`
-  - `WS_RECONNECT_BASE_MS` → `BRIDGE_RECONNECT_BASE_MS`
-  - `WS_RECONNECT_MAX_MS` → `BRIDGE_RECONNECT_MAX_MS`
-- Install `concurrently` dependency, update `package.json` `dev` script:
-  - `"dev": "concurrently \"vite\" \"tsx bridge/server.ts\""` — start both Vite and Bridge Server simultaneously
-- Add base type files under `src/connection/` created in T0.1 (if needed)
-
-**Output**:
-
-- `bridge/` directory with Bridge Server implementation
-- `pnpm dev` starts both Vite dev server and Bridge Server simultaneously
-- `constants.ts` updated with Bridge-related constants
-
-**Acceptance criteria**:
-
-- [x] `pnpm dev` starts both Vite and Bridge Server simultaneously
-- [x] Bridge Server listens for connections on `ws://127.0.0.1:18790`
-- [x] Bridge Server finds the most recently active session and monitors its JSONL file
-- [x] New JSONL lines are correctly parsed and broadcast
-- [x] Session switches are automatically tracked
-- [x] Constants in `constants.ts` have been renamed
+| Phase | Name                       | AI Tasks | Human Tasks | Scope                                           |
+| ----- | -------------------------- | -------- | ----------- | ----------------------------------------------- |
+| P0    | Phaser Bootstrap           | 3        | 0           | Install Phaser, game config, React mount        |
+| P1    | Tilemap & World            | 3        | 1           | Tiled import, collision, room detection         |
+| P2    | Character & Physics        | 3        | 1           | Sprite, FSM, physics, auto-navigation           |
+| P3    | Event Bridge & Integration | 3        | 1           | Wire connection layer, emotions, particles      |
+| P4    | UI & Polish                | 3        | 1           | Dashboard, scaling, sound, Electron             |
+| P5    | Three-Floor Expansion      | 3        | 1           | 9 rooms, ladders, full mapping, camera polish   |
 
 ---
 
-## Phase 1: Connection Layer
-
-### T1.1 — Bridge WebSocket Client
-
-> Implement the WebSocket client that connects to the Bridge Server with auto-reconnect.
-
-**Depends on**: T0.3
-
-**Work items**:
-
-- Create `src/connection/types.ts`:
-  - `ConnectionState` type (`disconnected` | `connecting` | `connected` | `reconnecting`) — no `handshaking` state needed
-  - `SessionLogEvent` interface (structure of session log JSONL lines):
-    - `id: string`, `parentId?: string`, `timestamp: string` (ISO 8601)
-    - `type: 'session' | 'message' | 'model_change' | 'thinking_level_change' | 'custom'`
-    - `message?:` (for `type: 'message'` events):
-      - `role: 'user' | 'assistant' | 'toolResult'`
-      - `content: string | ContentItem[]` (string for user, array for assistant/toolResult)
-      - `usage?: { input, output, cacheRead, cacheWrite, totalTokens, cost }` (assistant only)
-      - `stopReason?: 'toolUse' | 'stop'` (assistant only)
-  - `BridgeClientOptions` interface (url, reconnect settings)
-- Create `src/connection/bridgeClient.ts`:
-  - `BridgeClient` class implementing the connection state machine (see TECHNICAL.md Section 4.1)
-  - 4-state machine (no handshaking): `disconnected` → `connecting` → `connected` (or `reconnecting`)
-  - `connect(url)` — opens WebSocket, transitions directly to `connected` on success
-  - `disconnect()` — clean close
-  - Auto-reconnect with exponential backoff (1s → 2s → 4s → ... → 30s max)
-  - No heartbeat/tick mechanism (Bridge Server does not require heartbeat protocol)
-  - `onEvent(handler)` — register event listener, receives `SessionLogEvent`, returns unsubscribe function
-  - `onStateChange(handler)` — register state change listener
-  - Proper cleanup: close WebSocket, clear timers on disconnect
-- Write unit tests:
-  - Test state transitions (connect → connected, no handshake step)
-  - Test reconnect backoff timing
-  - Test event callback registration and unregistration
-  - Test disconnect cleanup
-
-**Output**:
-
-- `BridgeClient` class that can connect to the Bridge Server WebSocket endpoint
-- Full connection lifecycle with reconnect
-- Unit tests passing
-
-**Acceptance criteria**:
-
-- [x] Client connects to `ws://127.0.0.1:18790` when Bridge Server is running (or fails gracefully)
-- [x] Reconnection attempts follow exponential backoff pattern
-- [x] State changes are emitted correctly (4 states, no handshaking)
-- [x] Event handlers receive parsed `SessionLogEvent` objects
-- [x] `disconnect()` cleanly tears down all timers and the WebSocket
-- [x] Unit tests cover the state machine transitions
-
----
-
-### T1.2 — Event Parser + Action Types
-
-> Parse Session Log events into typed CharacterAction objects that the game engine consumes.
-
-**Depends on**: T1.1
-
-**Work items**:
-
-- Extend `src/connection/types.ts` with Session Log-specific event types:
-  - `SessionLogEvent` `type` field distinguishes event types:
-    - `type: 'session'` — session initialization (id, version, cwd)
-    - `type: 'message'` + `role: 'assistant'` — contains `text`, `thinking`, `toolCall` content items
-    - `type: 'message'` + `role: 'toolResult'` — tool execution results (`exitCode`, `durationMs`)
-    - `type: 'message'` + `role: 'user'` — user input
-  - `ContentItem` type: `TextContent | ThinkingContent | ToolCallContent | ToolResultContent`
-  - `CharacterAction` union type (GOTO_ROOM, CHANGE_EMOTION, WAKE_UP, GO_SLEEP, CELEBRATE, CONFUSED)
-  - `RoomId`, `AnimationId`, `EmotionId` types
-- Create `src/connection/eventParser.ts`:
-  - `parseSessionLogEvent(event: SessionLogEvent): CharacterAction | null`
-  - `TOOL_ROOM_MAP` constant mapping **lowercase** tool names to rooms/animations/emotions (see TECHNICAL.md Section 4.2):
-    - `exec` → Office (typing, focused)
-    - `read` → Living Room (sitting, thinking)
-    - `write` → Office (typing, focused)
-    - `edit` → Office (typing, focused)
-    - `web_search` → Living Room (thinking, curious)
-    - `memory_search` → Living Room (thinking, thinking)
-    - `glob` / `grep` → Living Room (sitting, curious)
-    - `task` → Living Room (think, thinking)
-  - Extract tool name from `toolCall` content items (`content.name` field)
-  - Use `stopReason` field to determine session state: `toolUse` (continuing) vs `stop` (task complete)
-  - Handle edge cases: unknown tool names → default to office, malformed events → return null
-- Create `ActionQueue` class (see TECHNICAL.md Section 4.2):
-  - Max size: 3
-  - Deduplication: same-room actions replace instead of queue
-  - FIFO pop
-- Write unit tests:
-  - Test each lowercase tool name maps to correct room/animation/emotion
-  - Test `type: 'session'` event produces `WAKE_UP` action
-  - Test `stopReason: 'stop'` produces `GO_SLEEP` action
-  - Test handling of multiple `toolCall` items in a single assistant message
-  - Test unknown tools fall back to office
-  - Test ActionQueue deduplication and overflow
-  - Test malformed events return null
-
-**Output**:
-
-- Complete type system for Session Log events and CharacterActions
-- Event parser with configurable mapping
-- ActionQueue for buffering during character movement
-- Unit tests covering all mappings
-
-**Acceptance criteria**:
-
-- [x] All lowercase tool names from the TOOL_ROOM_MAP produce correct CharacterActions
-- [x] `type: 'session'` → `WAKE_UP`; `stopReason: 'stop'` → `GO_SLEEP`
-- [x] A single assistant message with multiple toolCalls produces independent actions per tool
-- [x] Assistant text/thinking content → `GOTO_ROOM(office, type, focused)`
-- [x] Unknown/malformed events return `null` (no crash)
-- [x] ActionQueue respects max size and deduplication rules
-- [x] All unit tests pass
-
----
-
-### T1.3 — Mock Data Provider
-
-> Build a mock event generator that simulates realistic OpenClaw agent activity, producing Session Log format events.
-
-**Depends on**: T1.2
-
-**Work items**:
-
-- Create `src/connection/mockProvider.ts`:
-  - `MockProvider` class that generates realistic event sequences in Session Log format
-  - Session simulation cycle (see TECHNICAL.md Section 4.3):
-    1. Emit `type: 'session'` event (session initialization)
-    2. Emit `type: 'message', role: 'user'` event (user input)
-    3. Loop 10-30 times:
-       - Pause 3-8s → emit `type: 'message', role: 'assistant'` with `toolCall` content items
-       - Pause 1-5s → emit `type: 'message', role: 'toolResult'` with execution results
-    4. Intersperse assistant messages with `text`/`thinking` content between tool calls
-    5. Emit final assistant message (`stopReason: 'stop'`)
-    6. Pause 10-30s (idle period)
-    7. Repeat from step 2
-  - Weighted random tool selection (`write`/`edit` most frequent, `task` least) — using **lowercase** tool names
-  - Each event includes `id`, `parentId`, `timestamp` (ISO 8601) fields
-  - Generate realistic `usage` data (inputTokens, outputTokens, cost)
-  - `start(onEvent)` — begin generating events
-  - `stop()` — stop generating, emit final `stop` message
-- Write tests:
-  - Test that start/stop lifecycle is clean (no dangling timers)
-  - Test that tool distribution roughly matches weights over many iterations
-  - Test that events are well-formed SessionLogEvents with correct fields
-
-**Output**:
-
-- MockProvider that generates realistic agent behavior (Session Log format)
-- Passes all tests
-
-**Acceptance criteria**:
-
-- [x] Running MockProvider emits a sequence of session, user message, assistant (toolCall), and toolResult events
-- [x] Events are correctly formatted as SessionLogEvents (with id/parentId/timestamp)
-- [x] Tool names are lowercase: `write`, `edit`, `read`, `exec`, `web_search`, etc.
-- [x] Tool distribution feels realistic (more write/edit, fewer task/web_search)
-- [x] `stop()` cleans up all timers (no memory leaks)
-- [x] Session cycles repeat with idle gaps between them
-
----
-
-### T1.4 — Connection Manager + Connection Status UI
-
-> Orchestrate Bridge vs Mock mode switching and expose connection state to the UI.
-
-**Depends on**: T1.3
-
-**Work items**:
-
-- Create `src/connection/connectionManager.ts`:
-  - `ConnectionManager` class that orchestrates `BridgeClient` and `MockProvider`
-  - On `connect()`: attempt Bridge Server connection. If it fails or times out (5s), auto-switch to MockProvider
-  - On Bridge disconnect: switch to MockProvider after a brief delay, keep trying to reconnect Bridge Server in background
-  - On Bridge reconnect success: switch back from Mock to Bridge seamlessly
-  - Emit normalized `CharacterAction` events regardless of source (Bridge or Mock)
-  - Expose `connectionStatus`: `'live'` | `'mock'` | `'connecting'` | `'disconnected'`
-  - Expose session log `usage` data (tokens, cost) for the dashboard
-  - Expose `sessionInfo`: model (from `model_change` event), tokens used, session ID (from `session` event)
-- Create `src/ui/ConnectionBadge.tsx`:
-  - Small React component showing connection status
-  - Green dot + "Live" when connected to Bridge Server
-  - Yellow dot + "Mock" when using mock data
-  - Red dot + "Disconnected" when neither is active
-  - Animated pulsing dot for "Connecting..." state
-- Integrate ConnectionBadge into `App.tsx`
-- Manual integration test: start the app, verify it shows "Mock" mode and events flow
-
-**Output**:
-
-- ConnectionManager that seamlessly switches between live and mock data
-- Visual connection status indicator in the UI
-- Events flowing to the console (or a debug div) from either source
-
-**Acceptance criteria**:
-
-- [x] App starts and shows "Mock" badge (since Bridge Server is not running)
-- [x] ConnectionManager attempts Bridge Server connection on startup, falls back to mock
-- [x] Events from mock provider can be observed (console.log or debug UI)
-- [x] If Bridge Server were available, switching would happen automatically
-- [x] Connection badge accurately reflects current state
-- [x] No dangling timers or WebSocket connections on cleanup
-
----
-
-## Phase 2: Engine Foundation
-
-### T2.1 — Isometric Math + Canvas Setup
-
-> Implement the isometric coordinate system and set up the Canvas rendering pipeline.
-
-**Depends on**: T0.2 (can be done in parallel with P1)
-
-**Work items**:
-
-- Create `src/engine/isometric.ts`:
-  - `cartesianToIso(col, row)` — grid position → screen pixel offset
-  - `isoToCartesian(screenX, screenY)` — screen pixel → grid position (for mouse)
-  - `getTileAtScreen(screenX, screenY, camera)` — screen coords → tile coords with camera offset
-  - Constants: `TILE_WIDTH`, `TILE_HEIGHT` (imported from constants.ts)
-  - Utility: `tileCenter(col, row)` — get the center pixel position of a tile
-- Create `src/ui/CanvasView.tsx`:
-  - Mount a `<canvas>` element that fills its container
-  - Handle `ResizeObserver` for responsive sizing
-  - Handle `window.devicePixelRatio` for sharp rendering on retina displays
-  - Watch for DPR changes at runtime (window dragged between monitors) via `matchMedia`
-  - Expose canvas `ref` for the game engine to use
-  - Disable `imageSmoothingEnabled` for pixel-perfect rendering
-  - Handle mouse events (click, mousemove, wheel) and translate to world coordinates
-- Create `src/engine/renderer.ts` (initial version):
-  - `Renderer` class that takes a canvas context
-  - `clear()` — clear the frame
-  - `renderDebugGrid(cols, rows)` — draw an isometric grid for development
-  - Test rendering: draw a 10x10 isometric grid of colored diamonds
-- Write unit tests for isometric math:
-  - `cartesianToIso` and back round-trips correctly
-  - `isoToCartesian` correctly identifies tiles at known screen positions
-  - Edge cases: negative coordinates, fractional positions
-
-**Output**:
-
-- Isometric math utilities with full test coverage
-- Canvas component with DPR handling and resize support
-- Visible isometric debug grid on screen
-
-**Acceptance criteria**:
-
-- [x] Opening the app shows a visible isometric diamond grid
-- [x] Grid renders crisp on retina displays (no blurring)
-- [x] Canvas resizes correctly when browser window changes size
-- [x] Isometric math unit tests all pass (round-trip, edge cases)
-- [x] Mouse position can be translated to tile coordinates (console.log on hover)
-
----
-
-### T2.2 — Game Loop + Game State
-
-> Implement the fixed-timestep game loop and the central game state object.
-
-**Depends on**: T2.1
-
-**Work items**:
-
-- Create `src/engine/gameLoop.ts`:
-  - `GameLoop` class with fixed timestep (see TECHNICAL.md Section 4.7)
-  - `start()`, `stop()`, `pause()`, `resume()`
-  - `update(dt)` callback at fixed 60fps interval
-  - `render(interpolation)` callback on each animation frame
-  - FPS tracking (rolling average over last 60 frames)
-  - Delta time cap to prevent spiral of death (max 100ms)
-- Create `src/engine/gameState.ts`:
-  - `GameState` interface:
-    ```typescript
-    interface GameState {
-      character: CharacterState
-      world: WorldState
-      camera: CameraState
-      connection: ConnectionInfo
-      debug: DebugState
-    }
-    ```
-  - `createInitialGameState()` factory function
-  - `CharacterState` with position, state, emotion, animation, path
-  - `WorldState` stub (tiles, rooms, furniture — filled in Phase 3)
-  - `CameraState`: offsetX, offsetY, zoom
-  - `ConnectionInfo`: status, lastEvent, tokenUsage
-  - State change notification via eventBus (for React UI updates, throttled)
-- Wire up: GameLoop → update(GameState) → Renderer.renderFrame(GameState)
-- Add FPS counter display (bottom-left corner of canvas, togglable)
-
-**Output**:
-
-- Game loop running at stable 60fps
-- GameState object created and updated each frame
-- Debug grid renders continuously via the game loop
-- FPS counter visible
-
-**Acceptance criteria**:
-
-- [x] Game loop runs stably (check FPS counter shows ~60)
-- [x] Debug grid renders each frame without flickering
-- [x] `pause()` and `resume()` work correctly
-- [x] Game state object is accessible and mutable
-- [x] Delta time capping prevents frame spikes from cascading
-
----
-
-### T2.3 — Camera System
-
-> Implement viewport panning and zoom controls for navigating the isometric view.
-
-**Depends on**: T2.2
-
-**Work items**:
-
-- Create `src/engine/camera.ts`:
-  - `CameraState` interface: `{ offsetX, offsetY, zoom, targetOffsetX, targetOffsetY }`
-  - `pan(dx, dy)` — move camera by pixel delta
-  - `zoomTo(level)` — set zoom (float: 0.5-5.0, step ±0.25), zoom toward screen center
-  - `centerOn(col, row)` — center camera on a tile position
-  - `worldToScreen(worldX, worldY)` — apply camera transform
-  - `screenToWorld(screenX, screenY)` — inverse camera transform
-  - Smooth camera interpolation (lerp toward target each frame)
-  - Zoom bounds: min 1, max 5
-- Wire up mouse events from CanvasView:
-  - Mouse wheel → zoom in/out
-  - Middle-click + drag (or right-click + drag) → pan
-  - `renderer.ts` applies camera transform before rendering
-- Create `src/ui/ZoomControls.tsx`:
-  - +/- buttons to adjust zoom
-  - Display current zoom level
-  - "Reset" button to center view and reset zoom to default
-- Integrate ZoomControls into App.tsx layout
-- Set initial camera position to center the one-floor layout on screen
-
-**Output**:
-
-- Camera panning and zooming via mouse and UI buttons
-- Smooth camera animation
-- Debug grid zooms and pans correctly
-
-**Acceptance criteria**:
-
-- [x] Mouse wheel zooms in/out with float steps (±0.25, range 0.5x through 5x)
-- [x] Right-click drag pans the view smoothly
-- [x] Zoom controls (+/-/reset) work correctly
-- [x] Camera smoothly interpolates to target position
-- [x] Grid renders correctly at all zoom levels (no gaps, no jitter)
-- [x] `centerOn()` correctly frames a given tile
-
----
-
-## Phase 3: World Building (One Floor)
-
-### T3.1 — Tile Map + Room Definitions
-
-> Define the one-floor layout as a tile map and configure the three rooms.
-
-**Depends on**: T2.3
-
-**Work items**:
-
-- Create `src/world/tileMap.ts`:
-  - `TileType` enum: `FLOOR_WOOD`, `FLOOR_CARPET`, `WALL`, `DOOR`, `EMPTY`
-  - Main floor tile map: approximately 16x12 grid (adjustable)
-  - Layout design:
-    ```
-    Row 0-1:  WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL
-    Row 2:    WALL  [--- OFFICE ---]  DOOR  [-- LIVING ROOM --]  DOOR  [-- BEDROOM --]  WALL
-    Row 3-8:  WALL   FLOOR(wood)      DOOR   FLOOR(carpet)       DOOR   FLOOR(carpet)    WALL
-    Row 9:    WALL  [--- OFFICE ---]  WALL  [-- LIVING ROOM --]  WALL  [-- BEDROOM --]  WALL
-    Row 10-11: WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL WALL
-    ```
-  - `getFloorLayout(): TileType[][]`
-  - `buildWalkabilityGrid(layout): boolean[][]` — floor and door tiles are walkable, walls are not
-- Create `src/world/rooms.ts`:
-  - `Room` interface:
-    ```typescript
-    interface Room {
-      id: RoomId
-      name: string
-      bounds: {
-        startCol: number
-        startRow: number
-        endCol: number
-        endRow: number
-      }
-      entryTile: TileCoord // Door tile closest to the room
-      activityZone: TileCoord // Where the character sits/stands/sleeps
-      furnitureItems: FurniturePlacement[]
-    }
-    ```
-  - Define three rooms:
-    - **Office**: left section, activityZone = desk chair position
-    - **Living Room**: center section, activityZone = sofa position
-    - **Bedroom**: right section, activityZone = bed position
-  - `getRoomById(id: RoomId): Room`
-  - `getRoomForAction(action: CharacterAction): Room` — lookup room for a given action
-- Write unit tests:
-  - Walkability grid has correct walkable/blocked tiles
-  - All room activityZones are walkable
-  - All room entryTiles are walkable (doors)
-  - All three rooms are fully enclosed
-
-**Output**:
-
-- Complete tile map for one floor with 3 rooms
-- Room definitions with entry points and activity zones
-- Walkability grid generated correctly
-
-**Acceptance criteria**:
-
-- [x] Tile map renders as an isometric floor plan (using debug renderer from T2.1)
-- [x] Three distinct rooms are visible with walls between them
-- [x] Doors connect the rooms
-- [x] Walkability grid correctly marks walls as blocked
-- [x] Room activityZones and entryTiles are on walkable tiles
-- [x] Unit tests pass
-
----
-
-### T3.2 — Floor and Wall Rendering
-
-> Render the tile map with proper isometric floor tiles and wall segments.
-
-**Depends on**: T3.1
-
-**Work items**:
-
-- Create placeholder sprite assets (programmatic or simple PNGs):
-  - `public/assets/tiles/floor-wood.png` — warm wood floor tile (64x32 isometric diamond)
-  - `public/assets/tiles/floor-carpet.png` — carpet floor tile (64x32)
-  - `public/assets/tiles/wall-front.png` — front-facing wall (64x64, diamond + 32px height)
-  - `public/assets/tiles/wall-side.png` — side-facing wall (64x64)
-  - `public/assets/tiles/door.png` — door opening (64x64)
-  - These can be simple colored shapes initially — pixel art quality comes later
-- Create `src/world/sprites.ts`:
-  - `loadSprite(path: string): Promise<HTMLImageElement>` — load a PNG and cache it
-  - `SpriteCache` — Map<string, HTMLImageElement> for loaded sprites
-  - `preloadAllSprites()` — load all required sprites at startup
-  - Return placeholder colored rectangles if sprite files are missing
-- Update `src/engine/renderer.ts`:
-  - `renderFloor(ctx, world)` — iterate tiles, draw floor sprites at correct isometric positions
-  - `renderWalls(ctx, world)` — draw wall sprites with correct height offset (walls are taller than floor)
-  - `renderDoors(ctx, world)` — render door openings
-  - Replace debug grid with actual tile rendering
-  - Handle draw order: back-to-front (top-left to bottom-right in isometric)
-- Verify the visual result: a visible isometric one-floor house with 3 rooms
-
-**Output**:
-
-- Visible isometric floor plan with distinct floor types per room
-- Walls enclosing the rooms with door openings
-- Sprites loaded and cached
-
-**Acceptance criteria**:
-
-- [x] Floor renders with correct isometric alignment (no gaps between tiles)
-- [x] Walls render with correct height (taller than floor)
-- [x] Two different floor types are visually distinct (office vs living/bedroom)
-- [x] Doors are visually open/passable
-- [x] Sprites load without errors; fallback to colored shapes if files missing
-- [x] Draw order is correct (no visual glitches at tile boundaries)
-
----
-
-### T3.3 — Furniture Placement
-
-> Place furniture in each room and integrate into the rendering pipeline.
-
-**Depends on**: T3.2
-
-**Work items**:
-
-- Create `src/world/furniture.ts`:
-  - `FurnitureType` enum: `DESK_COMPUTER`, `CHAIR_OFFICE`, `SOFA`, `FIREPLACE`, `BED`, `LAMP`, `BOOKSHELF`, `TABLE`
-  - `FurniturePlacement` interface:
-    ```typescript
-    interface FurniturePlacement {
-      type: FurnitureType
-      col: number
-      row: number
-      spriteKey: string
-      zOffset: number // Vertical render offset
-      walkable: boolean // Can character walk on this tile?
-      occupiable: boolean // Can character sit/stand here? (for chairs, beds)
-    }
-    ```
-  - Define furniture for each room:
-    - **Office**: computer desk (2 tiles), office chair, bookshelf, lamp
-    - **Living Room**: sofa, fireplace, coffee table, small bookshelf
-    - **Bedroom**: bed (2 tiles), bedside lamp, small table
-- Create placeholder furniture sprites:
-  - Simple isometric colored shapes per furniture type
-  - Sprites stored in `public/assets/furniture/`
-- Update `src/engine/renderer.ts`:
-  - Add furniture to the entity list for z-sorted rendering
-  - Furniture renders at correct isometric position with z-offset
-  - Furniture occludes/overlaps correctly with the character (depth sorting)
-- Update walkability grid: furniture tiles marked as non-walkable (except `occupiable` tiles like chairs)
-
-**Output**:
-
-- Each room has recognizable furniture
-- Furniture renders in correct depth order
-- Walkability grid updated to account for furniture
-
-**Acceptance criteria**:
-
-- [x] Office has a desk with computer and chair visible
-- [x] Living room has sofa and fireplace visible
-- [x] Bedroom has bed and lamp visible
-- [x] Character cannot walk through furniture (walkability check)
-- [x] Character CAN walk to occupiable tiles (chair, sofa, bed)
-- [x] Depth sorting: character behind furniture is visually occluded correctly
-
----
-
-## Phase 4: Character System
-
-### T4.1 — Character Sprite + Animation System
-
-> Create the lobster-hat character sprite with animation frames and build the animation playback system.
-
-**Depends on**: T3.2 (needs renderer to display character)
-
-**Work items**:
-
-- Create character sprites (programmatic placeholder or simple pixel art):
-  - **Idle**: 4 frames (subtle breathing/bobbing), 4 directions (NE, NW, SE, SW)
-  - **Walk**: 6 frames (leg movement), 4 directions
-  - **Type**: 4 frames (arms moving on keyboard), 1 direction (facing desk)
-  - **Sleep**: 4 frames (chest rise/fall, ZZZ), 1 direction (in bed)
-  - **Sit**: 2 frames (subtle movement), 2 directions
-  - **Think**: 4 frames (hand on chin, head tilt), 1 direction
-  - Character size: 32x48 pixels (fits within one tile, head + lobster hat extends above)
-  - The lobster hat: red/orange claw-shaped headwear, the defining visual feature
-  - For MVP, programmatic sprites are fine: colored rectangle body + red triangle hat
-- Create animation data:
-  ```typescript
-  const ANIMATIONS: Record<AnimationId, AnimationConfig> = {
-    idle: { frameCount: 4, fps: 2, loop: true },
-    walk: { frameCount: 6, fps: 8, loop: true },
-    type: { frameCount: 4, fps: 6, loop: true },
-    sleep: { frameCount: 4, fps: 1, loop: true },
-    sit: { frameCount: 2, fps: 1, loop: true },
-    think: { frameCount: 4, fps: 2, loop: true },
-    celebrate: { frameCount: 6, fps: 4, loop: false },
+## Phase 0: Phaser Bootstrap
+
+### T0.1 [AI] — Install Phaser & Create Game Config
+
+**Goal**: Set up Phaser 3 in the existing Vite + React + TypeScript project with a blank running game.
+
+**Steps**:
+
+1. Run `pnpm add phaser` to install Phaser 3.
+
+2. Create file `src/game/config.ts`:
+```typescript
+import Phaser from 'phaser'
+import { BootScene } from './scenes/BootScene'
+import { HouseScene } from './scenes/HouseScene'
+import { UIScene } from './scenes/UIScene'
+
+export const gameConfig: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: 480,
+  height: 270,
+  zoom: 2,                 // 2x pixel scaling → 960×540 rendered (top-level, NOT inside scale)
+  pixelArt: true,          // disable anti-aliasing for pixel art
+  roundPixels: true,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { x: 0, y: 800 },
+      debug: false,
+    },
+  },
+  scene: [BootScene, HouseScene, UIScene],
+}
+```
+
+3. Create these stub scene files:
+
+`src/game/scenes/BootScene.ts`:
+```typescript
+import Phaser from 'phaser'
+
+export class BootScene extends Phaser.Scene {
+  constructor() { super({ key: 'BootScene' }) }
+  preload() {
+    // Asset loading will go here (T0.3)
   }
-  ```
-- Build animation playback system in `src/engine/character.ts` (initial):
-  - Track `currentAnimation`, `currentFrame`, `frameTimer`
-  - `updateAnimation(dt)` — advance frame timer, switch frames at correct FPS
-  - `setAnimation(id)` — switch animation, reset frame counter
-  - `getCurrentSpriteFrame()` — return the current frame rectangle/image for rendering
-- Update renderer to draw character:
-  - Draw character sprite at correct isometric position
-  - Character sorts with furniture in the z-order (sorted by row + col)
-  - Character renders above floor, at same depth plane as furniture
+  create() {
+    this.scene.start('HouseScene')
+    this.scene.launch('UIScene')  // parallel overlay scene
+  }
+}
+```
 
-**Output**:
+`src/game/scenes/HouseScene.ts`:
+```typescript
+import Phaser from 'phaser'
 
-- Animated character visible on screen with lobster-hat silhouette
-- Animation playback at correct frame rates
-- Character properly depth-sorted with furniture
+export class HouseScene extends Phaser.Scene {
+  constructor() { super({ key: 'HouseScene' }) }
+  create() {
+    this.add.text(100, 100, 'Watch Claw v1.0 — HouseScene', {
+      fontSize: '12px', color: '#ffffff'
+    })
+  }
+  update(_time: number, _delta: number) {
+    // Game logic will go here
+  }
+}
+```
 
-**Acceptance criteria**:
+`src/game/scenes/UIScene.ts`:
+```typescript
+import Phaser from 'phaser'
 
-- [x] Character is visible on the isometric floor
-- [x] Idle animation plays continuously (subtle bobbing)
-- [x] Character has a recognizable lobster hat (even if simple)
-- [x] Switching animations works correctly (idle → walk → type → etc.)
-- [x] Frame rates are correct per animation (walk is faster than idle)
-- [x] Character depth-sorts correctly with furniture
+export class UIScene extends Phaser.Scene {
+  constructor() { super({ key: 'UIScene' }) }
+  create() {
+    // HUD overlay will go here (T3.4)
+  }
+}
+```
 
----
+4. Create `src/game/index.ts`:
+```typescript
+export { gameConfig } from './config'
+export { BootScene } from './scenes/BootScene'
+export { HouseScene } from './scenes/HouseScene'
+export { UIScene } from './scenes/UIScene'
+```
 
-### T4.2a — Pathfinding System
+5. Verify `pnpm dev` starts without errors. The Phaser game won't be mounted yet (that's T0.2), but there should be no TypeScript compilation errors.
 
-> Implement tile-based BFS pathfinding for room-to-room navigation.
-
-**Depends on**: T3.3 (needs furniture/walkability grid)
-
-**Work items**:
-
-- Create `src/engine/pathfinding.ts`:
-  - `findPath(from, to, walkabilityGrid): TileCoord[] | null` (BFS implementation, see TECHNICAL.md Section 4.6)
-  - 4-directional neighbors (N, S, E, W) — no diagonals for isometric
-  - Path result excludes the starting tile, includes the destination
-  - Return `null` if no path found
-  - Handle inter-room pathfinding: character must go through doors
-- Create `moveAlongPath()` utility function:
-  - Smooth movement between tiles using lerp
-  - Snap to tile when close enough (< 0.05 distance)
-  - Direction calculation: determine NE/NW/SE/SW based on movement vector
-- Write unit tests:
-  - Path from office to bedroom goes through doors
-  - No path through walls
-  - Path to unreachable tile returns null
-  - Path when already at destination returns empty array
-  - Direction calculation for all 4 directions
-
-**Output**:
-
-- BFS pathfinding that routes through doors between rooms
-- Movement interpolation for smooth tile-to-tile walking
-- Unit tests covering all path scenarios
-
-**Acceptance criteria**:
-
-- [x] `findPath(office, bedroom)` returns a path that goes through door tiles
-- [x] `findPath` never routes through walls or furniture
-- [x] Returns `null` for unreachable destinations
-- [x] `moveAlongPath` produces smooth per-frame movement
-- [x] Direction is correctly determined from movement vector
-- [x] All unit tests pass
+**Done when**: `pnpm typecheck` passes and all files above exist.
 
 ---
 
-### T4.2b — Character FSM
+### T0.2 [AI] — PhaserContainer React Component
 
-> Implement the character finite state machine that processes actions and manages state transitions.
+**Goal**: Replace the old `<CanvasView>` with a React component that mounts and manages the Phaser game lifecycle.
 
-**Depends on**: T4.1, T4.2a (needs animation system and pathfinding)
+**Steps**:
 
-**Work items**:
+1. Create `src/ui/PhaserContainer.tsx`:
+```typescript
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import Phaser from 'phaser'
+import { gameConfig } from '@/game'
 
-- Implement full FSM in `src/engine/character.ts` (see TECHNICAL.md Section 4.5):
-  - States: `idle`, `walking`, `typing`, `sitting`, `sleeping`, `thinking`, `celebrating`
-  - `processAction(action: CharacterAction)` — respond to actions from the event parser:
-    - `GOTO_ROOM` → find path to room's activityZone → set state to `walking`
-    - `WAKE_UP` → if sleeping, transition to idle
-    - `GO_SLEEP` → GOTO_ROOM(bedroom) with sleep animation
-    - `CELEBRATE` → play celebrate animation
-    - `CONFUSED` → change emotion, stay in current room
-  - `update(dt)` — state-specific logic:
-    - `walking`: move along path, update direction, transition to target state on arrival
-    - `idle`: check pending actions, auto-sleep after IDLE_SLEEP_THRESHOLD
-    - Others: check for new pending actions (can interrupt)
-  - Track `prevPosition` for render interpolation (see TECHNICAL.md renderer section)
-- Integrate with GameLoop: `gameLoop.update()` calls `character.update(dt)`
-- Write unit tests:
-  - All state transitions are valid (no illegal transitions)
-  - GOTO_ROOM triggers walking state
-  - Arrival at destination triggers correct target state
-  - Auto-sleep after idle threshold
-  - WAKE_UP only works from sleeping state
-- Manual test: dispatch actions via console and watch character walk between rooms
+export interface PhaserContainerHandle {
+  getGame(): Phaser.Game | null
+}
 
-**Output**:
+export const PhaserContainer = forwardRef<PhaserContainerHandle>(
+  function PhaserContainer(_props, ref) {
+    const containerRef = useRef<HTMLDivElement>(null)
+    const gameRef = useRef<Phaser.Game | null>(null)
 
-- Character FSM with all state transitions
-- Character responds to all CharacterAction types
-- Properly integrated with GameLoop
+    useImperativeHandle(ref, () => ({
+      getGame: () => gameRef.current,
+    }))
 
-**Acceptance criteria**:
+    useEffect(() => {
+      if (!containerRef.current || gameRef.current) return
 
-- [x] Dispatching `GOTO_ROOM('office')` makes character walk to the office desk
-- [x] Character walks through doors (not through walls)
-- [x] Character faces the correct direction while walking
-- [x] Walk animation plays during movement, target animation plays on arrival
-- [x] If character is already in the target room, it transitions directly (no walk)
-- [x] Auto-sleep triggers after 30s of idle
-- [x] Pathfinding handles cases where character is already at the destination
-- [x] All unit tests pass
+      const game = new Phaser.Game({
+        ...gameConfig,
+        parent: containerRef.current,
+      })
+      gameRef.current = game
 
----
+      return () => {
+        game.destroy(true)
+        gameRef.current = null
+      }
+    }, [])
 
-### T4.3 — Emotion Bubble System
+    return (
+      <div
+        ref={containerRef}
+        style={{ flex: 1, minWidth: 0, minHeight: 0, background: '#1a1a2e' }}
+      />
+    )
+  }
+)
+```
 
-> Display emotion bubbles above the character's head.
+2. Update `src/App.tsx`:
+   - Replace `import { CanvasView, ... } from '@/ui'` → import `PhaserContainer` and `PhaserContainerHandle`
+   - Remove all references to `GameLoop`, `renderFrame`, `setupCanvas`, `buildWorldState`, old `gameState` (the `useMemo<GameState>` block)
+   - Remove the `CanvasView` and `ZoomControls` components from the JSX
+   - Keep `ConnectionManager` initialization (the `useEffect` that creates `cm`), `Dashboard`, keyboard shortcuts, session info polling
+   - In the JSX, replace the canvas area with `<PhaserContainer ref={phaserRef} />`
+   - Store phaserRef: `const phaserRef = useRef<PhaserContainerHandle>(null)`
+   - **Important**: Do NOT wire ConnectionManager to Phaser yet (that's T3.1). Just make sure both exist side by side.
 
-**Depends on**: T4.2b
+3. Delete these files (they are now replaced):
+   - `src/ui/CanvasView.tsx`
+   - `src/ui/ZoomControls.tsx`
 
-- 16x16 pixel bubbles for each emotion: focused, thinking, sleepy, happy, confused, curious, serious, satisfied
-- Each is a small icon/emoji-style pixel sprite floating above the character
-- Simple approach: colored circle with a small icon inside (e.g., yellow circle + "Z" for sleepy)
-- Small downward-pointing triangle/arrow connecting bubble to character
-- Implement emotion bubble rendering in `src/engine/renderer.ts`:
-  - `renderEmotionBubble(ctx, character)`:
-    - Draw bubble sprite above character's head (offset by character height + gap)
-    - Gentle floating animation (sine wave vertical bobbing, 1-2px amplitude)
-    - Fade-in when emotion changes (opacity transition over 0.3s)
-    - Optionally fade out after 5-10s if emotion stays the same (to avoid visual clutter)
-- Integrate with character FSM:
-  - Each state transition sets the emotion
-  - Emotion can also be set independently (via `CHANGE_EMOTION` action)
-- Add rendering to the main render pipeline (draw after character, above all entities)
+4. Update `src/ui/index.ts` to export `PhaserContainer` instead of `CanvasView` and `ZoomControls`.
 
-**Output**:
-
-- Emotion bubbles appear above character head
-- Smooth floating animation and fade-in
-- Emotion changes in response to character state
-
-**Acceptance criteria**:
-
-- [x] Emotion bubble is visible above the character's head
-- [x] Bubble floats gently (sine wave bobbing)
-- [x] Emotion changes when character transitions states (e.g., typing → focused, sleeping → sleepy)
-- [x] Different emotions are visually distinguishable
-- [x] Bubble fades in smoothly when emotion changes
-- [x] Bubble renders correctly at all zoom levels
+**Done when**: `pnpm dev` shows the Phaser game (with "Watch Claw v1.0 — HouseScene" text) on the left, and the Dashboard on the right. No console errors.
 
 ---
 
-## Phase 5: Integration & Polish
+### T0.3 [AI] — BootScene with Loading Bar
 
-### T5.1 — End-to-End Event → Character Wiring
+**Goal**: Add a loading progress bar to BootScene, and generate programmatic placeholder assets.
 
-> Connect the ConnectionManager to the game engine so real/mock events drive the character.
+**Steps**:
 
-**Depends on**: T1.4, T4.2b (both connection layer and character system must be complete)
+1. Create a placeholder tileset programmatically. Add to `BootScene.preload()`:
+```typescript
+preload() {
+  // --- Generate placeholder tileset texture (16x16 per tile, 4 tiles in a row) ---
+  const tileSize = 16
+  const canvas = document.createElement('canvas')
+  canvas.width = tileSize * 4
+  canvas.height = tileSize
+  const ctx = canvas.getContext('2d')!
+  // Tile 0: empty (transparent)
+  // Tile 1: floor (brown)
+  ctx.fillStyle = '#8B7355'
+  ctx.fillRect(tileSize * 1, 0, tileSize, tileSize)
+  ctx.strokeStyle = '#6B5335'
+  ctx.strokeRect(tileSize * 1, 0, tileSize, tileSize)
+  // Tile 2: wall (dark gray)
+  ctx.fillStyle = '#4a4a5a'
+  ctx.fillRect(tileSize * 2, 0, tileSize, tileSize)
+  // Tile 3: door (lighter)
+  ctx.fillStyle = '#a89070'
+  ctx.fillRect(tileSize * 3, 0, tileSize, tileSize)
+  this.textures.addCanvas('placeholder-tiles', canvas)
 
-**Work items**:
+  // --- Generate placeholder character texture (32x32, single frame matching spritesheet frame size) ---
+  const charCanvas = document.createElement('canvas')
+  charCanvas.width = 32
+  charCanvas.height = 32
+  const charCtx = charCanvas.getContext('2d')!
+  // Body
+  charCtx.fillStyle = '#4a7ab5'
+  charCtx.fillRect(8, 12, 16, 14)
+  // Head
+  charCtx.fillStyle = '#f0d0a0'
+  charCtx.beginPath()
+  charCtx.arc(16, 9, 7, 0, Math.PI * 2)
+  charCtx.fill()
+  // Lobster hat (red)
+  charCtx.fillStyle = '#e04040'
+  charCtx.fillRect(8, 1, 16, 6)
+  // Eyes
+  charCtx.fillStyle = '#000'
+  charCtx.fillRect(12, 8, 2, 2)
+  charCtx.fillRect(18, 8, 2, 2)
+  // Feet
+  charCtx.fillStyle = '#333'
+  charCtx.fillRect(9, 26, 6, 4)
+  charCtx.fillRect(17, 26, 6, 4)
+  this.textures.addCanvas('placeholder-char', charCanvas)
 
-- Wire `ConnectionManager` → `GameState` → Character:
-  - ConnectionManager emits CharacterActions via callback
-  - Actions are pushed to the character's ActionQueue
-  - GameLoop's update cycle processes the queue
-- Integration flow verification:
-  ```
-  MockProvider emits SessionLogEvent → EventParser produces CharacterAction →
-  ConnectionManager forwards to GameState → Character.processAction() →
-  Character walks to room → Arrives → Plays animation → Shows emotion
-  ```
-- Handle rapid event sequences:
-  - Multiple tool events in quick succession → character goes to the latest room (ActionQueue dedup)
-  - Session initialization followed by tool → character wakes up and walks to tool room
-  - `stopReason: 'stop'` arrives while walking → character redirects to bedroom
-- Handle edge cases:
-  - App starts with no events → character starts in bedroom sleeping
-  - Connection switches from mock to live mid-session → character continues smoothly
-  - Bridge Server disconnects → character walks to bedroom and sleeps (visual "offline" indicator)
-- End-to-end smoke test: run the app, observe character responding to mock events for 2+ minutes
-- **Integration tests** (Vitest):
-  - Test: MockProvider → EventParser → ActionQueue → Character FSM pipeline
-    - Emit an assistant message with `toolCall: write` → verify character ends up in office with `typing` state
-    - Emit an assistant message with `stopReason: 'stop'` → verify character ends up in bedroom with `sleeping` state
-    - Emit rapid events → verify ActionQueue deduplication and priority ordering
-  - Test: ConnectionManager switches mock ↔ live correctly
-    - Start with no Bridge Server → verify MockProvider activates
-    - Simulate Bridge Server becoming available → verify switch to live mode
-  - Test: VisibilityManager buffers events correctly
-    - Simulate tab hidden → emit events → simulate tab visible → verify only latest state applied
-  - These tests use real module instances (not mocks) to verify cross-module contracts
+  // --- Loading bar ---
+  const width = this.cameras.main.width
+  const height = this.cameras.main.height
+  const barWidth = 200
+  const barHeight = 12
+  const barX = (width - barWidth) / 2
+  const barY = height / 2
 
-**Output**:
+  const bgBar = this.add.rectangle(barX + barWidth/2, barY, barWidth, barHeight, 0x333333)
+  const progressBar = this.add.rectangle(barX, barY, 0, barHeight, 0x4a9eff)
+  progressBar.setOrigin(0, 0.5)
 
-- Complete event → visualization pipeline working end-to-end
-- Character responds to all event types correctly
-- Edge cases handled gracefully
+  this.add.text(width / 2, barY - 20, 'Loading...', {
+    fontSize: '10px', color: '#ffffff'
+  }).setOrigin(0.5)
 
-**Acceptance criteria**:
+  this.load.on('progress', (value: number) => {
+    progressBar.width = barWidth * value
+  })
+}
+```
 
-- [x] Character moves between rooms in response to mock events
-- [x] Character plays correct animation in each room (typing in office, sitting in living room, sleeping in bedroom)
-- [x] Character shows correct emotion for each activity
-- [x] Rapid events are handled without visual glitches (smooth transitions via queue)
-- [x] Character sleeps when no events arrive for 30+ seconds
-- [x] Integration tests pass: event→character pipeline, mock↔live switching, visibility buffering
-- [x] No JavaScript errors in console during extended running
+2. `create()` stays the same — starts HouseScene and UIScene.
 
----
-
-### T5.2 — Status Dashboard
-
-> Build the side panel dashboard showing connection status, agent state, and token usage.
-
-**Depends on**: T5.1
-
-**Work items**:
-
-- Create `src/ui/Dashboard.tsx`:
-  - **Connection section**: status indicator (Live/Mock/Disconnected), Bridge Server URL
-  - **Agent state section**: current state (Working/Thinking/Idle/Sleeping), current tool name, current room, current emotion
-  - **Session section**: session ID, model name (from `model_change` event), run duration
-  - **Token usage section**: tokens used / limit, simple progress bar (data from session log `usage` field)
-  - **Activity log section**: scrollable list of last 20 events with timestamps
-    ```
-    14:32:05  write  → Office
-    14:31:58  read   → Living Room
-    14:31:42  exec   → Office
-    14:31:30  (idle) → Bedroom
-    ```
-  - Subscribe to GameState changes via EventBus (throttled at 250ms)
-  - Compact design: right side panel, ~280px wide, dark background
-- Style the dashboard:
-  - Monospace font for event log
-  - Color-coded status indicators
-  - Pixel-art-inspired border/frame styling (optional, simple CSS)
-- Layout: `App.tsx` renders `<CanvasView>` (flex: 1) + `<Dashboard>` (fixed width) side by side
-- Make dashboard collapsible/toggleable (keyboard shortcut: `D` key)
-
-**Output**:
-
-- Functional status dashboard showing all key information
-- Updates in real-time based on events
-- Clean, non-intrusive layout alongside the canvas
-
-**Acceptance criteria**:
-
-- [x] Dashboard shows current connection status (Mock for development)
-- [x] Agent state updates when character changes rooms/activities
-- [x] Activity log scrolls and shows recent events with timestamps
-- [x] Token usage section displays (mock data or real if connected)
-- [x] Dashboard is toggleable with `D` key
-- [x] Dashboard doesn't cause canvas rendering to stutter (throttled updates)
-- [x] Layout is responsive: dashboard shrinks or hides on narrow viewports
+**Done when**: Loading bar appears briefly (even if assets load instantly), then the HouseScene text appears. Both placeholder textures are available to Phaser via `this.textures.get('placeholder-tiles')` and `this.textures.get('placeholder-char')`.
 
 ---
 
-### T5.3 — Final Polish + Dev Documentation
+## Phase 1: Tilemap & World
 
-> Polish the MVP experience, fix visual issues, and update project documentation.
+### T1.1 [HUMAN] — Create Tileset & Tilemap in Tiled 🎨
 
-**Depends on**: T5.2
+> **This task is for the human developer. You need to create art assets and a Tiled map file.**
 
-**Work items**:
+**What you need to install**:
+- [Tiled Map Editor](https://www.mapeditor.org/) (free, all platforms)
 
-- **Visual polish**:
-  - Adjust tile colors and furniture placement for visual balance
-  - Ensure character walk speed feels natural (not too fast, not too slow)
-  - Tune animation frame rates for each state
-  - Add subtle ambient details if time permits (e.g., fireplace glow, monitor light)
-  - Ensure the lobster hat is clearly visible and recognizable
-- **Initial camera position**: auto-center and zoom to frame the full one-floor house
-- **Error handling**:
-  - Graceful handling if Bridge WebSocket URL is wrong
-  - Clear error messages in the dashboard for connection issues
-  - No uncaught errors in console during normal operation
-- **Performance verification**:
-  - Confirm 60fps on modern hardware
-  - Check memory usage stays stable over time (no leaks)
-  - Test with rapid mock events (stress test the action queue)
-- **Update README.md**:
-  - Project description, features, screenshots
-  - Quick start instructions (`pnpm install && pnpm dev`)
-  - Configuration (Bridge WebSocket URL, mock mode)
-  - Link to docs/ for detailed documentation
-- **Dev experience**:
-  - Add `pnpm dev:mock` script that forces mock mode regardless of Bridge Server availability
-  - Add debug key shortcuts:
-    - `G` — toggle isometric grid overlay
-    - `F` — toggle FPS counter
-    - `D` — toggle dashboard
-    - `M` — force mock mode
-  - Console-friendly: log connection status changes, event parsing errors
+**Tileset image to create — `public/assets/tilesets/interior.png`**:
 
-**Output**:
+| Spec | Value |
+|------|-------|
+| **Tile size** | 16×16 pixels |
+| **Image format** | PNG with transparency |
+| **Art style** | Pixel art, side-view / cross-section (like a dollhouse cutaway). Warm color palette. Similar to games like "Tiny Room Stories" or "Sheltered" cross-section style. |
+| **Pixel density** | 1 pixel = 1 pixel (no anti-aliasing, no gradients, hard edges only) |
+| **Color palette** | Max 32 colors. Warm wood tones for floors (#8B7355, #6B5335), cool grays for walls (#4a4a5a), accent colors for special tiles. |
 
-- Polished, functional MVP
-- Updated README and documentation
-- Clean dev experience with debug tools
+**Tiles needed in the tileset** (minimum):
 
-**Acceptance criteria**:
+| Tile # | Name | Description |
+|--------|------|-------------|
+| 0 | Empty | Fully transparent |
+| 1 | Wood floor | Warm brown planks, side-view showing thickness (~2px) |
+| 2 | Stone floor | Gray stone blocks, for basement |
+| 3 | Carpet floor | Soft blue/red carpet tile |
+| 4 | Interior wall (top) | Upper portion of wall with molding |
+| 5 | Interior wall (body) | Repeatable middle wall section |
+| 6 | Interior wall (base) | Wall baseboard |
+| 7 | Exterior wall | Dark brick/stone, house exterior |
+| 8 | Door frame (top) | Arched doorway top |
+| 9 | Door frame (side) | Doorway side pillar |
+| 10 | Window | Glass pane with frame (for exterior walls) |
+| 11 | Stairs (left) | Ascending left-to-right step |
+| 12 | Stairs (right) | Ascending right-to-left step |
+| 13 | Ladder | Vertical ladder rungs |
+| 14 | Railing | Safety railing for stairs |
+| 15 | Roof tile (left slope) | For the house top |
+| 16 | Roof tile (right slope) | For the house top |
 
-- [x] App runs smoothly for 10+ minutes without errors
-- [x] Character behavior feels natural and responsive
-- [x] Lobster hat is clearly visible and recognizable
-- [x] README has clear setup instructions
-- [x] Debug shortcuts all work (G, F, D, M)
-- [x] `pnpm dev` → working app in under 5 seconds
-- [x] No console errors during normal operation
-- [x] Memory usage stable (no growth over 10-minute run)
+**Tilemap to create — `public/assets/tilemaps/house.json`**:
+
+| Spec | Value |
+|------|-------|
+| **Map size** | 30 tiles wide × 30 tiles tall (480×480 pixels) |
+| **Format** | Tiled JSON export |
+| **Orientation** | Orthogonal (standard 2D, NOT isometric) |
+
+**Tile layers needed**:
+
+| Layer name | Purpose | Notes |
+|------------|---------|-------|
+| `background` | Exterior walls, sky, house frame | Behind everything |
+| `floors` | All floor surfaces | One layer for all 3 floors |
+| `walls` | Interior walls, room dividers | Rendered behind character |
+| `collision` | Invisible solid tiles | Use tile #2 (any tile); set custom property `collides: true`. Mark all solid surfaces: floors, walls, ceilings. **This layer will be hidden at runtime.** |
+| `foreground` | Items in front of character | Desk fronts, table edges, etc. |
+
+**Object layers needed**:
+
+| Layer name | Object type | What to place |
+|------------|-------------|---------------|
+| `spawn_points` | Point object | One point named `player_start` at the 2F Office area |
+| `room_zones` | Rectangle objects | One rectangle per room. Name = room ID (e.g., `toolbox`). Custom property: `floor` (integer: 1, 2, or 3) |
+| `activity_spots` | Point objects | One point per room where character performs activity. Name = room ID. Custom properties: `anim` (string, e.g. `type`), `direction` (string: `left` or `right`) |
+| `ladders` | Rectangle objects | Vertical zones where character can climb. Name = `ladder` |
+
+**Floor layout** (MVP — start with 2F only, expand to 3 floors in T5.1):
+
+```
+2F Main Floor (10 tiles tall):
+┌──────────┬──────────┬──────────┐
+│          │          │          │
+│  🔧      │  🛋       │  🛏      │
+│ Toolbox  │  Office  │ Bedroom  │
+│ (exec)   │  (chat)  │ (rest)   │
+│          │          │          │
+└──────────┴──────────┴──────────┘
+  10 tiles    10 tiles   10 tiles
+```
+
+**Important Tiled settings**:
+- In Tiled, name the tileset exactly **`interior`** (this name is used in code: `map.addTilesetImage('interior', ...)`)
+- Set "Tile Width" and "Tile Height" both to 16
+- For collision tiles, use `setCollisionByExclusion` — simply paint any non-empty tile in the collision layer; all non-empty tiles will be treated as solid
+
+**Deliverable**: Place these files in the project:
+- `public/assets/tilesets/interior.png`
+- `public/assets/tilemaps/house.json` (exported from Tiled)
+- `public/assets/tilemaps/house.tmx` (Tiled project file, for future editing)
+
+---
+
+### T1.2 [AI] — Load Tilemap in HouseScene
+
+**Goal**: Import the Tiled JSON tilemap (from T1.1) into HouseScene and render all layers.
+
+**Context**: The human has created `public/assets/tilemaps/house.json` and `public/assets/tilesets/interior.png`. If these files don't exist yet, use the placeholder tileset generated in T0.3 and create a simple programmatic tilemap.
+
+**Steps**:
+
+1. Update `BootScene.preload()` to load the tilemap and tileset:
+```typescript
+// If real assets exist:
+this.load.tilemapTiledJSON('house', 'assets/tilemaps/house.json')
+this.load.image('interior-tiles', 'assets/tilesets/interior.png')
+```
+
+2. Update `HouseScene.create()`:
+```typescript
+create() {
+  // Create tilemap
+  const map = this.make.tilemap({ key: 'house' })
+  const tileset = map.addTilesetImage('interior', 'interior-tiles')!
+
+  // Create layers (names must match Tiled layer names)
+  const bgLayer = map.createLayer('background', tileset)!
+  const floorLayer = map.createLayer('floors', tileset)!
+  const wallLayer = map.createLayer('walls', tileset)!
+  const fgLayer = map.createLayer('foreground', tileset)!
+
+  // Set foreground layer depth above character (character depth = 10)
+  fgLayer.setDepth(20)
+
+  // Store reference for physics setup
+  this.map = map
+
+  // Set camera bounds to map size
+  this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+  this.cameras.main.setBackgroundColor('#1a1a2e')
+}
+```
+
+3. Add `private map!: Phaser.Tilemaps.Tilemap` to HouseScene class properties.
+
+4. If tilemap files don't exist yet, create a **fallback**: generate a simple 30×10 tilemap programmatically using `this.make.tilemap({ width: 30, height: 10, tileWidth: 16, tileHeight: 16 })` with the placeholder-tiles texture. Draw a simple floor + walls pattern.
+
+**Done when**: Running `pnpm dev` shows the tilemap rendered in the game area. Rooms are visible (even if using placeholder colored tiles).
+
+---
+
+### T1.3 [AI] — Collision Layer & Physics World
+
+**Goal**: Parse the collision layer from the tilemap and set up Arcade Physics world bounds.
+
+**Steps**:
+
+1. In `HouseScene.create()`, after creating the tilemap layers:
+```typescript
+// Create collision layer — use setCollisionByExclusion: all non-empty tiles are solid
+const collisionLayer = map.createLayer('collision', tileset)
+if (collisionLayer) {
+  collisionLayer.setCollisionByExclusion([-1]) // every non-empty tile = solid
+  collisionLayer.setVisible(false) // hide collision tiles
+  this.collisionLayer = collisionLayer
+}
+
+// Set world bounds
+this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+```
+
+2. Add `private collisionLayer!: Phaser.Tilemaps.TilemapLayer` to HouseScene.
+
+3. Create a temporary test sprite to verify physics:
+```typescript
+// Temporary test — remove after T2.1
+const testSprite = this.physics.add.sprite(160, 0, 'placeholder-char')
+testSprite.setBounce(0.1)
+testSprite.setCollideWorldBounds(true)
+if (this.collisionLayer) {
+  this.physics.add.collider(testSprite, this.collisionLayer)
+}
+this.cameras.main.startFollow(testSprite, true, 0.08, 0.08)
+
+// Arrow key movement for testing
+const cursors = this.input.keyboard!.createCursorKeys()
+this.events.on('update', () => {
+  if (cursors.left.isDown) testSprite.setVelocityX(-100)
+  else if (cursors.right.isDown) testSprite.setVelocityX(100)
+  else testSprite.setVelocityX(0)
+  if (cursors.up.isDown && testSprite.body!.blocked.down) testSprite.setVelocityY(-300)
+})
+```
+
+**Done when**: The test sprite falls with gravity, lands on the floor (collision layer), cannot walk through walls, and can be moved with arrow keys + jump. Remove the test sprite code after confirming it works.
+
+---
+
+### T1.4 [AI] — RoomManager
+
+**Goal**: Create a system that detects which room the character is in, based on Tiled object layers.
+
+**Steps**:
+
+1. Create `src/game/systems/RoomManager.ts`:
+```typescript
+import Phaser from 'phaser'
+
+export interface RoomDef {
+  id: string
+  name: string
+  floor: number
+  bounds: Phaser.Geom.Rectangle
+  activitySpot: { x: number; y: number }
+  activityAnim: string
+  activityDirection: 'left' | 'right'
+}
+
+export class RoomManager {
+  private rooms: RoomDef[] = []
+  private spawnPoint: { x: number; y: number } = { x: 160, y: 80 }
+
+  constructor(map: Phaser.Tilemaps.Tilemap) {
+    this.parseRoomZones(map)
+    this.parseActivitySpots(map)
+    this.parseSpawnPoints(map)
+  }
+
+  private parseRoomZones(map: Phaser.Tilemaps.Tilemap): void {
+    const layer = map.getObjectLayer('room_zones')
+    if (!layer) { console.warn('[RoomManager] No room_zones layer found'); return }
+    for (const obj of layer.objects) {
+      this.rooms.push({
+        id: obj.name,
+        name: obj.name,
+        floor: (obj.properties?.find((p: any) => p.name === 'floor')?.value as number) ?? 2,
+        bounds: new Phaser.Geom.Rectangle(obj.x!, obj.y!, obj.width!, obj.height!),
+        activitySpot: { x: obj.x! + obj.width! / 2, y: obj.y! + obj.height! / 2 },
+        activityAnim: 'idle',
+        activityDirection: 'right',
+      })
+    }
+  }
+
+  private parseActivitySpots(map: Phaser.Tilemaps.Tilemap): void {
+    const layer = map.getObjectLayer('activity_spots')
+    if (!layer) return
+    for (const obj of layer.objects) {
+      const room = this.rooms.find(r => r.id === obj.name)
+      if (room) {
+        room.activitySpot = { x: obj.x!, y: obj.y! }
+        room.activityAnim = (obj.properties?.find((p: any) => p.name === 'anim')?.value as string) ?? 'idle'
+        room.activityDirection = (obj.properties?.find((p: any) => p.name === 'direction')?.value as 'left' | 'right') ?? 'right'
+      }
+    }
+  }
+
+  private parseSpawnPoints(map: Phaser.Tilemaps.Tilemap): void {
+    const layer = map.getObjectLayer('spawn_points')
+    if (!layer) return
+    const sp = layer.objects.find(o => o.name === 'player_start')
+    if (sp) this.spawnPoint = { x: sp.x!, y: sp.y! }
+  }
+
+  getCurrentRoom(x: number, y: number): RoomDef | null {
+    return this.rooms.find(r => r.bounds.contains(x, y)) ?? null
+  }
+
+  getRoomById(id: string): RoomDef | null {
+    return this.rooms.find(r => r.id === id) ?? null
+  }
+
+  getSpawnPoint(): { x: number; y: number } {
+    return { ...this.spawnPoint }
+  }
+
+  getAllRooms(): RoomDef[] {
+    return [...this.rooms]
+  }
+}
+```
+
+2. In `HouseScene.create()`, instantiate RoomManager after creating the tilemap:
+```typescript
+this.roomManager = new RoomManager(map)
+```
+
+3. Add `private roomManager!: RoomManager` to HouseScene.
+
+**Done when**: `RoomManager.getCurrentRoom(x, y)` correctly returns the room at any position. `getSpawnPoint()` returns the player start position. If Tiled object layers don't exist yet, the fallback returns hardcoded room definitions.
+
+---
+
+## Phase 2: Character & Physics
+
+### T2.1 [HUMAN] — Character Spritesheet 🎨
+
+> **This task is for the human developer. Create the character sprite art.**
+
+**Character spritesheet — `public/assets/character/lobster.png`**:
+
+| Spec | Value |
+|------|-------|
+| **Sprite size** | 32×32 pixels per frame |
+| **Image format** | PNG with transparency |
+| **Art style** | Pixel art, side-view. Chibi/cute proportions (large head ~40% of height). The character wears a distinctive red lobster-shaped hat (OpenClaw mascot). |
+| **Color palette** | Max 16 colors for the character. Body: blue clothing (#4a7ab5). Head: warm skin (#f0d0a0). Hat: red (#e04040) with darker red claws (#c03030). Shoes: dark (#333). |
+| **Layout** | Horizontal strip. Each animation is a row. All frames in one PNG file. |
+
+**Animations needed** (each row in the spritesheet):
+
+| Row | Animation | Frames | Frame rate | Loop | Description |
+|-----|-----------|--------|------------|------|-------------|
+| 0 | `idle` | 4 | 6 fps | yes | Slight breathing motion. Arms at sides. |
+| 1 | `walk` | 6 | 10 fps | yes | Walking cycle. Arms swing. Legs step. |
+| 2 | `jump` | 3 | 8 fps | no | Crouch → rise → airborne pose. |
+| 3 | `type` | 4 | 8 fps | yes | Seated, arms move over keyboard. |
+| 4 | `sleep` | 2 | 2 fps | yes | Lying down, gentle breathing. Eyes closed. |
+| 5 | `think` | 4 | 4 fps | yes | Standing, hand on chin, looking up. |
+| 6 | `celebrate` | 4 | 8 fps | yes | Jumping with arms up, happy face. |
+| 7 | `climb` | 4 | 8 fps | yes | Climbing motion on ladder. |
+
+**Total spritesheet size**: 192×256 pixels (6 frames wide × 8 rows tall, each frame 32×32)
+
+> **Tip**: You can use [Aseprite](https://www.aseprite.org/) ($20) or [LibreSprite](https://libresprite.github.io/) (free) or [Piskel](https://www.piskelapp.com/) (free, web-based) to create pixel art spritesheets.
+>
+> **Alternative**: Search [itch.io](https://itch.io/game-assets/free/tag-pixel-art/tag-character) for a free platformer character spritesheet and modify it to add the lobster hat. Look for "tiny character" or "chibi platformer" style.
+
+**Deliverable**: `public/assets/character/lobster.png`
+
+---
+
+### T2.2 [AI] — LobsterCharacter Sprite & Physics
+
+**Goal**: Create the main character class with Arcade Physics, load the spritesheet, and set up basic movement.
+
+**Context**: The character spritesheet is at `public/assets/character/lobster.png` (32×32 frames, 6 columns × 8 rows). If it doesn't exist yet, use the `placeholder-char` texture from T0.3.
+
+**Steps**:
+
+1. Update `BootScene.preload()` to load the character spritesheet:
+```typescript
+if (/* real asset exists */) {
+  this.load.spritesheet('lobster', 'assets/character/lobster.png', {
+    frameWidth: 32, frameHeight: 32,
+  })
+} // else: placeholder-char from T0.3 is already available
+```
+
+2. Create `src/game/characters/LobsterCharacter.ts`:
+```typescript
+import Phaser from 'phaser'
+
+export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
+  private autoNavTarget: { x: number; y: number } | null = null
+  private targetState: string | null = null
+  private targetEmotion: string | null = null
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    // Use real spritesheet if available, else placeholder
+    const textureKey = scene.textures.exists('lobster') ? 'lobster' : 'placeholder-char'
+    super(scene, x, y, textureKey)
+
+    scene.add.existing(this)
+    scene.physics.add.existing(this)
+
+    // Physics body configuration
+    const body = this.body as Phaser.Physics.Arcade.Body
+    body.setSize(14, 24)        // hitbox smaller than sprite
+    body.setOffset(9, 8)        // center the hitbox
+    body.setMaxVelocity(160, 400)
+    body.setDrag(800, 0)
+    body.setBounce(0)
+    body.setCollideWorldBounds(true)
+
+    this.setDepth(10)           // above floors/walls, below foreground
+
+    // Create animations
+    this.createAnimations()
+
+    // Keyboard input (for debug / manual control)
+    this.cursors = scene.input.keyboard!.createCursorKeys()
+  }
+
+  private createAnimations(): void {
+    const scene = this.scene
+    const key = this.texture.key
+
+    if (key === 'placeholder-char') {
+      // No animation for placeholder — it's a single frame
+      return
+    }
+
+    const anims: Array<{ key: string; row: number; frames: number; rate: number; loop: boolean }> = [
+      { key: 'idle',      row: 0, frames: 4, rate: 6,  loop: true },
+      { key: 'walk',      row: 1, frames: 6, rate: 10, loop: true },
+      { key: 'jump',      row: 2, frames: 3, rate: 8,  loop: false },
+      { key: 'type',      row: 3, frames: 4, rate: 8,  loop: true },
+      { key: 'sleep',     row: 4, frames: 2, rate: 2,  loop: true },
+      { key: 'think',     row: 5, frames: 4, rate: 4,  loop: true },
+      { key: 'celebrate', row: 6, frames: 4, rate: 8,  loop: true },
+      { key: 'climb',     row: 7, frames: 4, rate: 8,  loop: true },
+    ]
+
+    const cols = 6 // frames per row in spritesheet
+    for (const a of anims) {
+      if (scene.anims.exists(a.key)) continue
+      scene.anims.create({
+        key: a.key,
+        frames: scene.anims.generateFrameNumbers(key, {
+          start: a.row * cols,
+          end: a.row * cols + a.frames - 1,
+        }),
+        frameRate: a.rate,
+        repeat: a.loop ? -1 : 0,
+      })
+    }
+  }
+
+  update(_time: number, _delta: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body
+    const onGround = body.blocked.down
+
+    // If auto-navigating, handle that instead of keyboard
+    if (this.autoNavTarget) {
+      this.updateAutoNav()
+      return
+    }
+
+    // Manual keyboard control (for testing)
+    if (this.cursors.left.isDown) {
+      body.setVelocityX(-160)
+      this.setFlipX(true)
+      if (onGround) this.playAnim('walk')
+    } else if (this.cursors.right.isDown) {
+      body.setVelocityX(160)
+      this.setFlipX(false)
+      if (onGround) this.playAnim('walk')
+    } else {
+      if (onGround) this.playAnim('idle')
+    }
+
+    if (this.cursors.up.isDown && onGround) {
+      body.setVelocityY(-350)
+      this.playAnim('jump')
+    }
+  }
+
+  private playAnim(key: string): void {
+    if (this.scene.anims.exists(key) && this.anims.currentAnim?.key !== key) {
+      this.anims.play(key, true)
+    }
+  }
+
+  // --- Auto-navigation (called by EventBridge) ---
+  navigateTo(x: number, y: number, state?: string, emotion?: string): void {
+    this.autoNavTarget = { x, y }
+    this.targetState = state ?? null
+    this.targetEmotion = emotion ?? null
+  }
+
+  cancelNavigation(): void {
+    this.autoNavTarget = null
+    this.targetState = null
+    this.targetEmotion = null
+  }
+
+  private updateAutoNav(): void {
+    if (!this.autoNavTarget) return
+    const body = this.body as Phaser.Physics.Arcade.Body
+    const dx = this.autoNavTarget.x - this.x
+    const threshold = 4 // pixels
+
+    if (Math.abs(dx) > threshold) {
+      // Walk toward target
+      const speed = 120
+      body.setVelocityX(dx > 0 ? speed : -speed)
+      this.setFlipX(dx < 0)
+      if (body.blocked.down) this.playAnim('walk')
+    } else {
+      // Arrived
+      body.setVelocityX(0)
+      this.x = this.autoNavTarget.x
+
+      // Transition to target state
+      if (this.targetState) {
+        this.playAnim(this.targetState)
+      } else {
+        this.playAnim('idle')
+      }
+
+      this.autoNavTarget = null
+      this.targetState = null
+      this.targetEmotion = null
+    }
+  }
+}
+```
+
+3. In `HouseScene.create()`, replace the test sprite with LobsterCharacter:
+```typescript
+const spawn = this.roomManager.getSpawnPoint()
+this.character = new LobsterCharacter(this, spawn.x, spawn.y)
+this.physics.add.collider(this.character, this.collisionLayer)
+this.cameras.main.startFollow(this.character, true, 0.08, 0.08)
+```
+
+4. In `HouseScene.update()`:
+```typescript
+update(time: number, delta: number) {
+  this.character.update(time, delta)
+}
+```
+
+**Done when**: Character stands on the floor, walks left/right with arrow keys, jumps with up arrow, plays animations (or stays static with placeholder). Camera follows.
+
+---
+
+### T2.3 [AI] — Character FSM & Auto-Navigation
+
+**Goal**: Implement the full state machine and the `handleCharacterAction()` method that will be called by EventBridge.
+
+**Steps**:
+
+1. Add a `currentState` property and state machine to `LobsterCharacter`:
+```typescript
+export type LobsterState =
+  | 'idle' | 'walking' | 'jumping' | 'typing' | 'thinking'
+  | 'sleeping' | 'celebrating' | 'climbing'
+
+// In the class:
+private _state: LobsterState = 'idle'
+private idleTimer = 0
+private readonly IDLE_SLEEP_THRESHOLD = 30 // seconds
+
+get currentState(): LobsterState { return this._state }
+
+setState(newState: LobsterState): void {
+  if (this._state === newState) return
+  this._state = newState
+  this.idleTimer = 0
+
+  // Play animation for this state
+  this.playAnim(newState === 'walking' ? 'walk' : newState === 'jumping' ? 'jump' : newState)
+
+  // Physics changes per state
+  const body = this.body as Phaser.Physics.Arcade.Body
+  if (newState === 'climbing') {
+    body.setAllowGravity(false) // disable gravity for ladder climbing
+  } else {
+    body.setAllowGravity(true)
+  }
+}
+```
+
+2. Add `handleCharacterAction()` — this is the main entry point for the EventBridge:
+```typescript
+handleCharacterAction(action: CharacterAction): void {
+  switch (action.type) {
+    case 'GOTO_ROOM': {
+      // Get the room manager from the scene
+      const scene = this.scene as HouseScene
+      const room = scene.roomManager.getRoomById(action.room)
+      if (!room) { console.warn(`Unknown room: ${action.room}`); return }
+      this.navigateTo(room.activitySpot.x, room.activitySpot.y, action.animation, action.emotion)
+      this.setState('walking')
+      break
+    }
+    case 'WAKE_UP':
+      if (this._state === 'sleeping') {
+        this.setState('idle')
+      }
+      break
+    case 'GO_SLEEP': {
+      const scene = this.scene as HouseScene
+      const bedroom = scene.roomManager.getRoomById('bedroom')
+      if (bedroom) {
+        this.navigateTo(bedroom.activitySpot.x, bedroom.activitySpot.y, 'sleep', 'sleepy')
+        this.setState('walking')
+      }
+      break
+    }
+    case 'CELEBRATE':
+      this.setState('celebrating')
+      break
+    case 'CONFUSED':
+      // Show confused emotion without changing room
+      this.scene.events.emit('show-emotion', 'confused')
+      break
+    case 'RESET':
+      this.cancelNavigation()
+      const scene2 = this.scene as HouseScene
+      const bed = scene2.roomManager.getRoomById('bedroom')
+      if (bed) {
+        this.setPosition(bed.activitySpot.x, bed.activitySpot.y)
+      }
+      this.setState('sleeping')
+      break
+  }
+}
+```
+
+3. Update `updateAutoNav()` to call `setState()` on arrival instead of just playing animation.
+
+4. Add idle timer logic in `update()`: if character is idle for more than 30 seconds, automatically dispatch `GO_SLEEP`.
+
+**Done when**: You can manually call `character.handleCharacterAction({ type: 'GOTO_ROOM', room: 'bedroom', animation: 'sleep', emotion: 'sleepy' })` from browser console and the character walks to the bedroom and lies down.
+
+---
+
+### T2.4 [AI] — Furniture & Room Decoration (Programmatic)
+
+**Goal**: Add placeholder furniture to each room so they're visually distinct, using Phaser graphics primitives. These will be replaced with real art assets later.
+
+**Steps**:
+
+1. Create `src/game/systems/FurnitureRenderer.ts`:
+   - For each room, draw simple colored rectangles representing furniture
+   - **Toolbox (2F)**: Workbench (brown rectangle), terminal screen (dark rectangle with green text glow)
+   - **Office (2F)**: Desk (brown), computer monitor (dark + blue glow), office chair (blue rectangle)
+   - **Bedroom (2F)**: Bed (large blue-white rectangle), nightstand (small brown), window (light blue rectangle on wall)
+   - Use `this.add.rectangle()` and `this.add.graphics()` in HouseScene
+   - Set depths correctly: furniture behind character (depth 5), some items in front (depth 15)
+
+2. Add room name labels using Phaser text at the top of each room. Use the built-in monospace font (no custom font needed yet).
+
+**Done when**: Each room has at least 2-3 furniture pieces drawn with colored rectangles. Rooms are visually distinguishable. Room names displayed.
+
+---
+
+## Phase 3: Event Bridge & Integration
+
+### T3.1 [AI] — EventBridge (ConnectionManager → Phaser)
+
+**Goal**: Wire the existing `ConnectionManager` (in `src/connection/`) to dispatch `CharacterAction` events to the Phaser HouseScene.
+
+**Steps**:
+
+1. Create `src/game/systems/EventBridge.ts`:
+```typescript
+import type { ConnectionManager } from '@/connection/connectionManager'
+import type { CharacterAction } from '@/connection/types'
+import type { HouseScene } from '../scenes/HouseScene'
+
+export class EventBridge {
+  private unsubAction: (() => void) | null = null
+  private unsubStatus: (() => void) | null = null
+
+  constructor(
+    private cm: ConnectionManager,
+    private scene: HouseScene,
+  ) {}
+
+  connect(): void {
+    this.unsubAction = this.cm.onAction((action: CharacterAction) => {
+      // Dispatch to character in the HouseScene
+      if (this.scene.character) {
+        this.scene.character.handleCharacterAction(action)
+      }
+    })
+
+    this.unsubStatus = this.cm.onStatusChange((status) => {
+      // Emit event for UIScene to display
+      this.scene.events.emit('connection-status', status)
+    })
+  }
+
+  disconnect(): void {
+    this.unsubAction?.()
+    this.unsubStatus?.()
+    this.unsubAction = null
+    this.unsubStatus = null
+  }
+}
+```
+
+2. Update `src/ui/PhaserContainer.tsx`:
+   - Accept a `connectionManager` prop
+   - After Phaser game is created, wait for HouseScene to be ready, then create EventBridge
+   - Use `game.scene.getScene('HouseScene')` to get the scene reference
+   - Listen for scene 'create' event to know when it's ready
+
+3. Update `src/App.tsx`:
+   - Pass `connectionRef.current` to `<PhaserContainer connectionManager={connectionRef.current} />`
+
+4. Make `character` and `roomManager` public on HouseScene so EventBridge can access them.
+
+**Done when**: Start Bridge Server (`pnpm run dev` which runs both vite and bridge), start an OpenClaw session, and verify the character moves to the correct room when tools are called.
+
+---
+
+### T3.2 [AI] — EmotionSystem
+
+**Goal**: Show emotion bubbles above the character.
+
+**Steps**:
+
+1. Create `src/game/systems/EmotionSystem.ts`:
+   - Creates a Phaser `Container` positioned above character head
+   - Contains a speech bubble background (rounded rectangle via Graphics) and an icon text
+   - Emotion map: `{ focused: '💡', thinking: '?', sleepy: '💤', happy: '😊', confused: '❗', curious: '🔍', serious: '⚡', satisfied: '✨' }`
+   - `show(emotion: string)`: create/update bubble, set icon, start float tween (`y: -3` to `y: 3`, yoyo, repeat: -1)
+   - `hide()`: fade out tween then destroy
+   - `update()`: follow character position (x, y - 24)
+
+2. Instantiate EmotionSystem in HouseScene, call `update()` in HouseScene `update()`.
+
+3. Wire to EventBridge: when `GOTO_ROOM` action has emotion, call `emotionSystem.show(action.emotion)`.
+
+**Done when**: Emotion bubble appears above character head when events arrive. Bubble follows character and floats gently.
+
+---
+
+### T3.3 [AI] — Particle Effects
+
+**Goal**: Add particle effects for celebration, error, sleeping.
+
+**Steps**:
+
+1. Create `src/game/systems/ParticleEffects.ts`:
+   - `celebration(x, y)`: Colorful confetti using Phaser 3.80+ particle API:
+     ```typescript
+     const emitter = this.scene.add.particles(x, y, 'confetti', {
+       speed: { min: 50, max: 200 },
+       angle: { min: 230, max: 310 },
+       gravityY: 300,
+       lifespan: 1500,
+       quantity: 20,
+       emitting: false,
+     })
+     emitter.explode() // one-shot burst
+     ```
+   - `errorSparks(x, y)`: Red/orange sparks that burst outward:
+     ```typescript
+     const emitter = this.scene.add.particles(x, y, 'spark', {
+       speed: { min: 30, max: 100 },
+       angle: { min: 0, max: 360 },
+       tint: [0xff4444, 0xff8800],
+       lifespan: 800,
+       quantity: 10,
+       emitting: false,
+     })
+     emitter.explode()
+     ```
+   - `sleepZzz(x, y)`: Create Phaser text objects ("z", "Z") that float upward and fade out using tweens.
+
+2. Call these from LobsterCharacter state transitions.
+
+**Done when**: Celebrate state shows confetti. Sleeping shows floating Z's. Error shows sparks.
+
+---
+
+### T3.4 [HUMAN] — Emotion Bubble & Particle Sprites 🎨
+
+> **This task is for the human developer.**
+
+**Emotion bubble spritesheet — `public/assets/ui/emotions.png`**:
+
+| Spec | Value |
+|------|-------|
+| **Frame size** | 16×16 pixels |
+| **Layout** | Horizontal strip, 8 frames |
+| **Style** | White speech bubble background with colored icon inside |
+| **Art style** | Pixel art, 1-2px border, minimal detail |
+
+| Frame | Emotion | Icon | Color |
+|-------|---------|------|-------|
+| 0 | focused | Lightbulb | Yellow #FFD700 |
+| 1 | thinking | Question mark | Purple #A855F7 |
+| 2 | sleepy | Moon + Z | Gray #6B7280 |
+| 3 | happy | Star sparkle | Green #22C55E |
+| 4 | confused | Exclamation | Red #EF4444 |
+| 5 | curious | Magnifying glass | Orange #F59E0B |
+| 6 | serious | Lightning bolt | Dark red #DC2626 |
+| 7 | satisfied | Checkmark | Teal #10B981 |
+
+**Particle sprites — `public/assets/effects/`**:
+
+| File | Size | Description |
+|------|------|-------------|
+| `confetti.png` | 4×4 pixels, 5 colored squares in a row (20×4) | Red, yellow, green, blue, pink squares |
+| `zzz.png` | 8×8 pixels | White pixel letter "Z" on transparent background |
+| `spark.png` | 4×4 pixels | Single bright orange/red dot with 1px glow |
+
+**Deliverable**: Place files in `public/assets/ui/` and `public/assets/effects/`.
+
+---
+
+## Phase 4: UI & Polish
+
+### T4.1 [AI] — Dashboard Update
+
+**Goal**: Update the React Dashboard to show character state alongside Phaser game.
+
+**Steps**:
+
+1. Update `Dashboard.tsx`:
+   - Remove any references to old `CharacterState` from `engine/gameState.ts`
+   - Accept new props: `characterState?: string`, `currentRoom?: string`, `currentEmotion?: string`
+   - Display these in the dashboard panel
+   - Keep existing: `connectionStatus`, `sessionInfo`, `events`, `fps`
+
+2. Create a bridge from Phaser → React for dashboard data:
+   - In HouseScene, emit events via `eventBus`: `eventBus.emit('character-state-change', { state, room, emotion })`
+   - In App.tsx, subscribe to eventBus and update React state for Dashboard props
+
+**Done when**: Dashboard shows current room name, character state, and emotion updating in real-time.
+
+---
+
+### T4.2 [AI] — Pixel-Perfect Scaling
+
+**Goal**: Ensure pixel art renders crisp at all window sizes.
+
+**Steps**:
+
+1. The game config from T0.1 already has `pixelArt: true` and `scale.mode: FIT`. Verify these work.
+
+2. Add Electron minimum window size in `electron/main.cjs`:
+```javascript
+mainWindow = new BrowserWindow({ width: 960, height: 600, minWidth: 800, minHeight: 600, ... })
+```
+
+3. Test that pixels are sharp (no blurring) at 1x and 2x DPI. If blurry, add:
+```typescript
+canvas.style.imageRendering = 'pixelated'
+```
+
+**Done when**: Pixels are crisp, no sub-pixel blurring at any window size.
+
+---
+
+### T4.3 [HUMAN] — Sound Effects 🔊
+
+> **This task is for the human developer.**
+
+**Sound effects needed — place in `public/assets/audio/`**:
+
+| File | Format | Duration | Description | Where to find |
+|------|--------|----------|-------------|---------------|
+| `footstep.ogg` | OGG Vorbis | 0.1-0.2s | Soft step on wood floor | [freesound.org](https://freesound.org/search/?q=footstep+wood) |
+| `typing.ogg` | OGG Vorbis | 0.3-0.5s | Mechanical keyboard keypress (2-3 keys) | [freesound.org](https://freesound.org/search/?q=keyboard+typing+mechanical) |
+| `snore.ogg` | OGG Vorbis | 1-2s | Gentle breathing / light snore | [freesound.org](https://freesound.org/search/?q=snore+gentle) |
+| `jump.ogg` | OGG Vorbis | 0.2s | Soft whoosh / hop sound | [freesound.org](https://freesound.org/search/?q=jump+small) |
+| `celebrate.ogg` | OGG Vorbis | 0.5-1s | Short happy chime / fanfare | [freesound.org](https://freesound.org/search/?q=success+chime+8bit) |
+| `error.ogg` | OGG Vorbis | 0.3s | Soft alert buzz (not alarming) | [freesound.org](https://freesound.org/search/?q=error+buzz+soft) |
+
+> **License**: Only use sounds with **CC0** or **CC-BY** license. OGG Vorbis format preferred (Phaser loads it natively). MP3 also works as fallback.
+
+**Deliverable**: 6 audio files in `public/assets/audio/`.
+
+---
+
+### T4.4 [AI] — Sound System & Electron Integration
+
+**Goal**: Load and play sound effects based on character state changes. Polish Electron wrapper.
+
+**Steps**:
+
+1. In `BootScene.preload()`, load all audio files:
+```typescript
+this.load.audio('footstep', 'assets/audio/footstep.ogg')
+this.load.audio('typing', 'assets/audio/typing.ogg')
+// ... etc
+```
+
+2. Create `src/game/systems/SoundManager.ts`:
+   - Play `footstep` during walking (every 0.3s interval, not every frame)
+   - Play `typing` during typing state (loop)
+   - Play `snore` during sleeping (loop)
+   - Mute toggle: listen for 'M' key
+   - If audio files don't exist, silently skip (no errors)
+
+3. Update `electron/main.cjs`:
+   - System tray icon
+   - Always-on-top toggle
+   - Auto-start Bridge Server as child process
+
+**Done when**: Sounds play during state transitions. 'M' key mutes. Electron builds and runs.
+
+---
+
+## Phase 5: Three-Floor Expansion
+
+### T5.1 [HUMAN] — Three-Floor Tilemap & Furniture Art 🎨
+
+> **This task is for the human developer. Expand the tilemap and create furniture art.**
+
+**Expand the Tiled map** (`house.tmx`) to three floors:
+
+```
+         ┌──────────────────────────────────────────────┐
+  3F     │  📦 仓库(下载)  📚 书房(文档)  🌙 阳台(搜索) │
+         ├────────────────────────────────────────────────┤
+  2F     │  🔧 工具(执行)  🛋 办公(对话)  🛏 卧室(休息)  │
+         ├────────────────────────────────────────────────┤
+  1F     │  📱 地下室(应用) 💻 机房(code)  🗑 垃圾桶     │
+         └──────────────────────────────────────────────┘
+```
+
+**New map size**: 30 tiles wide × 34 tiles tall (each floor ~10 tiles + 2 tiles for floor/ceiling structure)
+
+**Add these elements in Tiled**:
+- Ladders or staircases connecting 1F↔2F and 2F↔3F (place in `ladders` object layer as rectangles)
+- `room_zones` rectangles for all 9 rooms
+- `activity_spots` points for all 9 rooms
+
+**Furniture spritesheet — `public/assets/tilesets/furniture.png`**:
+
+| Spec | Value |
+|------|-------|
+| **Tile size** | 16×16 pixels |
+| **Style** | Same pixel art style as interior.png. Side-view cross-section. |
+
+**Furniture tiles needed**:
+
+| Tile # | Name | Room | Description |
+|--------|------|------|-------------|
+| 0 | Desk | Office, Study | Wooden desk surface with legs |
+| 1 | Computer monitor | Office, Server Room | Screen with blue/green glow |
+| 2 | Office chair | Office | Swivel chair, side view |
+| 3 | Bed (left half) | Bedroom | Pillow + blanket left portion |
+| 4 | Bed (right half) | Bedroom | Blanket + footboard right portion |
+| 5 | Nightstand | Bedroom | Small table with lamp |
+| 6 | Bookshelf (full) | Study | Packed with colored book spines |
+| 7 | Bookshelf (half) | Study | Partially filled shelf |
+| 8 | Couch (left) | Study | Soft couch left arm |
+| 9 | Couch (right) | Study | Soft couch right arm |
+| 10 | Server rack | Server Room | Tall rack with blinking LEDs |
+| 11 | Workbench | Toolbox | Sturdy table with tools on it |
+| 12 | Tool wall | Toolbox | Wall-mounted tool pegboard |
+| 13 | Crate/box | Warehouse | Wooden crate for downloads |
+| 14 | Shelf with boxes | Warehouse | Storage shelf |
+| 15 | Trash bin | Trash | Open-top bin with items sticking out |
+| 16 | Railing/fence | Balcony | Outdoor railing |
+| 17 | Potted plant | Balcony | Outdoor plant |
+| 18 | Old computer | Basement | Retro CRT monitor |
+| 19 | Cable mess | Basement | Tangled cables on floor |
+
+**Deliverable**:
+- Updated `public/assets/tilemaps/house.json` (re-export from Tiled)
+- `public/assets/tilesets/furniture.png`
+
+---
+
+### T5.2 [AI] — Ladder Physics & Cross-Floor Navigation
+
+**Goal**: Implement climbing mechanics and auto-navigation across floors.
+
+**Steps**:
+
+1. Parse `ladders` object layer from tilemap in RoomManager:
+```typescript
+getLadderZones(): Phaser.Geom.Rectangle[] { ... }
+```
+
+2. In HouseScene, create invisible overlap zones for each ladder:
+```typescript
+for (const zone of this.roomManager.getLadderZones()) {
+  const ladderZone = this.add.zone(zone.x + zone.width/2, zone.y + zone.height/2, zone.width, zone.height)
+  this.physics.add.existing(ladderZone, true) // static body
+  this.physics.add.overlap(this.character, ladderZone, () => {
+    this.character.setInLadderZone(true)
+  })
+}
+```
+
+3. Add ladder climbing to LobsterCharacter:
+   - Add property `private inLadderZone = false` and setter `setInLadderZone(v: boolean)`
+   - **Important**: Reset at the beginning of each `update()`: `this.inLadderZone = false` — the overlap callback will set it back to `true` if still overlapping
+   - When `inLadderZone` and up/down pressed: disable gravity, move vertically
+   - When leaving zone: re-enable gravity
+   - Auto-navigation: if target is on different floor, walk to nearest ladder → climb → walk to target
+
+4. Update auto-navigation to handle multi-floor paths:
+```typescript
+// Determine if target is on a different floor
+// If yes: navigate to ladder X position → climb to correct Y → navigate to target X
+```
+
+**Done when**: Character can climb ladders between all 3 floors. Auto-navigation works across floors.
+
+---
+
+### T5.3 [AI] — Full Event Mapping (9 Rooms)
+
+**Goal**: Extend RoomId and EventParser to support all 9 rooms.
+
+**Steps**:
+
+1. Update `src/connection/types.ts` — extend `RoomId`:
+```typescript
+export type RoomId =
+  | 'warehouse' | 'study' | 'balcony'       // 3F
+  | 'toolbox' | 'office' | 'bedroom'         // 2F
+  | 'basement' | 'server_room' | 'trash'     // 1F
+```
+
+2. Update `src/connection/eventParser.ts` — update `TOOL_ROOM_MAP`:
+```typescript
+const TOOL_ROOM_MAP: Record<string, ToolMapping> = {
+  // 1F — Basement
+  write:   { room: 'server_room', animation: 'type', emotion: 'focused' },
+  edit:    { room: 'server_room', animation: 'type', emotion: 'focused' },
+  process: { room: 'basement',    animation: 'type', emotion: 'serious' },
+  task:    { room: 'basement',    animation: 'think', emotion: 'thinking' },
+  sessions_spawn: { room: 'basement', animation: 'think', emotion: 'thinking' },
+
+  // 2F — Main Floor
+  exec:    { room: 'toolbox',  animation: 'type', emotion: 'serious' },
+  todowrite: { room: 'office', animation: 'type', emotion: 'focused' },
+
+  // 3F — Attic
+  read:    { room: 'study',     animation: 'think', emotion: 'curious' },
+  grep:    { room: 'study',     animation: 'think', emotion: 'curious' },
+  glob:    { room: 'warehouse', animation: 'type',  emotion: 'busy' },
+  web_search: { room: 'balcony', animation: 'think', emotion: 'curious' },
+}
+```
+
+3. Update default tool mapping to go to `office`.
+
+4. Update `parseSessionLogEvent()`:
+   - User message → `office` (2F, chat/dialogue)
+   - Assistant text streaming → `office` (2F)
+   - Session end (`stopReason: 'stop'`) → `bedroom` (2F, sleep)
+   - Session start → `office` (2F, wake up)
+
+**Done when**: Each OpenClaw tool call sends the character to the correct room across all 3 floors.
+
+---
+
+### T5.4 [AI] — Camera Polish & Visual Effects
+
+**Goal**: Smooth camera transitions and ambient visual effects.
+
+**Steps**:
+
+1. Camera improvements:
+   - When character changes floor, smooth pan the camera (don't snap)
+   - Add whole-house zoom-out view toggle (press 'Z' to zoom out and see all 3 floors)
+   - Camera dead zone so character can move a bit without camera following
+
+2. Visual polish:
+   - Day/night tint: use Phaser 3.80+ post-FX API:
+     ```typescript
+     const fx = this.cameras.main.postFX.addColorMatrix()
+     const hour = new Date().getHours()
+     if (hour < 6 || hour > 20) fx.night(0.3) // blue tint at night
+     ```
+   - Add simple parallax: create a sky/clouds background layer that moves slower than the main camera
+
+3. Animated decorations:
+   - Server room LEDs: flickering colored rectangles using Phaser timer events
+   - Computer screens: alternating glow colors
+
+**Done when**: Camera smoothly follows across floors. Day/night tint visible. At least 2 animated decorations working. Press 'Z' to toggle full-house view.
 
 ---
 
 ## Dependency Graph
 
-```mermaid
-graph TD
-    T0.1["T0.1<br/>Project Scaffolding"]
-    T0.2["T0.2<br/>Dev Tooling Setup"]
-    T0.3["T0.3<br/>Session Log Adaptation"]
-    T1.1["T1.1<br/>Bridge Client"]
-    T1.2["T1.2<br/>Event Parser"]
-    T1.3["T1.3<br/>Mock Provider"]
-    T1.4["T1.4<br/>Connection Manager"]
-    T2.1["T2.1<br/>Isometric Math + Canvas"]
-    T2.2["T2.2<br/>Game Loop + State"]
-    T2.3["T2.3<br/>Camera System"]
-    T3.1["T3.1<br/>Tile Map + Rooms"]
-    T3.2["T3.2<br/>Floor & Wall Rendering"]
-    T3.3["T3.3<br/>Furniture"]
-    T4.1["T4.1<br/>Character Sprite"]
-    T4.2a["T4.2a<br/>Pathfinding"]
-    T4.2b["T4.2b<br/>Character FSM"]
-    T4.3["T4.3<br/>Emotion Bubbles"]
-    T5.1["T5.1<br/>End-to-End Wiring"]
-    T5.2["T5.2<br/>Dashboard"]
-    T5.3["T5.3<br/>Polish"]
-
-    T0.1 --> T0.2
-    T0.2 --> T0.3
-
-    %% Phase 1 (Connection) — sequential chain
-    T0.3 --> T1.1
-    T1.1 --> T1.2
-    T1.2 --> T1.3
-    T1.3 --> T1.4
-
-    %% Phase 2 (Engine) — can start in parallel with Phase 1
-    T0.2 --> T2.1
-    T2.1 --> T2.2
-    T2.2 --> T2.3
-
-    %% Phase 3 (World) — needs engine
-    T2.3 --> T3.1
-    T3.1 --> T3.2
-    T3.2 --> T3.3
-
-    %% Phase 4 (Character) — needs world + renderer
-    T3.2 --> T4.1
-    T3.3 --> T4.2a
-    T4.1 --> T4.2b
-    T4.2a --> T4.2b
-    T4.2b --> T4.3
-
-    %% Phase 5 (Integration) — needs both Connection and Character
-    T1.4 --> T5.1
-    T4.2b --> T5.1
-    T5.1 --> T5.2
-    T4.3 --> T5.2
-    T5.2 --> T5.3
-
-    %% Styling
-    style T0.1 fill:#4a9eff,color:#fff
-    style T0.2 fill:#4a9eff,color:#fff
-    style T0.3 fill:#4a9eff,color:#fff
-    style T1.1 fill:#ff9f43,color:#fff
-    style T1.2 fill:#ff9f43,color:#fff
-    style T1.3 fill:#ff9f43,color:#fff
-    style T1.4 fill:#ff9f43,color:#fff
-    style T2.1 fill:#2ed573,color:#fff
-    style T2.2 fill:#2ed573,color:#fff
-    style T2.3 fill:#2ed573,color:#fff
-    style T3.1 fill:#a55eea,color:#fff
-    style T3.2 fill:#a55eea,color:#fff
-    style T3.3 fill:#a55eea,color:#fff
-    style T4.1 fill:#ff6b81,color:#fff
-    style T4.2a fill:#ff6b81,color:#fff
-    style T4.2b fill:#ff6b81,color:#fff
-    style T4.3 fill:#ff6b81,color:#fff
-    style T5.1 fill:#ffa502,color:#fff
-    style T5.2 fill:#ffa502,color:#fff
-    style T5.3 fill:#ffa502,color:#fff
+```
+        [AI]                             [HUMAN]
+T0.1 → T0.2 → T0.3
+                 ↓
+               T1.1 [HUMAN: tileset + tilemap]
+                 ↓
+         T1.2 → T1.3 → T1.4
+                 ↓
+               T2.1 [HUMAN: character spritesheet]
+                 ↓
+         T2.2 → T2.3 → T2.4
+                         ↓
+                 T3.1 → T3.2 → T3.3
+                                 ↓
+                               T3.4 [HUMAN: emotion + particle sprites]
+                                 ↓
+                 T4.1   T4.2
+                                 ↓
+                               T4.3 [HUMAN: sound effects]
+                                 ↓
+                         T4.4
+                                 ↓
+                               T5.1 [HUMAN: 3-floor tilemap + furniture]
+                                 ↓
+                 T5.2 → T5.3 → T5.4
 ```
 
-### Parallelization Opportunities
-
-The two main tracks can run in parallel:
-
-```
-Track A (Connection):  T0.1 → T0.2 → T0.3 → T1.1 → T1.2 → T1.3 → T1.4 ────────────────┐
-                                                                                          ├→ T5.1 → T5.2 → T5.3
-Track B (Engine+World): T0.1 → T0.2 → T2.1 → T2.2 → T2.3 → T3.1 → T3.2 → T3.3 → T4.1 → T4.2a → T4.2b → T4.3 ─┘
-```
-
-If two developers are working on this, one can focus on Track A (connection layer) while the other builds Track B (engine + world + character). They converge at **T5.1 (End-to-End Wiring)**.
-
-For a single developer, the recommended order is:
-
-1. **T0.1** → **T0.2** → **T0.3** (bootstrap + architecture adaptation)
-2. **T2.1** → **T2.2** → **T2.3** (get something visual on screen early — motivation!)
-3. **T1.1** → **T1.2** → **T1.3** → **T1.4** (data layer)
-4. **T3.1** → **T3.2** → **T3.3** (build the house)
-5. **T4.1** + **T4.2a** (can overlap) → **T4.2b** → **T4.3** (bring the character to life)
-6. **T5.1** → **T5.2** → **T5.3** (wire everything together)
-
-This order prioritizes **visual feedback early** (seeing the isometric grid on screen by day 2) which keeps motivation high.
+**Note**: AI tasks can proceed with programmatic placeholders while waiting for human art assets. When the human delivers the assets, they are hot-swapped in (just replace the files, no code changes needed).
 
 ---
 
 ## Estimated Timeline
 
-| Task                         | Est. Time    | Cumulative    |
-| ---------------------------- | ------------ | ------------- |
-| T0.1 Project Scaffolding     | 0.5 day      | 0.5 day       |
-| T0.2 Dev Tooling Setup       | 0.5 day      | 1 day         |
-| T0.3 Session Log Adaptation  | 0.5 day      | 1.5 days      |
-| T2.1 Isometric Math + Canvas | 0.5 day      | 2 days        |
-| T2.2 Game Loop + State       | 0.5 day      | 2.5 days      |
-| T2.3 Camera System           | 0.5 day      | 3 days        |
-| T1.1 Bridge Client           | 0.5 day      | 3.5 days      |
-| T1.2 Event Parser            | 0.5 day      | 4 days        |
-| T1.3 Mock Provider           | 0.5 day      | 4.5 days      |
-| T1.4 Connection Manager      | 0.5 day      | 5 days        |
-| T3.1 Tile Map + Rooms        | 0.5 day      | 5.5 days      |
-| T3.2 Floor & Wall Rendering  | 0.5 day      | 6 days        |
-| T3.3 Furniture               | 0.5 day      | 6.5 days      |
-| T4.1 Character Sprite        | 0.5 day      | 7 days        |
-| T4.2a Pathfinding            | 0.5 day      | 7.5 days      |
-| T4.2b Character FSM          | 0.5 day      | 8 days        |
-| T4.3 Emotion Bubbles         | 0.5 day      | 8.5 days      |
-| T5.1 End-to-End Wiring       | 0.5 day      | 9 days        |
-| T5.2 Dashboard               | 0.5 day      | 9.5 days      |
-| T5.3 Polish                  | 0.5 day      | 10 days       |
-| **Buffer**                   | **1.5 days** | **11.5 days** |
-
-**Total estimated MVP: ~10 working days + 1.5 days buffer = ~11.5 working days** (roughly 2.5 calendar weeks at half-day per task pace).
-
-> **Note on the buffer**: The buffer accounts for unexpected complexity in integration (T5.1), sprite creation taking longer than expected, and edge cases in Bridge Server and session log parsing that only surface during real testing.
-
----
-
-## Checklist Summary
-
-- [x] P0: Project boots, lints, tests, builds, Bridge Server ready
-- [x] P1: Events flow from Bridge Server (or mock) to parsed CharacterActions
-- [x] P2: Isometric canvas renders with game loop, camera pans and zooms
-- [x] P3: One-floor house visible with 3 rooms, walls, doors, furniture
-- [x] P4: Lobster-hat character walks between rooms, plays animations, shows emotions
-- [x] P5: Events drive character behavior end-to-end, dashboard shows status, app is polished
-- [ ] P6: Mock removed, Bridge enhanced, 3/4 top-down pixel art redone, Electron desktop app
-
----
-
-## Phase 6: v0.2 Improvements
-
-### T6.1 — Remove Mock Data Logic (0.5 day)
-
-> Fully remove Mock mode, only support real Bridge Server data.
-
-**Depends on**: T5.3
-
-**Delete:**
-
-- `src/connection/mockProvider.ts`
-- `src/connection/mockProvider.test.ts`
-
-**Modify:**
-
-- `src/connection/connectionManager.ts` — Remove `MockProvider` references, `switchToMock()`, `MOCK_SWITCH_DELAY_MS`, `mock` state
-- `src/connection/index.ts` — Remove MockProvider export
-- `src/App.tsx` — Remove `forceMock` keyboard shortcut (M key)
-- `src/engine/gameState.ts` — Remove `forceMock` from `DebugState`; remove `'mock'` from `ConnectionInfo.status`
-- `src/ui/ConnectionBadge.tsx` — Remove "Mock" status, keep only Live / Connecting / Disconnected
-- `package.json` — Remove `dev:mock` script
-
-**New ConnectionManager behavior:**
-
-- Start → Connect Bridge → Success = `'live'`, Failure = keep retrying (exponential backoff), status = `'connecting'`
-- Never generate fake data
-
-**Acceptance criteria:**
-
-- [ ] No `mock` / `Mock` / `MockProvider` references in code
-- [ ] `pnpm test` passes (after removing mock tests)
-- [ ] UI shows "Connecting..." when Bridge unavailable, never "Mock"
-- [ ] Character does not auto-move without real events
-
----
-
-### T6.2 — Bridge Server Enhancements (0.5 day)
-
-> Improve session monitoring sensitivity and session switch notifications.
-
-**Depends on**: T6.1
-
-**Modify:** `bridge/server.ts`
-
-- Shorten `SESSION_CHECK_INTERVAL_MS` from 5000 → 2000
-- Add `fs.watch` on `sessions.json` itself, trigger `checkForSessionChange()` immediately on file change
-- Session switch broadcasts `session_switch` message (already exists), frontend `BridgeClient` dispatches `RESET` on receipt
-- Confirm `pnpm dev` script correctly starts Vite + Bridge Server concurrently
-
-**Modify:** `src/connection/bridgeClient.ts`
-
-- On receiving `_bridge: true, type: 'session_switch'` message, emit a special event to notify ConnectionManager (currently `_bridge` messages are skipped)
-
-**Modify:** `src/connection/connectionManager.ts`
-
-- On session switch notification, dispatch `RESET` action to reset character
-
-**Acceptance criteria:**
-
-- [ ] `pnpm dev` starts Vite + Bridge Server together
-- [ ] Bridge Server detects session switch within 2s
-- [ ] Character auto-resets to bedroom/sleeping on session switch
-- [ ] `sessions.json` modifications immediately trigger check
-
----
-
-### T6.3 — Pixel Art Asset Directory Structure (0.5 day)
-
-> Set up sprite loading framework and asset directory for Stardew Valley style pixel assets.
-
-**Depends on**: T6.1
-
-**User provides**: Download Stardew Valley style pixel assets from itch.io / OpenGameArt
-
-**Developer provides**: Directory structure and sprite loading framework
-
-```
-public/assets/
-├── tilesets/
-│   └── interior.png          # Floor, wall tileset (16x16 or 32x32)
-├── furniture/
-│   ├── desk-computer.png     # Computer desk
-│   ├── bookshelf.png         # Bookshelf
-│   ├── bed.png               # Bed
-│   ├── sofa.png              # Sofa
-│   ├── lamp.png              # Desk lamp
-│   └── ...
-├── character/
-│   └── character.png         # Character spritesheet (walk/idle/sit/type/sleep)
-└── ui/
-    └── emotion-bubbles.png   # Emotion bubble sprites
-```
-
-**New files:**
-
-- `src/engine/spritesheet.ts` — Spritesheet loading, frame cutting, animation frame definitions
-
-**Modify:**
-
-- `src/world/sprites.ts` — Rewrite to spritesheet-based loading (replacing placeholder logic)
-
-**Acceptance criteria:**
-
-- [ ] Spritesheet loader correctly cuts frames
-- [ ] Missing images have clear fallback (colored placeholder blocks + console warning)
-
----
-
-### T6.4 — Coordinate System and Rendering Refactor (1 day)
-
-> Switch from isometric (diamond tiles) to 3/4 top-down (Stardew Valley style rectangular tiles).
-
-**Depends on**: T6.3
-
-**Current**: Isometric rendering (diamond tiles, z-sorting by col+row)
-**Target**: 3/4 top-down sprite-based rendering (rectangular tiles, y-sorting)
-
-**Rewrite:**
-
-- `src/engine/isometric.ts` → `src/engine/coordinates.ts`
-  - `cartesianToScreen(col, row)` — Grid position → screen pixels (simple tile size multiplication)
-  - `screenToCartesian(x, y, camera)` — Mouse position → grid position
-  - Remove all isometric diamond calculations
-- `src/engine/isometric.test.ts` → `src/engine/coordinates.test.ts`
-- `src/engine/renderer.ts` — Full rewrite
-  - Render layers: floor tiles → walls → furniture → character → emotion bubbles → UI
-  - Use `ctx.drawImage()` for sprites (replacing `ctx.fillRect` / `ctx.beginPath`)
-  - Y-coordinate sorting for correct occlusion (standard 3/4 view approach)
-- `src/engine/camera.ts` — Simplify to top-down camera
-- Update all files referencing isometric: `gameState.ts`, `character.ts`, `pathfinding.ts`, `CanvasView.tsx`, etc.
-
-**Acceptance criteria:**
-
-- [ ] Floor tiles render as rectangular grid (not diamonds)
-- [ ] Sprite assets display correctly if available; colored placeholders if missing
-- [ ] Camera pan/zoom works correctly in new perspective
-
----
-
-### T6.5 — Rebuild World Map and Rooms (0.5 day)
-
-> Rebuild map with new room names and horizontal layout.
-
-**Depends on**: T6.4
-
-**Room layout (horizontal row):**
-
-```
-┌─────────────┬─────────────┬─────────────┐
-│             │             │             │
-│  Workshop   │   Study     │  Bedroom    │
-│  (工作室)    │   (书房)    │  (卧室)     │
-│             │             │             │
-└─────────────┴─────────────┴─────────────┘
-```
-
-**Modify:**
-
-- `src/connection/types.ts` — `RoomId` from `'office' | 'living-room' | 'bedroom'` to `'workshop' | 'study' | 'bedroom'`
-- `src/connection/eventParser.ts` — Update `TOOL_ROOM_MAP` room references
-- `src/world/tileMap.ts` — Horizontal 3-room tile map (~24x10 tiles)
-- `src/world/rooms.ts` — Update room definitions: Workshop, Study, Bedroom
-- `src/world/furniture.ts` — Define furniture placement with sprite references (position + spriteKey)
-- `src/engine/pathfinding.ts` — BFS unchanged, only update grid size
-- `src/engine/character.ts` — Update RESET action bedroom coordinates
-
-**Furniture configuration:**
-| Room | Furniture |
-| -------- | -------------------------------------------- |
-| Workshop | Computer desk (dual monitors), office chair, small bookshelf |
-| Study | Large bookshelf, sofa, coffee table, desk lamp |
-| Bedroom | Bed, nightstand, desk lamp |
-
-**Acceptance criteria:**
-
-- [ ] Three rooms display horizontally, separated by walls and doors
-- [ ] Furniture displays in correct positions (sprites or placeholder blocks)
-- [ ] Character can move between all three rooms through doors (pathfinding correct)
-
----
-
-### T6.6 — Character Sprite Integration (0.5 day)
-
-> Switch character rendering from programmatic drawing to spritesheet-driven.
-
-**Depends on**: T6.5
-
-**Modify:**
-
-- `src/engine/character.ts` — Animation system uses spritesheet frame indices
-- `src/engine/renderer.ts` — Character rendering uses `drawImage()` to cut frames from spritesheet
-
-**Character animation frames:**
-| Animation | Frames | Directions | Trigger |
-| --------- | ------ | -------------- | ---------------- |
-| idle | 2-4 | 4-directional | Default |
-| walk | 4-6 | 4-directional | GOTO_ROOM |
-| type | 2-4 | 1-dir (facing desk) | Workshop activity |
-| read | 2 | 1-dir (facing shelf) | Study activity |
-| sleep | 2-4 | 1-dir (facing bed) | Bedroom/idle timeout |
-
-**Emotion bubbles:** sprite-based, floating above character head
-
-**Acceptance criteria:**
-
-- [ ] Character rendered with spritesheet (not programmatic rectangles)
-- [ ] Smooth frame animation when walking
-- [ ] Different state animations play in different rooms
-- [ ] Emotion bubbles display correctly
-
----
-
-### T6.7 — Electron Desktop App Integration (1 day)
-
-> Wrap the web project as an Electron desktop app with system tray and always-on-top support.
-
-**Depends on**: T6.6
-
-**New files:**
-
-- `electron/main.ts` — Electron main process entry
-  - Create BrowserWindow, load Vite dev server (dev) or bundled files (production)
-  - Window options: borderless or semi-transparent, always-on-top, resizable
-  - System tray icon and menu (show/hide, quit)
-- `electron/preload.ts` — Preload script (secure IPC channels)
-- `electron/tray.ts` — System tray management
-
-**Modify:**
-
-- `package.json` — Add Electron dependencies (`electron`, `electron-builder`), new scripts:
-  - `"dev:electron"` — Start Vite + Bridge Server + Electron concurrently
-  - `"build:electron"` — Package as macOS .app / .dmg
-  - `"pack"` — electron-builder packaging
-- `vite.config.ts` — Adapt for Electron renderer build (base path etc.)
-- Bridge Server integration — Bridge Server can run in two modes:
-  - As standalone process (same as v0.1)
-  - Forked by Electron main process (recommended, unified lifecycle management)
-
-**Window features:**
-
-- Default window size: 1100x700 (canvas + dashboard)
-- Always-on-top toggle (tray menu or keyboard shortcut)
-- Window position and size memory (restore on next launch)
-- macOS: Dock icon support, click Dock icon to restore window
-
-**Acceptance criteria:**
-
-- [ ] `pnpm dev:electron` opens Electron window with full UI
-- [ ] Bridge Server forked and managed by Electron main process
-- [ ] System tray icon visible, right-click menu has show/hide/quit
-- [ ] Always-on-top toggleable
-- [ ] Window can be reopened via tray icon after closing
-- [ ] `pnpm build:electron` produces distributable macOS app
-
----
-
-### T6.8 — End-to-End Verification and Polish (0.5 day)
-
-> Full pipeline verification of v0.2 changes and experience polish.
-
-**Depends on**: T6.7
-
-**Verification items:**
-
-- Bridge Server connection → Event parsing → Character FSM → Renderer full pipeline
-- Character stays quiet in bedroom sleeping when no events
-- OpenClaw `write`/`edit`/`exec` → Character goes to Workshop and types
-- OpenClaw `read`/`grep`/`web_search` → Character goes to Study
-- OpenClaw `stopReason: 'stop'` → Character returns to Bedroom and sleeps
-- Session switch → Character resets
-- Electron desktop window runs stably
-
-**Polish:**
-
-- Adjust walking speed (not too fast, not too slow)
-- Adjust animation frame rates
-- Dashboard removes Mock-related displays
-- Update README
-
-**Acceptance criteria:**
-
-- [ ] `pnpm dev:electron` → Electron + Bridge Server + Vite start together
-- [ ] Window shows "Live", character quietly sleeping (no events)
-- [ ] Character correctly responds to real events
-- [ ] `pnpm test` passes, `pnpm typecheck` zero errors, `pnpm build` succeeds
-- [ ] 10-minute stable run with no errors
-- [ ] Electron app packages successfully (macOS .app)
+| Phase | AI Work | Human Work | Calendar |
+| ----- | ------- | ---------- | -------- |
+| P0    | 1.5 days | —         | Day 1–2  |
+| P1    | 1.5 days | 1–2 days (tileset + tilemap) | Day 2–4 |
+| P2    | 2 days   | 1–2 days (character spritesheet) | Day 4–7 |
+| P3    | 2 days   | 0.5 day (emotion + particle sprites) | Day 7–9 |
+| P4    | 1.5 days | 0.5 day (sound effects) | Day 9–11 |
+| P5    | 1.5 days | 1–2 days (3-floor tilemap + furniture) | Day 11–13 |
+| **Total** | **~10 days** | **~5 days** | **~2.5 weeks** |
+
+> Human art tasks can be done **in parallel** with AI coding tasks. The AI uses programmatic placeholders until real assets are delivered.
