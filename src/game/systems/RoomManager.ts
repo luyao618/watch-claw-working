@@ -132,7 +132,7 @@ export class RoomManager {
         h: 160,
         spotX: 256,
         spotY: 112,
-        anim: 'think',
+        anim: 'type',
         dir: 'right' as const,
       },
       {
@@ -144,7 +144,7 @@ export class RoomManager {
         h: 160,
         spotX: 416,
         spotY: 112,
-        anim: 'think',
+        anim: 'type',
         dir: 'right' as const,
       },
       // 2F — Main Floor
@@ -194,7 +194,7 @@ export class RoomManager {
         h: 160,
         spotX: 96,
         spotY: 464,
-        anim: 'think',
+        anim: 'type',
         dir: 'right' as const,
       },
       {
