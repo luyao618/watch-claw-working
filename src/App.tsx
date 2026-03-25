@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { PhaserContainer } from '@/ui/PhaserContainer.tsx'
 import type { PhaserContainerHandle } from '@/ui/PhaserContainer.tsx'
 import { Dashboard } from '@/ui'
+import ModeSelector from '@/ui/ModeSelector.tsx'
+import type { AppMode } from '@/ui/ModeSelector.tsx'
 import { ConnectionManager } from '@/connection/connectionManager.ts'
 import type { SessionLogEvent } from '@/connection/types.ts'
 import type {
@@ -32,6 +34,7 @@ function App() {
   })
   const [events, setEvents] = useState<SessionLogEvent[]>([])
   const [showDashboard, setShowDashboard] = useState(true)
+  const [appMode, setAppMode] = useState<AppMode>('monitor')
 
   // Character state from Phaser (T4.1)
   const [characterState, setCharacterState] = useState('idle')
@@ -124,8 +127,31 @@ function App() {
         overflow: 'hidden',
       }}
     >
-      {/* Phaser Game Area */}
-      <PhaserContainer ref={phaserRef} connectionManager={cm} />
+      {/* Left column: mode selector bar + Phaser game */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Mode selector bar — sits above the game canvas */}
+        <div
+          style={{
+            flexShrink: 0,
+            backgroundColor: '#12121f',
+          }}
+        >
+          <ModeSelector currentMode={appMode} onModeChange={setAppMode} />
+        </div>
+        {/* Phaser Game Area */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <PhaserContainer ref={phaserRef} connectionManager={cm} />
+        </div>
+      </div>
 
       {/* Dashboard */}
       <Dashboard
