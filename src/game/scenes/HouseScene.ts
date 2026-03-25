@@ -339,24 +339,7 @@ export class HouseScene extends Phaser.Scene {
 
   // --- Day/Night Tint (T5.4) ---
   private applyDayNightTint(): void {
-    try {
-      const hour = new Date().getHours()
-      if (hour < 6 || hour > 20) {
-        // Night time: blue tint
-        const fx = this.cameras.main.postFX?.addColorMatrix()
-        if (fx) {
-          fx.night(0.3)
-        }
-      } else if (hour < 8 || hour > 18) {
-        // Dawn/dusk: warm tint
-        const fx = this.cameras.main.postFX?.addColorMatrix()
-        if (fx) {
-          fx.saturate(0.1)
-        }
-      }
-    } catch {
-      // postFX may not be supported in all renderers
-    }
+    // Disabled: day/night tint distorts the pixel art colors
   }
 
   // --- Room name labels at top-center of each room ---

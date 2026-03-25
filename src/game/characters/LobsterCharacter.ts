@@ -107,8 +107,10 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
       { key: 'jump', row: 2, frames: 3, rate: 8, loop: false },
       { key: 'type', row: 3, frames: 4, rate: 8, loop: true },
       { key: 'sleep', row: 4, frames: 2, rate: 2, loop: true },
-      { key: 'think', row: 5, frames: 4, rate: 4, loop: true },
-      { key: 'celebrate', row: 6, frames: 4, rate: 8, loop: true },
+      // think: reuse type frames (row 3) as fallback
+      { key: 'think', row: 3, frames: 4, rate: 4, loop: true },
+      // celebrate: spritesheet only has 6 rows (0-5), row 6 doesn't exist, fallback to idle frames
+      { key: 'celebrate', row: 0, frames: 4, rate: 12, loop: true },
     ]
 
     const cols = 6
