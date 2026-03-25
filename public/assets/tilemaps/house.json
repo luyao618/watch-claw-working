@@ -174,8 +174,8 @@
     {
       "data": [
         0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0,
+        2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7, 2, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 2, 7, 7, 7, 7, 7, 7, 7, 7, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
         0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
         0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
@@ -186,9 +186,9 @@
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
         0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 7, 7, 7, 7, 7,
-        7, 7, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 7, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0,
+        0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 7, 7, 7, 7, 7,
+        7, 7, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7,
+        7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0,
         0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
         0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0,
@@ -200,10 +200,10 @@
         0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 7, 7, 7, 7, 7, 7, 7,
-        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 0, 0, 7, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-        7, 7, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 2, 0, 0, 0, 0, 0, 0,
+        7, 7, 7, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 2, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
         0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
         0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
@@ -323,7 +323,13 @@
           "width": 160,
           "x": 16,
           "y": 0,
-          "properties": [{ "name": "floor", "type": "int", "value": 3 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 3
+            }
+          ]
         },
         {
           "height": 160,
@@ -335,7 +341,13 @@
           "width": 160,
           "x": 176,
           "y": 0,
-          "properties": [{ "name": "floor", "type": "int", "value": 3 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 3
+            }
+          ]
         },
         {
           "height": 160,
@@ -347,7 +359,13 @@
           "width": 160,
           "x": 336,
           "y": 0,
-          "properties": [{ "name": "floor", "type": "int", "value": 3 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 3
+            }
+          ]
         },
         {
           "height": 160,
@@ -359,7 +377,13 @@
           "width": 160,
           "x": 16,
           "y": 176,
-          "properties": [{ "name": "floor", "type": "int", "value": 2 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 2
+            }
+          ]
         },
         {
           "height": 160,
@@ -371,7 +395,13 @@
           "width": 160,
           "x": 176,
           "y": 176,
-          "properties": [{ "name": "floor", "type": "int", "value": 2 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 2
+            }
+          ]
         },
         {
           "height": 160,
@@ -383,7 +413,13 @@
           "width": 160,
           "x": 336,
           "y": 176,
-          "properties": [{ "name": "floor", "type": "int", "value": 2 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 2
+            }
+          ]
         },
         {
           "height": 160,
@@ -395,7 +431,13 @@
           "width": 160,
           "x": 16,
           "y": 352,
-          "properties": [{ "name": "floor", "type": "int", "value": 1 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 1
+            }
+          ]
         },
         {
           "height": 160,
@@ -407,7 +449,13 @@
           "width": 160,
           "x": 176,
           "y": 352,
-          "properties": [{ "name": "floor", "type": "int", "value": 1 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 1
+            }
+          ]
         },
         {
           "height": 160,
@@ -419,7 +467,13 @@
           "width": 160,
           "x": 336,
           "y": 352,
-          "properties": [{ "name": "floor", "type": "int", "value": 1 }]
+          "properties": [
+            {
+              "name": "floor",
+              "type": "int",
+              "value": 1
+            }
+          ]
         }
       ],
       "opacity": 1,
@@ -445,8 +499,16 @@
           "x": 96,
           "y": 112,
           "properties": [
-            { "name": "anim", "type": "string", "value": "type" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "type"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -461,8 +523,16 @@
           "x": 256,
           "y": 112,
           "properties": [
-            { "name": "anim", "type": "string", "value": "think" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "think"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -477,8 +547,16 @@
           "x": 416,
           "y": 112,
           "properties": [
-            { "name": "anim", "type": "string", "value": "think" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "think"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -493,8 +571,16 @@
           "x": 96,
           "y": 288,
           "properties": [
-            { "name": "anim", "type": "string", "value": "type" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "type"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -509,8 +595,16 @@
           "x": 256,
           "y": 288,
           "properties": [
-            { "name": "anim", "type": "string", "value": "type" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "type"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -525,8 +619,16 @@
           "x": 420,
           "y": 285,
           "properties": [
-            { "name": "anim", "type": "string", "value": "sleep" },
-            { "name": "direction", "type": "string", "value": "left" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "sleep"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "left"
+            }
           ]
         },
         {
@@ -541,8 +643,16 @@
           "x": 96,
           "y": 464,
           "properties": [
-            { "name": "anim", "type": "string", "value": "think" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "think"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -557,8 +667,16 @@
           "x": 256,
           "y": 464,
           "properties": [
-            { "name": "anim", "type": "string", "value": "type" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "type"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         },
         {
@@ -573,8 +691,16 @@
           "x": 416,
           "y": 464,
           "properties": [
-            { "name": "anim", "type": "string", "value": "type" },
-            { "name": "direction", "type": "string", "value": "right" }
+            {
+              "name": "anim",
+              "type": "string",
+              "value": "type"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "right"
+            }
           ]
         }
       ],

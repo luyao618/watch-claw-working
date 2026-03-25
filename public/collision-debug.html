@@ -7,9 +7,37 @@
         margin: 0;
         background: #111;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         height: 100vh;
+        gap: 10px;
+      }
+      .legend {
+        display: flex;
+        gap: 16px;
+        color: #fff;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .legend-box {
+        width: 14px;
+        height: 14px;
+        border: 1px solid #555;
+      }
+      .legend-red {
+        background: rgba(255, 0, 0, 0.4);
+      }
+      .legend-blue {
+        background: rgba(0, 120, 255, 0.5);
+      }
+      .legend-green {
+        border: 0.5px solid rgba(0, 255, 0, 0.3);
       }
       .c {
         position: relative;
@@ -43,6 +71,10 @@
         background: rgba(255, 0, 0, 0.4);
         border: 0.5px solid rgba(255, 80, 80, 0.6);
       }
+      .ow {
+        background: rgba(0, 120, 255, 0.5);
+        border: 0.5px solid rgba(80, 160, 255, 0.8);
+      }
       .e {
         border: 0.5px solid rgba(0, 255, 0, 0.1);
       }
@@ -53,6 +85,20 @@
     </style>
   </head>
   <body>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box legend-red"></div>
+        Solid collision (blocked)
+      </div>
+      <div class="legend-item">
+        <div class="legend-box legend-blue"></div>
+        One-way platform (jump up, drop down)
+      </div>
+      <div class="legend-item">
+        <div class="legend-box legend-green"></div>
+        Empty (passable)
+      </div>
+    </div>
     <div class="c">
       <img src="assets/house-bg.png" />
       <div class="g">
@@ -156,142 +202,90 @@
         <div class="t s" style="left: 16px; top: 16px" title="col=1 row=1">
           1,1
         </div>
-        <div
-          class="t e"
-          style="left: 32px; top: 16px"
-          title="col=2 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 48px; top: 16px"
-          title="col=3 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 64px; top: 16px"
-          title="col=4 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 80px; top: 16px"
-          title="col=5 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 96px; top: 16px"
-          title="col=6 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 112px; top: 16px"
-          title="col=7 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 128px; top: 16px"
-          title="col=8 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 144px; top: 16px"
-          title="col=9 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 160px; top: 16px"
-          title="col=10 row=1"
-        ></div>
+        <div class="t s" style="left: 32px; top: 16px" title="col=2 row=1">
+          2,1
+        </div>
+        <div class="t s" style="left: 48px; top: 16px" title="col=3 row=1">
+          3,1
+        </div>
+        <div class="t s" style="left: 64px; top: 16px" title="col=4 row=1">
+          4,1
+        </div>
+        <div class="t s" style="left: 80px; top: 16px" title="col=5 row=1">
+          5,1
+        </div>
+        <div class="t s" style="left: 96px; top: 16px" title="col=6 row=1">
+          6,1
+        </div>
+        <div class="t s" style="left: 112px; top: 16px" title="col=7 row=1">
+          7,1
+        </div>
+        <div class="t s" style="left: 128px; top: 16px" title="col=8 row=1">
+          8,1
+        </div>
+        <div class="t s" style="left: 144px; top: 16px" title="col=9 row=1">
+          9,1
+        </div>
+        <div class="t s" style="left: 160px; top: 16px" title="col=10 row=1">
+          10,1
+        </div>
         <div class="t s" style="left: 176px; top: 16px" title="col=11 row=1">
           11,1
         </div>
-        <div
-          class="t e"
-          style="left: 192px; top: 16px"
-          title="col=12 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 208px; top: 16px"
-          title="col=13 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 224px; top: 16px"
-          title="col=14 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 240px; top: 16px"
-          title="col=15 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 256px; top: 16px"
-          title="col=16 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 272px; top: 16px"
-          title="col=17 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 288px; top: 16px"
-          title="col=18 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 304px; top: 16px"
-          title="col=19 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 320px; top: 16px"
-          title="col=20 row=1"
-        ></div>
+        <div class="t s" style="left: 192px; top: 16px" title="col=12 row=1">
+          12,1
+        </div>
+        <div class="t s" style="left: 208px; top: 16px" title="col=13 row=1">
+          13,1
+        </div>
+        <div class="t s" style="left: 224px; top: 16px" title="col=14 row=1">
+          14,1
+        </div>
+        <div class="t s" style="left: 240px; top: 16px" title="col=15 row=1">
+          15,1
+        </div>
+        <div class="t s" style="left: 256px; top: 16px" title="col=16 row=1">
+          16,1
+        </div>
+        <div class="t s" style="left: 272px; top: 16px" title="col=17 row=1">
+          17,1
+        </div>
+        <div class="t s" style="left: 288px; top: 16px" title="col=18 row=1">
+          18,1
+        </div>
+        <div class="t s" style="left: 304px; top: 16px" title="col=19 row=1">
+          19,1
+        </div>
+        <div class="t s" style="left: 320px; top: 16px" title="col=20 row=1">
+          20,1
+        </div>
         <div class="t s" style="left: 336px; top: 16px" title="col=21 row=1">
           21,1
         </div>
-        <div
-          class="t e"
-          style="left: 352px; top: 16px"
-          title="col=22 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 368px; top: 16px"
-          title="col=23 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 384px; top: 16px"
-          title="col=24 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 400px; top: 16px"
-          title="col=25 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 416px; top: 16px"
-          title="col=26 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 432px; top: 16px"
-          title="col=27 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 448px; top: 16px"
-          title="col=28 row=1"
-        ></div>
-        <div
-          class="t e"
-          style="left: 464px; top: 16px"
-          title="col=29 row=1"
-        ></div>
+        <div class="t s" style="left: 352px; top: 16px" title="col=22 row=1">
+          22,1
+        </div>
+        <div class="t s" style="left: 368px; top: 16px" title="col=23 row=1">
+          23,1
+        </div>
+        <div class="t s" style="left: 384px; top: 16px" title="col=24 row=1">
+          24,1
+        </div>
+        <div class="t s" style="left: 400px; top: 16px" title="col=25 row=1">
+          25,1
+        </div>
+        <div class="t s" style="left: 416px; top: 16px" title="col=26 row=1">
+          26,1
+        </div>
+        <div class="t s" style="left: 432px; top: 16px" title="col=27 row=1">
+          27,1
+        </div>
+        <div class="t s" style="left: 448px; top: 16px" title="col=28 row=1">
+          28,1
+        </div>
+        <div class="t s" style="left: 464px; top: 16px" title="col=29 row=1">
+          29,1
+        </div>
         <div class="t s" style="left: 480px; top: 16px" title="col=30 row=1">
           30,1
         </div>
@@ -1542,21 +1536,23 @@
         <div class="t s" style="left: 112px; top: 160px" title="col=7 row=10">
           7,10
         </div>
+        <div class="t s" style="left: 128px; top: 160px" title="col=8 row=10">
+          8,10
+        </div>
         <div
-          class="t e"
-          style="left: 128px; top: 160px"
-          title="col=8 row=10"
-        ></div>
-        <div
-          class="t e"
+          class="t ow"
           style="left: 144px; top: 160px"
-          title="col=9 row=10"
-        ></div>
+          title="col=9 row=10 [ONE-WAY]"
+        >
+          9,10
+        </div>
         <div
-          class="t e"
+          class="t ow"
           style="left: 160px; top: 160px"
-          title="col=10 row=10"
-        ></div>
+          title="col=10 row=10 [ONE-WAY]"
+        >
+          10,10
+        </div>
         <div class="t s" style="left: 176px; top: 160px" title="col=11 row=10">
           11,10
         </div>
@@ -1578,21 +1574,23 @@
         <div class="t s" style="left: 272px; top: 160px" title="col=17 row=10">
           17,10
         </div>
+        <div class="t s" style="left: 288px; top: 160px" title="col=18 row=10">
+          18,10
+        </div>
         <div
-          class="t e"
-          style="left: 288px; top: 160px"
-          title="col=18 row=10"
-        ></div>
-        <div
-          class="t e"
+          class="t ow"
           style="left: 304px; top: 160px"
-          title="col=19 row=10"
-        ></div>
+          title="col=19 row=10 [ONE-WAY]"
+        >
+          19,10
+        </div>
         <div
-          class="t e"
+          class="t ow"
           style="left: 320px; top: 160px"
-          title="col=20 row=10"
-        ></div>
+          title="col=20 row=10 [ONE-WAY]"
+        >
+          20,10
+        </div>
         <div class="t s" style="left: 336px; top: 160px" title="col=21 row=10">
           21,10
         </div>
@@ -1636,41 +1634,27 @@
         <div class="t s" style="left: 16px; top: 176px" title="col=1 row=11">
           1,11
         </div>
-        <div
-          class="t e"
-          style="left: 32px; top: 176px"
-          title="col=2 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 48px; top: 176px"
-          title="col=3 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 64px; top: 176px"
-          title="col=4 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 80px; top: 176px"
-          title="col=5 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 96px; top: 176px"
-          title="col=6 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 112px; top: 176px"
-          title="col=7 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 128px; top: 176px"
-          title="col=8 row=11"
-        ></div>
+        <div class="t s" style="left: 32px; top: 176px" title="col=2 row=11">
+          2,11
+        </div>
+        <div class="t s" style="left: 48px; top: 176px" title="col=3 row=11">
+          3,11
+        </div>
+        <div class="t s" style="left: 64px; top: 176px" title="col=4 row=11">
+          4,11
+        </div>
+        <div class="t s" style="left: 80px; top: 176px" title="col=5 row=11">
+          5,11
+        </div>
+        <div class="t s" style="left: 96px; top: 176px" title="col=6 row=11">
+          6,11
+        </div>
+        <div class="t s" style="left: 112px; top: 176px" title="col=7 row=11">
+          7,11
+        </div>
+        <div class="t s" style="left: 128px; top: 176px" title="col=8 row=11">
+          8,11
+        </div>
         <div
           class="t e"
           style="left: 144px; top: 176px"
@@ -1684,41 +1668,27 @@
         <div class="t s" style="left: 176px; top: 176px" title="col=11 row=11">
           11,11
         </div>
-        <div
-          class="t e"
-          style="left: 192px; top: 176px"
-          title="col=12 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 208px; top: 176px"
-          title="col=13 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 224px; top: 176px"
-          title="col=14 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 240px; top: 176px"
-          title="col=15 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 256px; top: 176px"
-          title="col=16 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 272px; top: 176px"
-          title="col=17 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 288px; top: 176px"
-          title="col=18 row=11"
-        ></div>
+        <div class="t s" style="left: 192px; top: 176px" title="col=12 row=11">
+          12,11
+        </div>
+        <div class="t s" style="left: 208px; top: 176px" title="col=13 row=11">
+          13,11
+        </div>
+        <div class="t s" style="left: 224px; top: 176px" title="col=14 row=11">
+          14,11
+        </div>
+        <div class="t s" style="left: 240px; top: 176px" title="col=15 row=11">
+          15,11
+        </div>
+        <div class="t s" style="left: 256px; top: 176px" title="col=16 row=11">
+          16,11
+        </div>
+        <div class="t s" style="left: 272px; top: 176px" title="col=17 row=11">
+          17,11
+        </div>
+        <div class="t s" style="left: 288px; top: 176px" title="col=18 row=11">
+          18,11
+        </div>
         <div
           class="t e"
           style="left: 304px; top: 176px"
@@ -1732,46 +1702,30 @@
         <div class="t s" style="left: 336px; top: 176px" title="col=21 row=11">
           21,11
         </div>
-        <div
-          class="t e"
-          style="left: 352px; top: 176px"
-          title="col=22 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 368px; top: 176px"
-          title="col=23 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 384px; top: 176px"
-          title="col=24 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 400px; top: 176px"
-          title="col=25 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 416px; top: 176px"
-          title="col=26 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 432px; top: 176px"
-          title="col=27 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 448px; top: 176px"
-          title="col=28 row=11"
-        ></div>
-        <div
-          class="t e"
-          style="left: 464px; top: 176px"
-          title="col=29 row=11"
-        ></div>
+        <div class="t s" style="left: 352px; top: 176px" title="col=22 row=11">
+          22,11
+        </div>
+        <div class="t s" style="left: 368px; top: 176px" title="col=23 row=11">
+          23,11
+        </div>
+        <div class="t s" style="left: 384px; top: 176px" title="col=24 row=11">
+          24,11
+        </div>
+        <div class="t s" style="left: 400px; top: 176px" title="col=25 row=11">
+          25,11
+        </div>
+        <div class="t s" style="left: 416px; top: 176px" title="col=26 row=11">
+          26,11
+        </div>
+        <div class="t s" style="left: 432px; top: 176px" title="col=27 row=11">
+          27,11
+        </div>
+        <div class="t s" style="left: 448px; top: 176px" title="col=28 row=11">
+          28,11
+        </div>
+        <div class="t s" style="left: 464px; top: 176px" title="col=29 row=11">
+          29,11
+        </div>
         <div class="t s" style="left: 480px; top: 176px" title="col=30 row=11">
           30,11
         </div>
@@ -3068,21 +3022,23 @@
         <div class="t s" style="left: 272px; top: 320px" title="col=17 row=20">
           17,20
         </div>
+        <div class="t s" style="left: 288px; top: 320px" title="col=18 row=20">
+          18,20
+        </div>
         <div
-          class="t e"
-          style="left: 288px; top: 320px"
-          title="col=18 row=20"
-        ></div>
-        <div
-          class="t e"
+          class="t ow"
           style="left: 304px; top: 320px"
-          title="col=19 row=20"
-        ></div>
+          title="col=19 row=20 [ONE-WAY]"
+        >
+          19,20
+        </div>
         <div
-          class="t e"
+          class="t ow"
           style="left: 320px; top: 320px"
-          title="col=20 row=20"
-        ></div>
+          title="col=20 row=20 [ONE-WAY]"
+        >
+          20,20
+        </div>
         <div class="t s" style="left: 336px; top: 320px" title="col=21 row=20">
           21,20
         </div>
@@ -3206,11 +3162,9 @@
         <div class="t s" style="left: 272px; top: 336px" title="col=17 row=21">
           17,21
         </div>
-        <div
-          class="t e"
-          style="left: 288px; top: 336px"
-          title="col=18 row=21"
-        ></div>
+        <div class="t s" style="left: 288px; top: 336px" title="col=18 row=21">
+          18,21
+        </div>
         <div
           class="t e"
           style="left: 304px; top: 336px"
@@ -3330,11 +3284,9 @@
         <div class="t s" style="left: 272px; top: 352px" title="col=17 row=22">
           17,22
         </div>
-        <div
-          class="t e"
-          style="left: 288px; top: 352px"
-          title="col=18 row=22"
-        ></div>
+        <div class="t s" style="left: 288px; top: 352px" title="col=18 row=22">
+          18,22
+        </div>
         <div
           class="t e"
           style="left: 304px; top: 352px"

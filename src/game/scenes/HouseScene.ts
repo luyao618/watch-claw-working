@@ -217,15 +217,18 @@ export class HouseScene extends Phaser.Scene {
   private setupOneWayPlatforms(): void {
     this.oneWayPlatforms = this.physics.add.staticGroup()
 
-    // Passage locations — one-way platforms at floor openings
-    // 3F-2F left:  cols 8-10  (px 128-175), center x=152
-    // 3F-2F right: cols 18-20 (px 288-335), center x=312
-    // 2F-1F:       cols 18-20 (px 288-335), center x=312
-    // Platforms at row 10 (3F-2F floor, y=160) and row 20 (2F-1F floor, y=320)
+    // One-way platform tiles at passage openings between floors.
+    // These invisible platforms sit at the gap edges so the character can stand
+    // on the floor level, then jump/drop through when navigating.
+    //
+    // Collision layer gaps (from Tiled):
+    //   3F↔2F left:  cols 9-10, row 10  (px X:144-175, Y:160)
+    //   3F↔2F right: cols 19-20, row 10 (px X:304-335, Y:160)
+    //   2F↔1F:       cols 19-20, row 20 (px X:304-335, Y:320)
     const platforms = [
-      { x: 9 * 16, y: 10 * 16 + 8, width: 48, height: 16 }, // 3F-2F left
-      { x: 19 * 16, y: 10 * 16 + 8, width: 48, height: 16 }, // 3F-2F right
-      { x: 19 * 16, y: 20 * 16 + 8, width: 48, height: 16 }, // 2F-1F
+      { x: 10 * 16, y: 10 * 16 + 8, width: 32, height: 16 }, // 3F-2F left: cols 9-10
+      { x: 20 * 16, y: 10 * 16 + 8, width: 32, height: 16 }, // 3F-2F right: cols 19-20
+      { x: 20 * 16, y: 20 * 16 + 8, width: 32, height: 16 }, // 2F-1F: cols 19-20
     ]
 
     for (const p of platforms) {

@@ -16,18 +16,31 @@ export type LobsterState =
   | 'sleeping'
   | 'celebrating'
 
-// Passage X positions — where character.x should be so body fits in the opening
-// Body: offset_x=9, width=14 → body spans [x+9, x+22]
-// 3F↔2F left:  cols 8-10  (px 128-175), char.x = 136 (body 145-158)
-// 3F↔2F right: cols 18-20 (px 288-335), char.x = 296 (body 305-318)
-// 2F↔1F:       cols 18-20 (px 288-335), char.x = 296 (body 305-318)
-const PASSAGES_UP: Record<number, number[]> = {
-  2: [136, 296], // from 2F go up to 3F
-  1: [296], // from 1F go up to 2F
-}
-const PASSAGES_DOWN: Record<number, number[]> = {
-  3: [136, 296], // from 3F go down to 2F
-  2: [296], // from 2F go down to 1F
+// Passage X positions — where character sprite.x (center) should be so the
+// physics body fits entirely within the collision gap.
+//
+// Sprite: 32×32px, origin (0.5, 0.5) → sprite left edge = sprite.x - 16
+// Body:   setSize(14, 20), setOffset(9, 12)
+//         body left  = sprite.x - 16 + 9  = sprite.x - 7
+//         body right = sprite.x - 7  + 14 = sprite.x + 7
+//
+// Collision gaps (from Tiled collision layer, 16px tiles):
+//   3F↔2F left:  cols 9-10  → px [144, 176], gap center = 160
+//   3F↔2F right: cols 19-20 → px [304, 336], gap center = 320
+//   2F↔1F:       cols 19-20 → px [304, 336], gap center = 320 (only right exists)
+//
+// sprite.x = gap center → body spans [center-7, center+7], well within 32px gap
+const PASSAGE_X_LEFT = 160
+const PASSAGE_X_RIGHT = 320
+
+// Available passages for each floor transition
+const PASSAGES: Record<string, number[]> = {
+  // Going up
+  '2→3': [PASSAGE_X_LEFT, PASSAGE_X_RIGHT], // 2F→3F: two passages
+  '1→2': [PASSAGE_X_RIGHT], // 1F→2F: only right passage
+  // Going down
+  '3→2': [PASSAGE_X_LEFT, PASSAGE_X_RIGHT], // 3F→2F: two passages
+  '2→1': [PASSAGE_X_RIGHT], // 2F→1F: only right passage
 }
 
 export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
@@ -47,6 +60,10 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
   private readonly IDLE_SLEEP_THRESHOLD = 30
   private dropping = false
   private goingUp = false
+  /** Stuck detection: time spent in current auto-nav without floor change */
+  private navStuckTimer = 0
+  private readonly NAV_STUCK_TIMEOUT = 8000 // 8 seconds max per floor transition
+  private lastNavFloor = 0
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const textureKey = scene.textures.exists('lobster')
@@ -156,12 +173,14 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.dropping) return
     this.dropping = true
 
+    // Only set the dropping flag — the one-way platform collider's process
+    // callback checks isDropping() and skips collision when true.
+    // We do NOT disable body.checkCollision.down because that would also
+    // let the character fall through solid collision-layer tiles (walls/floors).
     const body = this.body as Phaser.Physics.Arcade.Body
-    body.checkCollision.down = false
     body.setVelocityY(200)
     this.playAnim('jump')
     ;(this.scene as HouseScene).time.delayedCall(400, () => {
-      body.checkCollision.down = true
       this.dropping = false
     })
   }
@@ -241,35 +260,72 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 
   // --- Auto-navigation ---
 
-  private findNearestPassage(goingUp: boolean): number {
-    const floor = this.getFloor()
-    const passages = goingUp
-      ? (PASSAGES_UP[floor] ?? [320])
-      : (PASSAGES_DOWN[floor] ?? [320])
+  /**
+   * Choose the best passage for the next floor transition.
+   *
+   * Strategy: pick the passage that minimizes total walk distance,
+   * considering both the walk to the passage AND the walk from the passage
+   * to the target X. If only one passage exists, use it.
+   *
+   * For multi-floor transitions (e.g. 3F→1F), we also consider that the
+   * 2F→1F transition only has a right passage (x=304), so if the route
+   * requires going through 1F↔2F, we may prefer the right passage on
+   * the 3F→2F leg to avoid backtracking.
+   */
+  private findBestPassage(
+    currentFloor: number,
+    targetFloor: number,
+    targetX: number,
+  ): number {
+    const goingUp = targetFloor > currentFloor
+    const nextFloor = goingUp ? currentFloor + 1 : currentFloor - 1
+    const key = `${currentFloor}→${nextFloor}`
+    const passages = PASSAGES[key] ?? [PASSAGE_X_RIGHT]
 
-    let nearest = passages[0]
-    let minDist = Math.abs(this.x - nearest)
-    for (const px of passages) {
-      const dist = Math.abs(this.x - px)
-      if (dist < minDist) {
-        minDist = dist
-        nearest = px
+    if (passages.length === 1) return passages[0]
+
+    // If we'll need another floor transition after this one, factor in
+    // the constraint of the next leg's available passages.
+    let effectiveTargetX = targetX
+    if (nextFloor !== targetFloor) {
+      // There's another transition after this — check what passages are
+      // available for the next leg.
+      const nextKey = `${nextFloor}→${goingUp ? nextFloor + 1 : nextFloor - 1}`
+      const nextPassages = PASSAGES[nextKey]
+      if (nextPassages && nextPassages.length === 1) {
+        // Only one passage available on the next leg — prefer to be near it
+        // after this transition, so weight the effective target toward it.
+        effectiveTargetX = nextPassages[0]
       }
     }
-    return nearest
+
+    // Pick the passage that minimizes: walk-to-passage + walk-from-passage-to-effectiveTarget
+    let best = passages[0]
+    let bestCost = Math.abs(this.x - best) + Math.abs(best - effectiveTargetX)
+    for (let i = 1; i < passages.length; i++) {
+      const px = passages[i]
+      const cost = Math.abs(this.x - px) + Math.abs(px - effectiveTargetX)
+      if (cost < bestCost) {
+        bestCost = cost
+        best = px
+      }
+    }
+    return best
   }
 
   navigateTo(x: number, y: number, state?: string, emotion?: string): void {
     this.autoNavTarget = { x, y }
     this.targetState = state ?? null
     this.targetEmotion = emotion ?? null
+    this.navStuckTimer = 0
+    this.lastNavFloor = this.getFloor()
 
     const currentFloor = this.getFloor()
     const targetFloor = y < 176 ? 3 : y < 352 ? 2 : 1
 
     if (currentFloor !== targetFloor) {
       this.goingUp = targetFloor > currentFloor
-      this.passageX = this.findNearestPassage(this.goingUp)
+      this.passageX = this.findBestPassage(currentFloor, targetFloor, x)
       this.autoNavPhase = 'walk-to-passage'
     } else {
       this.autoNavPhase = 'walk-to-target'
@@ -285,6 +341,32 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 
   private updateAutoNav(): void {
     if (!this.autoNavTarget) return
+
+    // Stuck detection: if we're navigating between floors and floor hasn't
+    // changed in NAV_STUCK_TIMEOUT, cancel to prevent infinite loops.
+    // During walk-to-target phase (same floor), we don't check stuck
+    // because horizontal movement is always straightforward.
+    if (
+      this.autoNavPhase === 'walk-to-passage' ||
+      this.autoNavPhase === 'jumping' ||
+      this.autoNavPhase === 'dropping'
+    ) {
+      const currentFloor = this.getFloor()
+      if (currentFloor !== this.lastNavFloor) {
+        this.lastNavFloor = currentFloor
+        this.navStuckTimer = 0
+      } else {
+        this.navStuckTimer += this.scene.game.loop.delta
+        if (this.navStuckTimer > this.NAV_STUCK_TIMEOUT) {
+          console.warn(
+            `[LobsterCharacter] Navigation stuck for ${this.NAV_STUCK_TIMEOUT}ms, cancelling`,
+          )
+          this.cancelNavigation()
+          this.setLobsterState('idle')
+          return
+        }
+      }
+    }
 
     switch (this.autoNavPhase) {
       case 'walk-to-passage':
@@ -317,19 +399,16 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
     } else {
       // At passage — jump or drop
       body.setVelocityX(0)
-      // At passage — jump or drop (both use dropThroughFloor to pass through solid floor)
-      body.setVelocityX(0)
       if (onGround && !this.dropping) {
         if (this.goingUp) {
-          // Jump up: disable floor collision temporarily + strong upward velocity
+          // Jump up through the passage gap.
+          // The collision layer has no tiles at passage openings, so we only
+          // need to bypass the one-way platform. Setting dropping=true makes
+          // the platform collider's process callback return false.
           this.dropping = true
-          body.checkCollision.up = false
-          body.checkCollision.down = false
           body.setVelocityY(-650)
           this.playAnim('jump')
           ;(this.scene as HouseScene).time.delayedCall(500, () => {
-            body.checkCollision.up = true
-            body.checkCollision.down = true
             this.dropping = false
           })
           this.autoNavPhase = 'jumping'
@@ -356,7 +435,11 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
       if (currentFloor !== targetFloor) {
         // Need another jump
         this.goingUp = targetFloor > currentFloor
-        this.passageX = this.findNearestPassage(this.goingUp)
+        this.passageX = this.findBestPassage(
+          currentFloor,
+          targetFloor,
+          this.autoNavTarget.x,
+        )
         this.autoNavPhase = 'walk-to-passage'
       } else {
         this.autoNavPhase = 'walk-to-target'
@@ -378,7 +461,11 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 
       if (currentFloor !== targetFloor) {
         this.goingUp = targetFloor > currentFloor
-        this.passageX = this.findNearestPassage(this.goingUp)
+        this.passageX = this.findBestPassage(
+          currentFloor,
+          targetFloor,
+          this.autoNavTarget.x,
+        )
         this.autoNavPhase = 'walk-to-passage'
       } else {
         this.autoNavPhase = 'walk-to-target'
