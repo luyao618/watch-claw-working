@@ -1,82 +1,25 @@
 /**
- * App — Root component that wires Connection, Engine, and UI together.
+ * App — Root component that wires Connection and UI together.
  *
- * End-to-end flow:
- *   ConnectionManager → CharacterAction → Character FSM → GameLoop → Renderer → Canvas
+ * End-to-end flow (v1.0):
+ *   ConnectionManager → CharacterAction → [EventBridge (T3.1)] → Phaser HouseScene
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { CanvasView, Dashboard, ZoomControls } from '@/ui'
+import { useState, useEffect, useRef } from 'react'
+import { PhaserContainer } from '@/ui/PhaserContainer.tsx'
+import type { PhaserContainerHandle } from '@/ui/PhaserContainer.tsx'
+import { Dashboard } from '@/ui'
 import { ConnectionManager } from '@/connection/connectionManager.ts'
 import type { SessionLogEvent } from '@/connection/types.ts'
 import type {
   ConnectionStatus,
   SessionInfo,
 } from '@/connection/connectionManager.ts'
-import {
-  createInitialCharacterState,
-  createInitialCameraState,
-  createInitialConnectionInfo,
-  createInitialDebugState,
-  TileType,
-} from '@/engine/gameState.ts'
-import type { GameState, WorldState } from '@/engine/gameState.ts'
-import { queueAction } from '@/engine/character.ts'
-import {
-  FLOOR_LAYOUT,
-  MAP_COLS,
-  MAP_ROWS,
-  ROOMS,
-  ALL_FURNITURE,
-  buildWalkabilityGrid,
-  preloadAllSprites,
-} from '@/world'
-
-// ── Build World State ───────────────────────────────────────────────────────
-
-function buildWorldState(): WorldState {
-  const tiles = FLOOR_LAYOUT
-  const walkabilityGrid = buildWalkabilityGrid(tiles, ALL_FURNITURE)
-
-  // Extract wall positions for 3D rendering
-  const walls: WorldState['walls'] = []
-  for (let row = 0; row < tiles.length; row++) {
-    for (let col = 0; col < tiles[row].length; col++) {
-      if (tiles[row][col] === TileType.WALL) {
-        // Determine wall type
-        const wallType = col < MAP_COLS / 2 ? 'front' : 'side'
-        walls.push({ col, row, wallType })
-      }
-    }
-  }
-
-  return {
-    width: MAP_COLS,
-    height: MAP_ROWS,
-    tiles,
-    walkabilityGrid,
-    rooms: ROOMS,
-    furniture: ALL_FURNITURE,
-    walls,
-  }
-}
 
 // ── App Component ───────────────────────────────────────────────────────────
 
 function App() {
-  // Game state (stable reference — mutated imperatively by engine)
-  const gameState = useMemo<GameState>(() => {
-    const world = buildWorldState()
-    return {
-      character: createInitialCharacterState(),
-      world,
-      camera: createInitialCameraState(),
-      connection: createInitialConnectionInfo(),
-      debug: createInitialDebugState(),
-    }
-  }, [])
-
-  // React state for UI updates (throttled)
+  // React state for UI updates
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('connecting')
   const [sessionInfo, setSessionInfo] = useState<SessionInfo>({
@@ -87,31 +30,24 @@ function App() {
     totalCost: 0,
   })
   const [events, setEvents] = useState<SessionLogEvent[]>([])
-  const [fps, setFps] = useState(0)
   const [showDashboard, setShowDashboard] = useState(true)
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 })
 
   const connectionRef = useRef<ConnectionManager | null>(null)
-
-  // Preload sprite assets
-  useEffect(() => {
-    preloadAllSprites()
-  }, [])
+  const phaserRef = useRef<PhaserContainerHandle>(null)
 
   // Initialize ConnectionManager
   useEffect(() => {
     const cm = new ConnectionManager()
     connectionRef.current = cm
 
-    // Handle character actions
-    cm.onAction((action) => {
-      queueAction(gameState.character, action)
+    // Handle character actions — will be wired to Phaser in T3.1
+    cm.onAction((_action) => {
+      // TODO (T3.1): dispatch action to Phaser HouseScene via EventBridge
     })
 
     // Handle connection status changes
     cm.onStatusChange((status) => {
       setConnectionStatus(status)
-      gameState.connection.status = status
     })
 
     // Handle raw events for activity log
@@ -120,7 +56,6 @@ function App() {
         const next = [...prev, event]
         return next.length > 100 ? next.slice(-100) : next
       })
-      gameState.connection.lastEventTime = Date.now()
     })
 
     // Start connection
@@ -130,7 +65,7 @@ function App() {
       cm.disconnect()
       connectionRef.current = null
     }
-  }, [gameState])
+  }, [])
 
   // Update session info periodically
   useEffect(() => {
@@ -155,41 +90,12 @@ function App() {
       switch (e.key.toLowerCase()) {
         case 'd':
           setShowDashboard((prev) => !prev)
-          gameState.debug.showDashboard = !gameState.debug.showDashboard
-          break
-        case 'g':
-          gameState.debug.showGrid = !gameState.debug.showGrid
-          break
-        case 'f':
-          gameState.debug.showFps = !gameState.debug.showFps
           break
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [gameState])
-
-  // Track canvas size for zoom controls
-  const canvasContainerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = canvasContainerRef.current
-    if (!el) return
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setCanvasSize({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        })
-      }
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  const handleFpsUpdate = useCallback((newFps: number) => {
-    setFps(newFps)
   }, [])
 
   return (
@@ -203,28 +109,15 @@ function App() {
         overflow: 'hidden',
       }}
     >
-      {/* Canvas Area */}
-      <div
-        ref={canvasContainerRef}
-        style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
-      >
-        <CanvasView gameState={gameState} onFpsUpdate={handleFpsUpdate} />
-        <ZoomControls
-          camera={gameState.camera}
-          mapCols={MAP_COLS}
-          mapRows={MAP_ROWS}
-          canvasWidth={canvasSize.width}
-          canvasHeight={canvasSize.height}
-        />
-      </div>
+      {/* Phaser Game Area */}
+      <PhaserContainer ref={phaserRef} />
 
       {/* Dashboard */}
       <Dashboard
         connectionStatus={connectionStatus}
         sessionInfo={sessionInfo}
-        character={gameState.character}
         events={events}
-        fps={fps}
+        fps={0} // TODO (T4.1): wire Phaser's actual FPS via React bridge
         visible={showDashboard}
       />
     </div>
