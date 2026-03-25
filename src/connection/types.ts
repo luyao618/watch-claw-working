@@ -136,7 +136,18 @@ export type BridgeMessage = BridgeStatusMessage | BridgeSessionSwitchMessage
 
 // ── Character Actions ───────────────────────────────────────────────────────
 
-export type RoomId = 'workshop' | 'study' | 'bedroom'
+export type RoomId =
+  | 'warehouse'
+  | 'study'
+  | 'balcony' // 3F
+  | 'toolbox'
+  | 'office'
+  | 'bedroom' // 2F
+  | 'basement'
+  | 'server_room'
+  | 'trash' // 1F
+  // Legacy v0.2 aliases (kept for backwards compatibility)
+  | 'workshop'
 
 export type AnimationId =
   | 'idle'
@@ -156,6 +167,7 @@ export type EmotionId =
   | 'curious'
   | 'serious'
   | 'satisfied'
+  | 'busy'
   | 'none'
 
 export type CharacterAction =

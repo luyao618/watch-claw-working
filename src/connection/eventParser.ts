@@ -1,8 +1,10 @@
 /**
  * Event Parser — maps session log events to character actions.
  *
- * Parses incoming SessionLogEvent objects (from Bridge Server) and returns
- * CharacterAction objects that drive the character FSM.
+ * Room mapping based on tool type and command content:
+ *   3F: Balcony (web), Study (read/write/edit), Warehouse (download/install)
+ *   2F: Toolbox (exec general), Office (assistant text), Bedroom (idle)
+ *   1F: Basement (subagents), Server Room (dev commands), Trash (delete)
  */
 
 import type {
@@ -23,42 +25,125 @@ interface ToolMapping {
   emotion: EmotionId
 }
 
+// Simple tool → room (no argument inspection needed)
 const TOOL_ROOM_MAP: Record<string, ToolMapping> = {
-  // All tool executions → Workshop (doing work)
-  write: { room: 'workshop', animation: 'type', emotion: 'focused' },
-  edit: { room: 'workshop', animation: 'type', emotion: 'focused' },
-  exec: { room: 'workshop', animation: 'type', emotion: 'serious' },
-  read: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  grep: { room: 'workshop', animation: 'type', emotion: 'curious' },
-  glob: { room: 'workshop', animation: 'type', emotion: 'curious' },
-  web_search: { room: 'workshop', animation: 'type', emotion: 'curious' },
-  memory_search: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  memory_get: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  process: { room: 'workshop', animation: 'type', emotion: 'serious' },
-  task: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  todowrite: { room: 'workshop', animation: 'type', emotion: 'focused' },
-  sessions_spawn: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  sessions_send: { room: 'workshop', animation: 'type', emotion: 'thinking' },
-  sessions_list: { room: 'workshop', animation: 'type', emotion: 'curious' },
-  sessions_history: { room: 'workshop', animation: 'type', emotion: 'curious' },
+  // 3F — Attic
+  web_search: { room: 'balcony', animation: 'think', emotion: 'curious' },
+  web_fetch: { room: 'balcony', animation: 'think', emotion: 'curious' },
+  read: { room: 'study', animation: 'think', emotion: 'curious' },
+  write: { room: 'study', animation: 'type', emotion: 'focused' },
+  edit: { room: 'study', animation: 'type', emotion: 'focused' },
+  grep: { room: 'study', animation: 'think', emotion: 'curious' },
+  glob: { room: 'study', animation: 'think', emotion: 'curious' },
+  memory_search: { room: 'study', animation: 'think', emotion: 'thinking' },
+  memory_get: { room: 'study', animation: 'think', emotion: 'thinking' },
+  todowrite: { room: 'study', animation: 'type', emotion: 'focused' },
+
+  // 2F — Main Floor (exec is handled separately with command inspection)
+  // cron tools → toolbox
+  cron: { room: 'toolbox', animation: 'type', emotion: 'serious' },
+
+  // 1F — Basement (subagent / session management)
+  task: { room: 'basement', animation: 'think', emotion: 'thinking' },
+  sessions_spawn: { room: 'basement', animation: 'think', emotion: 'thinking' },
+  sessions_send: { room: 'basement', animation: 'type', emotion: 'thinking' },
+  sessions_list: { room: 'basement', animation: 'think', emotion: 'curious' },
+  sessions_history: {
+    room: 'basement',
+    animation: 'think',
+    emotion: 'curious',
+  },
+  sessions_yield: { room: 'basement', animation: 'think', emotion: 'thinking' },
 }
 
 // Default mapping for unknown tools
 const DEFAULT_TOOL_MAPPING: ToolMapping = {
-  room: 'workshop',
+  room: 'office',
   animation: 'type',
   emotion: 'focused',
+}
+
+// ── exec command classification ──────────────────────────────────────────────
+
+// Patterns for download/install commands → Warehouse (3F)
+const DOWNLOAD_PATTERNS = [
+  /\bcurl\b/,
+  /\bwget\b/,
+  /\bpip\s+install\b/,
+  /\bnpm\s+install\b/,
+  /\bpnpm\s+(add|install)\b/,
+  /\byarn\s+add\b/,
+  /\bbrew\s+install\b/,
+  /\bapt\s+install\b/,
+  /\bapt-get\s+install\b/,
+]
+
+// Patterns for dev/programming commands → Server Room (1F)
+const DEV_PATTERNS = [
+  /\bgit\b/,
+  /\bpython\b/,
+  /\bpython3\b/,
+  /\bnode\b/,
+  /\bnpm\s+run\b/,
+  /\bnpx\b/,
+  /\bpnpm\s+run\b/,
+  /\bmake\b/,
+  /\bcargo\b/,
+  /\bgo\s+(build|run|test)\b/,
+  /\brustc\b/,
+  /\bgcc\b/,
+  /\bjava\b/,
+  /\bjavac\b/,
+  /\bdocker\b/,
+  /\btsc\b/,
+  /\bvitest\b/,
+  /\bjest\b/,
+  /\bpytest\b/,
+  /\beslint\b/,
+  /\bprettier\b/,
+]
+
+// Patterns for delete/trash commands → Trash (1F)
+const TRASH_PATTERNS = [
+  /\btrash\b/,
+  /\brm\s/,
+  /\brm$/,
+  /\bdelete\b/,
+  /\bunlink\b/,
+]
+
+function classifyExecCommand(command: string): ToolMapping {
+  const cmd = command.toLowerCase()
+
+  // Check download/install first
+  for (const pattern of DOWNLOAD_PATTERNS) {
+    if (pattern.test(cmd)) {
+      return { room: 'warehouse', animation: 'type', emotion: 'curious' }
+    }
+  }
+
+  // Check trash/delete
+  for (const pattern of TRASH_PATTERNS) {
+    if (pattern.test(cmd)) {
+      return { room: 'trash', animation: 'type', emotion: 'serious' }
+    }
+  }
+
+  // Check dev/programming
+  for (const pattern of DEV_PATTERNS) {
+    if (pattern.test(cmd)) {
+      return { room: 'server_room', animation: 'type', emotion: 'focused' }
+    }
+  }
+
+  // Default exec → Toolbox (2F, general execution)
+  return { room: 'toolbox', animation: 'type', emotion: 'serious' }
 }
 
 // ── Throttle for assistant text events ──────────────────────────────────────
 
 const ASSISTANT_TEXT_THROTTLE_MS = 2000
 
-/**
- * Encapsulates throttle state to avoid module-level mutable variables.
- * Provides deterministic behavior in tests — each EventParser instance
- * (or a call to reset()) starts with a clean slate.
- */
 class AssistantThrottle {
   private lastTime = 0
 
@@ -81,9 +166,25 @@ const assistantThrottle = new AssistantThrottle()
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Map a tool name to its room/animation/emotion mapping.
+ * Map a tool name (with optional arguments) to its room/animation/emotion.
  */
-export function mapToolToRoom(toolName: string): ToolMapping {
+export function mapToolToRoom(
+  toolName: string,
+  toolArgs?: Record<string, unknown>,
+): ToolMapping {
+  // Special handling for exec: inspect command content
+  if (toolName === 'exec' || toolName === 'process') {
+    const command =
+      (toolArgs?.command as string) ??
+      (toolArgs?.cmd as string) ??
+      (toolArgs?.input as string) ??
+      ''
+    if (command) {
+      return classifyExecCommand(command)
+    }
+    return { room: 'toolbox', animation: 'type', emotion: 'serious' }
+  }
+
   return TOOL_ROOM_MAP[toolName] ?? DEFAULT_TOOL_MAPPING
 }
 
@@ -103,11 +204,11 @@ export function parseSessionLogEvent(
 
   const { message } = event
 
-  // User message → fast run to computer (study)
+  // User message → Office (2F, chat/dialogue)
   if (message.role === 'user') {
     return {
       type: 'GOTO_ROOM',
-      room: 'study',
+      room: 'office',
       animation: 'type',
       emotion: 'focused',
       speed: 'fast',
@@ -119,13 +220,12 @@ export function parseSessionLogEvent(
     const msg = message as AssistantMessage
     const contents = msg.content
 
-    // Check for toolCalls → fast run to appropriate room
+    // Check for toolCalls → route to appropriate room
     const toolCalls = contents.filter((c: ContentItem) => c.type === 'toolCall')
     if (toolCalls.length > 0) {
-      // Use first toolCall to determine target
       const firstTool = toolCalls[0]
       if (firstTool.type === 'toolCall') {
-        const mapping = mapToolToRoom(firstTool.name)
+        const mapping = mapToolToRoom(firstTool.name, firstTool.arguments)
         return {
           type: 'GOTO_ROOM',
           room: mapping.room,
@@ -136,12 +236,12 @@ export function parseSessionLogEvent(
       }
     }
 
-    // Turn end → go to sleep (slow, with delay handled in character FSM)
+    // Turn end → go to sleep
     if (msg.stopReason === 'stop') {
       return { type: 'GO_SLEEP' }
     }
 
-    // Check for thinking vs text content
+    // Thinking only → Office (thinking pose)
     const hasThinking = contents.some((c: ContentItem) => c.type === 'thinking')
     const hasText = contents.some(
       (c: ContentItem) => c.type === 'text' && c.text.trim().length > 0,
@@ -150,18 +250,19 @@ export function parseSessionLogEvent(
     if (hasThinking && !hasText) {
       return {
         type: 'GOTO_ROOM',
-        room: 'study',
+        room: 'office',
         animation: 'think',
         emotion: 'thinking',
         speed: 'fast',
       }
     }
 
+    // Assistant text reply → Office (chat)
     if (hasText) {
       if (!assistantThrottle.shouldThrottle()) {
         return {
           type: 'GOTO_ROOM',
-          room: 'study',
+          room: 'office',
           animation: 'type',
           emotion: 'focused',
           speed: 'fast',
