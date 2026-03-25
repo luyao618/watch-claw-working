@@ -12,15 +12,17 @@ import type {
   SessionLogEvent,
   MessageEvent as MsgEvent,
 } from '@/connection/types.ts'
-import type { CharacterState } from '@/engine/gameState.ts'
 
 interface DashboardProps {
   connectionStatus: ConnectionStatus
   sessionInfo: SessionInfo
-  character: CharacterState
   events: SessionLogEvent[]
   fps: number
   visible: boolean
+  // Character state will be added back in T4.1 via Phaser → React bridge
+  characterState?: string
+  currentRoom?: string
+  currentEmotion?: string
 }
 
 // ── Helper to format event for log ──────────────────────────────────────────
@@ -102,10 +104,12 @@ function getStateColor(state: string): string {
 export default function Dashboard({
   connectionStatus,
   sessionInfo,
-  character,
   events,
   fps,
   visible,
+  characterState = 'idle',
+  currentRoom = '—',
+  currentEmotion = '—',
 }: DashboardProps) {
   const logRef = useRef<HTMLDivElement>(null)
 
@@ -153,14 +157,13 @@ export default function Dashboard({
       {/* Agent Status */}
       <Section title="Agent Status">
         <Row label="State">
-          <span style={{ color: getStateColor(character.state) }}>
-            {getStateLabel(character.state)}
+          <span style={{ color: getStateColor(characterState) }}>
+            {getStateLabel(characterState)}
           </span>
         </Row>
-        <Row label="Room">{character.currentRoom}</Row>
-        <Row label="Emotion">{character.emotion}</Row>
-        <Row label="Animation">{character.currentAnimation}</Row>
-        <Row label="FPS">{fps}</Row>
+        <Row label="Room">{currentRoom}</Row>
+        <Row label="Emotion">{currentEmotion}</Row>
+        <Row label="FPS">{fps || '—'}</Row>
       </Section>
 
       {/* Session Info */}

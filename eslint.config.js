@@ -23,6 +23,10 @@ export default defineConfig([
     rules: {
       ...prettierConfig.rules,
       'prettier/prettier': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
     languageOptions: {
       ecmaVersion: 2020,
