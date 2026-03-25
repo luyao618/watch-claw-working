@@ -74,6 +74,37 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (value: number) => {
       progressBar.width = barWidth * value
     })
+
+    // --- T1.2: Load tilemap and tileset ---
+    this.load.tilemapTiledJSON('house', 'assets/tilemaps/house.json')
+    this.load.image('interior-tiles', 'assets/tilesets/interior.png')
+    this.load.image('furniture-tiles', 'assets/tilesets/furniture.png')
+
+    // --- House background artwork ---
+    this.load.image('house-bg', 'assets/house-bg.png')
+
+    // --- T2.2: Load character spritesheet ---
+    this.load.spritesheet('lobster', 'assets/character/lobster.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    })
+
+    // --- T3.2 / T3.3: Load emotion and particle sprites ---
+    this.load.spritesheet('emotions', 'assets/ui/emotions.png', {
+      frameWidth: 16,
+      frameHeight: 16,
+    })
+    this.load.image('confetti', 'assets/effects/confetti.png')
+    this.load.image('zzz', 'assets/effects/zzz.png')
+    this.load.image('spark', 'assets/effects/spark.png')
+
+    // --- T4.4: Load audio files ---
+    this.load.audio('footstep', 'assets/audio/footstep.ogg')
+    this.load.audio('typing', 'assets/audio/typing.ogg')
+    this.load.audio('snore', 'assets/audio/snore.ogg')
+    this.load.audio('jump', 'assets/audio/jump.ogg')
+    this.load.audio('celebrate', 'assets/audio/celebrate.ogg')
+    this.load.audio('error', 'assets/audio/error.ogg')
   }
 
   create() {

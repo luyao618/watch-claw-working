@@ -35,6 +35,7 @@ function makeUserMessage(text = 'hello'): SessionLogEvent {
 
 function makeAssistantToolCall(
   toolName: string,
+  toolArgs: Record<string, unknown> = {},
   stopReason: 'toolUse' | 'stop' = 'toolUse',
 ): SessionLogEvent {
   return {
@@ -50,7 +51,7 @@ function makeAssistantToolCall(
           type: 'toolCall',
           id: 'tc-1',
           name: toolName,
-          arguments: { path: '/test/file.ts' },
+          arguments: { path: '/test/file.ts', ...toolArgs },
         },
       ],
       provider: 'github-copilot',
@@ -140,38 +141,91 @@ function makeModelChange(): SessionLogEvent {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('mapToolToRoom', () => {
-  it.each([
-    ['write', 'workshop', 'type', 'focused'],
-    ['edit', 'workshop', 'type', 'focused'],
-    ['exec', 'workshop', 'type', 'serious'],
-    ['read', 'workshop', 'type', 'thinking'],
-    ['grep', 'workshop', 'type', 'curious'],
-    ['glob', 'workshop', 'type', 'curious'],
-    ['web_search', 'workshop', 'type', 'curious'],
-    ['memory_search', 'workshop', 'type', 'thinking'],
-    ['memory_get', 'workshop', 'type', 'thinking'],
-    ['task', 'workshop', 'type', 'thinking'],
-    ['todowrite', 'workshop', 'type', 'focused'],
-    ['process', 'workshop', 'type', 'serious'],
-    ['sessions_spawn', 'workshop', 'type', 'thinking'],
-    ['sessions_send', 'workshop', 'type', 'thinking'],
-    ['sessions_list', 'workshop', 'type', 'curious'],
-    ['sessions_history', 'workshop', 'type', 'curious'],
-  ])(
-    'maps %s → room=%s, animation=%s, emotion=%s',
-    (tool, room, animation, emotion) => {
-      const result = mapToolToRoom(tool)
-      expect(result.room).toBe(room)
-      expect(result.animation).toBe(animation)
-      expect(result.emotion).toBe(emotion)
-    },
-  )
+  describe('3F — Attic rooms', () => {
+    it.each([
+      ['web_search', 'balcony'],
+      ['web_fetch', 'balcony'],
+    ])('maps %s → %s (Balcony)', (tool, room) => {
+      expect(mapToolToRoom(tool).room).toBe(room)
+    })
 
-  it('maps unknown tool to default (workshop)', () => {
-    const result = mapToolToRoom('unknown_tool_xyz')
-    expect(result.room).toBe('workshop')
-    expect(result.animation).toBe('type')
-    expect(result.emotion).toBe('focused')
+    it.each([
+      ['read', 'study'],
+      ['write', 'study'],
+      ['edit', 'study'],
+      ['grep', 'study'],
+      ['glob', 'study'],
+      ['memory_search', 'study'],
+      ['memory_get', 'study'],
+      ['todowrite', 'study'],
+    ])('maps %s → %s (Study)', (tool, room) => {
+      expect(mapToolToRoom(tool).room).toBe(room)
+    })
+
+    it('maps exec with download command → warehouse', () => {
+      expect(
+        mapToolToRoom('exec', { command: 'curl https://example.com' }).room,
+      ).toBe('warehouse')
+      expect(
+        mapToolToRoom('exec', { command: 'pip install requests' }).room,
+      ).toBe('warehouse')
+      expect(
+        mapToolToRoom('exec', { command: 'npm install phaser' }).room,
+      ).toBe('warehouse')
+      expect(mapToolToRoom('exec', { command: 'brew install jq' }).room).toBe(
+        'warehouse',
+      )
+    })
+  })
+
+  describe('2F — Main Floor rooms', () => {
+    it('maps generic exec → toolbox', () => {
+      expect(mapToolToRoom('exec', { command: 'ls -la' }).room).toBe('toolbox')
+      expect(mapToolToRoom('exec', { command: 'echo hello' }).room).toBe(
+        'toolbox',
+      )
+    })
+
+    it('maps unknown tool → office (default)', () => {
+      expect(mapToolToRoom('unknown_tool_xyz').room).toBe('office')
+    })
+  })
+
+  describe('1F — Basement rooms', () => {
+    it.each([
+      ['sessions_spawn', 'basement'],
+      ['sessions_send', 'basement'],
+      ['sessions_list', 'basement'],
+      ['sessions_history', 'basement'],
+      ['sessions_yield', 'basement'],
+      ['task', 'basement'],
+    ])('maps %s → %s (Basement)', (tool, room) => {
+      expect(mapToolToRoom(tool).room).toBe(room)
+    })
+
+    it('maps exec with dev command → server_room', () => {
+      expect(mapToolToRoom('exec', { command: 'git status' }).room).toBe(
+        'server_room',
+      )
+      expect(mapToolToRoom('exec', { command: 'python3 main.py' }).room).toBe(
+        'server_room',
+      )
+      expect(mapToolToRoom('exec', { command: 'npm run build' }).room).toBe(
+        'server_room',
+      )
+      expect(mapToolToRoom('exec', { command: 'cargo test' }).room).toBe(
+        'server_room',
+      )
+    })
+
+    it('maps exec with delete command → trash', () => {
+      expect(mapToolToRoom('exec', { command: 'rm -rf dist/' }).room).toBe(
+        'trash',
+      )
+      expect(
+        mapToolToRoom('exec', { command: 'trash old-file.txt' }).room,
+      ).toBe('trash')
+    })
   })
 })
 
@@ -184,11 +238,11 @@ describe('parseSessionLogEvent', () => {
   })
 
   describe('user messages', () => {
-    it('returns GOTO_ROOM(study) for user message', () => {
+    it('returns GOTO_ROOM(office) for user message', () => {
       const action = parseSessionLogEvent(makeUserMessage())
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'study',
+        room: 'office',
         animation: 'type',
         emotion: 'focused',
         speed: 'fast',
@@ -197,35 +251,61 @@ describe('parseSessionLogEvent', () => {
   })
 
   describe('assistant messages with toolCalls', () => {
-    it('returns GOTO_ROOM for write tool', () => {
+    it('returns GOTO_ROOM for write tool → study', () => {
       const action = parseSessionLogEvent(makeAssistantToolCall('write'))
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'workshop',
+        room: 'study',
         animation: 'type',
         emotion: 'focused',
         speed: 'fast',
       })
     })
 
-    it('returns GOTO_ROOM for read tool', () => {
+    it('returns GOTO_ROOM for read tool → study', () => {
       const action = parseSessionLogEvent(makeAssistantToolCall('read'))
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'workshop',
-        animation: 'type',
-        emotion: 'thinking',
+        room: 'study',
+        animation: 'think',
+        emotion: 'curious',
         speed: 'fast',
       })
     })
 
-    it('returns GOTO_ROOM with default for unknown tool', () => {
+    it('routes exec with git command → server_room', () => {
+      const action = parseSessionLogEvent(
+        makeAssistantToolCall('exec', { command: 'git diff HEAD' }),
+      )
+      expect(action).toEqual({
+        type: 'GOTO_ROOM',
+        room: 'server_room',
+        animation: 'type',
+        emotion: 'focused',
+        speed: 'fast',
+      })
+    })
+
+    it('routes exec with rm command → trash', () => {
+      const action = parseSessionLogEvent(
+        makeAssistantToolCall('exec', { command: 'rm -rf node_modules' }),
+      )
+      expect(action).toEqual({
+        type: 'GOTO_ROOM',
+        room: 'trash',
+        animation: 'type',
+        emotion: 'serious',
+        speed: 'fast',
+      })
+    })
+
+    it('returns GOTO_ROOM with default for unknown tool → office', () => {
       const action = parseSessionLogEvent(
         makeAssistantToolCall('some_unknown_tool'),
       )
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'workshop',
+        room: 'office',
         animation: 'type',
         emotion: 'focused',
         speed: 'fast',
@@ -240,11 +320,12 @@ describe('parseSessionLogEvent', () => {
     })
 
     it('returns GOTO_ROOM when toolCall present even if stopReason=stop', () => {
-      // This shouldn't normally happen, but toolCall takes priority
-      const action = parseSessionLogEvent(makeAssistantToolCall('edit', 'stop'))
+      const action = parseSessionLogEvent(
+        makeAssistantToolCall('edit', {}, 'stop'),
+      )
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'workshop',
+        room: 'study',
         animation: 'type',
         emotion: 'focused',
         speed: 'fast',
@@ -253,11 +334,11 @@ describe('parseSessionLogEvent', () => {
   })
 
   describe('assistant messages with thinking only', () => {
-    it('returns GOTO_ROOM(study, think, thinking)', () => {
+    it('returns GOTO_ROOM(office, think, thinking)', () => {
       const action = parseSessionLogEvent(makeAssistantThinking())
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'study',
+        room: 'office',
         animation: 'think',
         emotion: 'thinking',
         speed: 'fast',
@@ -266,7 +347,7 @@ describe('parseSessionLogEvent', () => {
   })
 
   describe('assistant messages with text', () => {
-    it('returns GOTO_ROOM(study, type, focused) for text reply', () => {
+    it('returns GOTO_ROOM(office, type, focused) for text reply', () => {
       const event: SessionLogEvent = {
         type: 'message',
         id: 'test',
@@ -281,7 +362,7 @@ describe('parseSessionLogEvent', () => {
       const action = parseSessionLogEvent(event)
       expect(action).toEqual({
         type: 'GOTO_ROOM',
-        room: 'study',
+        room: 'office',
         animation: 'type',
         emotion: 'focused',
         speed: 'fast',

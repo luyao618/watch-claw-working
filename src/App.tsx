@@ -1,11 +1,11 @@
 /**
  * App — Root component that wires Connection and UI together.
  *
- * End-to-end flow (v1.0):
- *   ConnectionManager → CharacterAction → [EventBridge (T3.1)] → Phaser HouseScene
+ * [T3.1] ConnectionManager → EventBridge → Phaser HouseScene
+ * [T4.1] Phaser → React dashboard bridge via gameEventBus
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { PhaserContainer } from '@/ui/PhaserContainer.tsx'
 import type { PhaserContainerHandle } from '@/ui/PhaserContainer.tsx'
 import { Dashboard } from '@/ui'
@@ -15,6 +15,7 @@ import type {
   ConnectionStatus,
   SessionInfo,
 } from '@/connection/connectionManager.ts'
+import { gameEventBus } from '@/game/scenes/HouseScene.ts'
 
 // ── App Component ───────────────────────────────────────────────────────────
 
@@ -32,26 +33,26 @@ function App() {
   const [events, setEvents] = useState<SessionLogEvent[]>([])
   const [showDashboard, setShowDashboard] = useState(true)
 
-  const connectionRef = useRef<ConnectionManager | null>(null)
+  // Character state from Phaser (T4.1)
+  const [characterState, setCharacterState] = useState('idle')
+  const [currentRoom, setCurrentRoom] = useState<string>('\u2014')
+  const [currentEmotion, setCurrentEmotion] = useState<string>('\u2014')
+  const [fps, setFps] = useState(0)
+
   const phaserRef = useRef<PhaserContainerHandle>(null)
 
-  // Initialize ConnectionManager
+  // Create ConnectionManager once (stable reference)
+  const cm = useMemo(() => new ConnectionManager(), [])
+
+  // Initialize ConnectionManager subscriptions and connect
   useEffect(() => {
-    const cm = new ConnectionManager()
-    connectionRef.current = cm
-
-    // Handle character actions — will be wired to Phaser in T3.1
-    cm.onAction((_action) => {
-      // TODO (T3.1): dispatch action to Phaser HouseScene via EventBridge
-    })
-
     // Handle connection status changes
-    cm.onStatusChange((status) => {
+    const unsubStatus = cm.onStatusChange((status) => {
       setConnectionStatus(status)
     })
 
     // Handle raw events for activity log
-    cm.onEventLog((event) => {
+    const unsubLog = cm.onEventLog((event) => {
       setEvents((prev) => {
         const next = [...prev, event]
         return next.length > 100 ? next.slice(-100) : next
@@ -62,20 +63,34 @@ function App() {
     cm.connect()
 
     return () => {
+      unsubStatus()
+      unsubLog()
       cm.disconnect()
-      connectionRef.current = null
     }
+  }, [cm])
+
+  // Subscribe to Phaser character state changes (T4.1)
+  useEffect(() => {
+    const unsub = gameEventBus.on('character-state-change', (data) => {
+      setCharacterState(data.state)
+      setCurrentRoom(data.room ?? '\u2014')
+      setCurrentEmotion(data.emotion ?? '\u2014')
+    })
+    return unsub
   }, [])
 
-  // Update session info periodically
+  // Update session info and FPS periodically
   useEffect(() => {
     const id = setInterval(() => {
-      if (connectionRef.current) {
-        setSessionInfo(connectionRef.current.session)
+      setSessionInfo(cm.session)
+      // Get FPS from Phaser game
+      const game = phaserRef.current?.getGame()
+      if (game) {
+        setFps(Math.round(game.loop.actualFps))
       }
     }, 500)
     return () => clearInterval(id)
-  }, [])
+  }, [cm])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -110,15 +125,18 @@ function App() {
       }}
     >
       {/* Phaser Game Area */}
-      <PhaserContainer ref={phaserRef} />
+      <PhaserContainer ref={phaserRef} connectionManager={cm} />
 
       {/* Dashboard */}
       <Dashboard
         connectionStatus={connectionStatus}
         sessionInfo={sessionInfo}
         events={events}
-        fps={0} // TODO (T4.1): wire Phaser's actual FPS via React bridge
+        fps={fps}
         visible={showDashboard}
+        characterState={characterState}
+        currentRoom={currentRoom}
+        currentEmotion={currentEmotion}
       />
     </div>
   )
