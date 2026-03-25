@@ -22,8 +22,8 @@ const { existsSync } = require('node:fs')
 
 const isDev = !app.isPackaged
 const VITE_DEV_URL = 'http://localhost:5173'
-const DEFAULT_WIDTH = 1100
-const DEFAULT_HEIGHT = 700
+const DEFAULT_WIDTH = 800
+const DEFAULT_HEIGHT = 600
 
 // ── State ────────────────────────────────────────────────────────────────────
 

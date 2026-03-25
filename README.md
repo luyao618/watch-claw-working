@@ -4,12 +4,11 @@
 
 > A pixel-art house where your OpenClaw AI lives -- watch it code, think, rest, and celebrate in real time.
 
-![Watch Claw v0.2 Screenshot](./docs/assets/V0.2-demo.jpg)
-_v0.2 running with programmatic placeholder art -- new front-end and pixel art assets are under active development._
+![Watch Claw V1 Screenshot](./docs/assets/V1-demo.jpg)
 
-**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. A lobster-hat character -- representing the OpenClaw agent -- lives in a cozy house, moving between rooms, performing activities, and expressing emotions based on the agent's actual runtime events.
+**Watch Claw** is a real-time pixel-art visualization of the [OpenClaw](https://github.com/openclaw/openclaw) AI agent's working state. A lobster-hat character -- representing the OpenClaw agent -- lives in a cozy three-floor house, moving between nine rooms, performing activities, and expressing emotions based on the agent's actual runtime events.
 
-The current version (v0.2) renders a single-floor house with three rooms using Canvas 2D. The project is actively migrating to **Phaser 3** with a side-view platformer style, expanding to a three-floor, nine-room house (v1.0).
+Built with **Phaser 3 Arcade Physics**, the game features gravity, jumping between floors, drop-through one-way platforms, and smart auto-navigation -- all rendered in a hand-crafted pixel-art side-view style.
 
 ## How It Works
 
@@ -31,13 +30,7 @@ Character walks to the corresponding room, plays animation, shows emotion
 
 A lightweight **Bridge Server** (Node.js) monitors OpenClaw's session log files (`~/.openclaw/agents/main/sessions/<session-id>.jsonl`), detects new entries via `fs.watch`, and pushes them to the browser over WebSocket (`ws://127.0.0.1:18790`). The front-end parses these events and translates them into character behaviors.
 
-## Current State (v1.0)
-
-v1.0 is running with Phaser 3, a pixel-art side-view three-floor house with 9 rooms:
-
-![Watch Claw v0.2 Screenshot](./docs/assets/V0.2-demo.jpg)
-
-### Room Mapping
+## Room Mapping
 
 The character moves between rooms based on what the OpenClaw agent is doing. The `exec` tool is further classified by inspecting the command content.
 
@@ -66,7 +59,7 @@ The character moves between rooms based on what the OpenClaw agent is doing. The
 | 🖥 **Server Room** | 1F    | `exec` with `git`, `python`, `node`, `npm run`, `make`, `cargo`, `docker`, `tsc`, `vitest`, etc. | Typing            | Focused            |
 | 🗑 **Trash**       | 1F    | `exec` with `rm`, `trash`, `delete`, `unlink`                                                    | Typing            | Serious            |
 
-### Features
+## Features
 
 - **Phaser 3 Arcade Physics** -- gravity, jumping between floors, drop-through one-way platforms
 - **Pixel-art background** -- hand-crafted 512x512 house artwork with collision layer overlay
@@ -89,7 +82,7 @@ The character moves between rooms based on what the OpenClaw agent is doing. The
 | Build Tool      | Vite 8                    | Fast HMR, native TS                                     |
 | Desktop         | Electron                  | Standalone desktop app with system tray                 |
 | Communication   | WebSocket (Bridge Server) | Session log monitoring + real-time push                 |
-| Map Editor      | Tiled (v1.0)              | Visual tilemap editing with collision and object layers |
+| Map Editor      | Tiled                     | Visual tilemap editing with collision and object layers |
 | Package Manager | pnpm                      | Fast, disk-efficient, strict dependencies               |
 | Testing         | Vitest                    | Fast unit tests, Vite-compatible                        |
 | Linting         | ESLint + Prettier         | Consistent code style with Husky pre-commit hooks       |
@@ -102,16 +95,16 @@ The character moves between rooms based on what the OpenClaw agent is doing. The
 |                                                                   |
 |  React Shell                                                      |
 |  +---------------------------+  +------------------------------+  |
-|  | PhaserContainer (v1.0)    |  | Dashboard.tsx                |  |
-|  | or CanvasView (v0.2)      |  | (status, tokens, event log)  |  |
+|  | PhaserContainer           |  | Dashboard.tsx                |  |
+|  | (Phaser 3 game canvas)    |  | (status, tokens, event log)  |  |
 |  +------------+--------------+  +------------------------------+  |
 |               |                                                   |
 |               v                                                   |
 |  Game Engine                                                      |
-|  [Phaser Scene / Canvas 2D] <-- [Character FSM]                   |
+|  [Phaser Scene] <------------ [Character FSM]                     |
 |               ^                                                   |
 |               | dispatch(CharacterAction)                         |
-|  Connection Layer (stable, shared between v0.2 and v1.0)          |
+|  Connection Layer                                                 |
 |  [BridgeClient] --> [EventParser] --> [ActionQueue]               |
 |  [ConnectionManager orchestrates all]                             |
 +------------------------------------------------------------------+
@@ -126,9 +119,7 @@ The character moves between rooms based on what the OpenClaw agent is doing. The
               ~/.openclaw/agents/main/sessions/
 ```
 
-### Connection Layer (stable across versions)
-
-The connection layer is fully working and shared between v0.2 and v1.0:
+### Connection Layer
 
 - **BridgeClient** -- WebSocket client with exponential backoff reconnect (1s to 30s)
 - **EventParser** -- maps session log events (tool calls, lifecycle, model changes) to `CharacterAction` objects
@@ -189,13 +180,13 @@ watch-claw/
 │   ├── main.cjs
 │   └── preload.cjs
 ├── src/
-│   ├── connection/      # Connection layer (stable)
+│   ├── connection/      # Connection layer
 │   │   ├── bridgeClient.ts       # WebSocket client with reconnect
 │   │   ├── eventParser.ts        # Session log -> CharacterAction (with exec command classification)
 │   │   ├── actionQueue.ts        # Priority queue
 │   │   ├── connectionManager.ts  # Orchestrates connection
 │   │   └── types.ts              # All shared types
-│   ├── game/            # Phaser 3 game engine (v1.0)
+│   ├── game/            # Phaser 3 game engine
 │   │   ├── config.ts             # Phaser game config (512x512, Arcade Physics)
 │   │   ├── scenes/
 │   │   │   ├── BootScene.ts      # Asset preloading with progress bar
@@ -230,16 +221,16 @@ watch-claw/
 
 ## Inspiration
 
-| Project                                                           | What we borrow                     | What we do differently                                                                             |
-| ----------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM | Bridge Server push (not file tailing), side-view platformer (v1.0), single character, Electron app |
-| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture          | Cozy home (not corporate office), physics-based movement (v1.0), high-fidelity pixel art           |
+| Project                                                           | What we borrow                     | What we do differently                                                                      |
+| ----------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| [Pixel Agents](https://github.com/pablodelucca/pixel-agents)      | JSONL file watching, character FSM | Bridge Server push (not file tailing), side-view platformer, single character, Electron app |
+| [PixelHQ ULTRA](https://github.com/RemyLoveLogicAI/pixelhq-ultra) | Event-driven architecture          | Cozy home (not corporate office), physics-based movement, high-fidelity pixel art           |
 
 ## Documentation
 
 - [Product Requirements Document](./docs/PRD.md) ([中文](./docs/PRD_CN.md))
 - [Technical Design Document](./docs/TECHNICAL.md) ([中文](./docs/TECHNICAL_CN.md))
-- [Task Breakdown (v1.0)](./docs/TASKS.md) ([中文](./docs/TASKS_CN.md))
+- [Task Breakdown](./docs/TASKS.md) ([中文](./docs/TASKS_CN.md))
 - [Archived Tasks (v0.2)](./docs/TASKS_v0.2_ARCHIVED.md) ([中文](./docs/TASKS_v0.2_ARCHIVED_CN.md))
 
 ## Contributing
