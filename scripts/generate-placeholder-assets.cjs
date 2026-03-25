@@ -160,52 +160,106 @@ function generateFurniture() {
 
 function generateTilemap() {
   const out = path.join(ASSETS, 'tilemaps/house.json')
-  console.log('\n[6/8] Generating house.json (30×30 Tiled format) ...')
+  const outTmx = path.join(ASSETS, 'tilemaps/house.tmx')
+  console.log('\n[6/8] Generating house.json + house.tmx (30×34 three-floor Tiled format) ...')
   ensureDir(path.dirname(out))
 
-  const W = 30, H = 30
+  // 30 wide × 34 tall: each floor ~10 rows + 2 rows structure between floors
+  // Layout:  rows 0-1 = roof, rows 2-11 = 3F, rows 12-13 = floor/ceiling,
+  //          rows 14-23 = 2F, rows 24-25 = floor/ceiling, rows 26-33 = 1F + foundation
+  const W = 30, H = 34
+  const TILE = 16 // px per tile
   const empty = () => new Array(W * H).fill(0)
 
-  // Build floor layer — 2F at rows 10-19 (middle of 30-row map)
-  const floors = empty()
-  for (let row = 19; row < 20; row++) {
-    for (let col = 0; col < W; col++) {
-      floors[row * W + col] = 2 // floor tile (index 1 + 1 for Tiled 1-based)
-    }
-  }
+  // Floor boundaries (row ranges for each floor's interior)
+  const F3 = { top: 2, bottom: 11, floor: 11 }   // 3F: rows 2-11, floor at row 11
+  const F2 = { top: 13, bottom: 22, floor: 22 }   // 2F: rows 13-22, floor at row 22
+  const F1 = { top: 24, bottom: 33, floor: 33 }   // 1F: rows 24-33, floor at row 33
 
-  // Build walls layer — walls at edges of rooms
-  const walls = empty()
-  // Left wall
-  for (let row = 10; row < 20; row++) walls[row * W + 0] = 3
-  // Right wall
-  for (let row = 10; row < 20; row++) walls[row * W + 29] = 3
-  // Dividers at col 10 and col 20
-  for (let row = 10; row < 19; row++) {
-    walls[row * W + 10] = 3
-    walls[row * W + 20] = 3
-  }
-  // Ceiling
-  for (let col = 0; col < W; col++) walls[10 * W + col] = 3
+  const allFloors = [F3, F2, F1]
 
-  // Build collision layer — floor + walls
-  const collision = empty()
-  for (let col = 0; col < W; col++) collision[19 * W + col] = 2
-  for (let row = 10; row < 20; row++) {
-    collision[row * W + 0] = 2
-    collision[row * W + 29] = 2
-    collision[row * W + 10] = 2
-    collision[row * W + 20] = 2
-  }
-  for (let col = 0; col < W; col++) collision[10 * W + col] = 2
-
-  // Background — fill exterior with wall tile
+  // --- Background layer: exterior walls outside the house ---
   const background = empty()
   for (let row = 0; row < H; row++) {
     for (let col = 0; col < W; col++) {
-      if (row < 10 || row >= 20) background[row * W + col] = 3
+      // roof rows and structure rows
+      if (row < 2 || row === 12 || row === 13 || row === 24 || row === 25) {
+        background[row * W + col] = 3 // wall tile
+      }
     }
   }
+
+  // --- Floors layer: floor surfaces at bottom of each floor ---
+  const floors = empty()
+  for (const f of allFloors) {
+    for (let col = 1; col < W - 1; col++) {
+      floors[f.floor * W + col] = 2 // floor tile
+    }
+  }
+
+  // --- Walls layer: outer walls + room dividers ---
+  const walls = empty()
+  for (const f of allFloors) {
+    // Left & right outer walls
+    for (let row = f.top; row <= f.bottom; row++) {
+      walls[row * W + 0] = 3
+      walls[row * W + 29] = 3
+    }
+    // Room dividers at col 10 and col 20 (doorway gap at bottom 2 rows)
+    for (let row = f.top; row <= f.floor - 2; row++) {
+      walls[row * W + 10] = 3
+      walls[row * W + 20] = 3
+    }
+    // Ceiling
+    for (let col = 0; col < W; col++) {
+      walls[f.top * W + col] = 3
+    }
+  }
+
+  // --- Collision layer: solid surfaces ---
+  const collision = empty()
+  for (const f of allFloors) {
+    // Floor
+    for (let col = 0; col < W; col++) collision[f.floor * W + col] = 2
+    // Outer walls
+    for (let row = f.top; row <= f.bottom; row++) {
+      collision[row * W + 0] = 2
+      collision[row * W + 29] = 2
+    }
+    // Dividers (with doorway gaps)
+    for (let row = f.top; row <= f.floor - 2; row++) {
+      collision[row * W + 10] = 2
+      collision[row * W + 20] = 2
+    }
+    // Ceiling
+    for (let col = 0; col < W; col++) collision[f.top * W + col] = 2
+  }
+
+  // --- Room definitions (9 rooms) ---
+  // Each room: 10 tiles wide, ~10 tiles tall
+  const rooms = [
+    // 3F
+    { id: 'warehouse', floor: 3, col: 0,  row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'type',  dir: 'right' },
+    { id: 'study',     floor: 3, col: 10, row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'think', dir: 'right' },
+    { id: 'balcony',   floor: 3, col: 20, row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'think', dir: 'right' },
+    // 2F
+    { id: 'toolbox',   floor: 2, col: 0,  row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'type',  dir: 'right' },
+    { id: 'office',    floor: 2, col: 10, row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'type',  dir: 'right' },
+    { id: 'bedroom',   floor: 2, col: 20, row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'sleep', dir: 'left'  },
+    // 1F
+    { id: 'basement',    floor: 1, col: 0,  row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'think', dir: 'right' },
+    { id: 'server_room', floor: 1, col: 10, row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'type',  dir: 'right' },
+    { id: 'trash',        floor: 1, col: 20, row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'type',  dir: 'right' },
+  ]
+
+  // --- Ladder zones (connecting floors, at col 5 between each pair) ---
+  const ladderCol = 5
+  const ladders = [
+    // 1F→2F ladder — spans from inside 2F down to inside 1F
+    { x: ladderCol * TILE, y: (F2.top + 2) * TILE, w: 2 * TILE, h: (F1.floor - F2.top - 3) * TILE },
+    // 2F→3F ladder — spans from inside 3F down to inside 2F
+    { x: ladderCol * TILE, y: (F3.top + 2) * TILE, w: 2 * TILE, h: (F2.floor - F3.top - 3) * TILE },
+  ]
 
   const tilemap = {
     compressionlevel: -1,
@@ -220,29 +274,36 @@ function generateTilemap() {
       // Object layers
       {
         draworder: 'topdown', id: 6, name: 'spawn_points', objects: [
-          { height: 0, id: 1, name: 'player_start', point: true, type: '', visible: true, width: 0, x: 240, y: 288, properties: [] },
+          { height: 0, id: 1, name: 'player_start', point: true, rotation: 0, type: '', visible: true, width: 0, x: 240, y: F2.floor * TILE - TILE, properties: [] },
         ], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
       },
       {
-        draworder: 'topdown', id: 7, name: 'room_zones', objects: [
-          { height: 160, id: 2, name: 'workshop', type: '', visible: true, width: 160, x: 0, y: 160, properties: [{ name: 'floor', type: 'int', value: 2 }] },
-          { height: 160, id: 3, name: 'study', type: '', visible: true, width: 160, x: 160, y: 160, properties: [{ name: 'floor', type: 'int', value: 2 }] },
-          { height: 160, id: 4, name: 'bedroom', type: '', visible: true, width: 160, x: 320, y: 160, properties: [{ name: 'floor', type: 'int', value: 2 }] },
-        ], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        draworder: 'topdown', id: 7, name: 'room_zones', objects: rooms.map((r, i) => ({
+          height: r.h * TILE, id: i + 2, name: r.id, rotation: 0, type: '', visible: true,
+          width: r.w * TILE, x: r.col * TILE, y: r.row * TILE,
+          properties: [{ name: 'floor', type: 'int', value: r.floor }],
+        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
       },
       {
-        draworder: 'topdown', id: 8, name: 'activity_spots', objects: [
-          { height: 0, id: 5, name: 'workshop', point: true, type: '', visible: true, width: 0, x: 80, y: 288, properties: [{ name: 'anim', type: 'string', value: 'type' }, { name: 'direction', type: 'string', value: 'right' }] },
-          { height: 0, id: 6, name: 'study', point: true, type: '', visible: true, width: 0, x: 240, y: 288, properties: [{ name: 'anim', type: 'string', value: 'think' }, { name: 'direction', type: 'string', value: 'right' }] },
-          { height: 0, id: 7, name: 'bedroom', point: true, type: '', visible: true, width: 0, x: 400, y: 288, properties: [{ name: 'anim', type: 'string', value: 'sleep' }, { name: 'direction', type: 'string', value: 'left' }] },
-        ], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        draworder: 'topdown', id: 8, name: 'activity_spots', objects: rooms.map((r, i) => ({
+          height: 0, id: i + 20, name: r.id, point: true, rotation: 0, type: '', visible: true, width: 0,
+          x: (r.col + r.w / 2) * TILE,
+          y: (r.row + r.h - 2) * TILE, // one tile above floor
+          properties: [
+            { name: 'anim', type: 'string', value: r.anim },
+            { name: 'direction', type: 'string', value: r.dir },
+          ],
+        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
       },
       {
-        draworder: 'topdown', id: 9, name: 'ladders', objects: [], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        draworder: 'topdown', id: 9, name: 'ladders', objects: ladders.map((l, i) => ({
+          height: l.h, id: i + 30, name: 'ladder', rotation: 0, type: '', visible: true,
+          width: l.w, x: l.x, y: l.y,
+        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
       },
     ],
     nextlayerid: 10,
-    nextobjectid: 8,
+    nextobjectid: 40,
     orientation: 'orthogonal',
     renderorder: 'right-down',
     tiledversion: '1.10.2',
@@ -261,6 +322,19 @@ function generateTilemap() {
         tileheight: 16,
         tilewidth: 16,
       },
+      {
+        columns: 20,
+        firstgid: 97,
+        image: '../tilesets/furniture.png',
+        imageheight: 16,
+        imagewidth: 320,
+        margin: 0,
+        name: 'furniture',
+        spacing: 0,
+        tilecount: 20,
+        tileheight: 16,
+        tilewidth: 16,
+      },
     ],
     tilewidth: 16,
     type: 'map',
@@ -270,6 +344,53 @@ function generateTilemap() {
 
   fs.writeFileSync(out, JSON.stringify(tilemap, null, 2))
   console.log(`  → ${out}`)
+
+  // --- Generate house.tmx (Tiled XML format) ---
+  // Minimal TMX that Tiled can open for editing
+  const layerToXml = (layer) => {
+    if (layer.type === 'tilelayer') {
+      return `  <layer id="${layer.id}" name="${layer.name}" width="${W}" height="${H}">
+    <data encoding="csv">
+${layer.data.reduce((acc, v, i) => {
+  acc += v
+  if (i < layer.data.length - 1) acc += ','
+  if ((i + 1) % W === 0) acc += '\n'
+  return acc
+}, '')}    </data>
+  </layer>`
+    }
+    if (layer.type === 'objectgroup') {
+      const objs = layer.objects.map(o => {
+        const props = (o.properties || []).map(p =>
+          `        <property name="${p.name}" type="${p.type}" value="${p.value}"/>`
+        ).join('\n')
+        const propsBlock = props ? `\n      <properties>\n${props}\n      </properties>` : ''
+        if (o.point) {
+          return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}">${propsBlock}\n      <point/>\n    </object>`
+        }
+        return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}" width="${o.width}" height="${o.height}">${propsBlock}\n    </object>`
+      }).join('\n')
+      return `  <objectgroup id="${layer.id}" name="${layer.name}">
+${objs}
+  </objectgroup>`
+    }
+    return ''
+  }
+
+  const tmx = `<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="${W}" height="${H}" tilewidth="16" tileheight="16" infinite="0">
+  <tileset firstgid="1" name="interior" tilewidth="16" tileheight="16" tilecount="96" columns="12">
+    <image source="../tilesets/interior.png" width="192" height="128"/>
+  </tileset>
+  <tileset firstgid="97" name="furniture" tilewidth="16" tileheight="16" tilecount="20" columns="20">
+    <image source="../tilesets/furniture.png" width="320" height="16"/>
+  </tileset>
+${tilemap.layers.map(layerToXml).join('\n')}
+</map>
+`
+
+  fs.writeFileSync(outTmx, tmx)
+  console.log(`  → ${outTmx}`)
 }
 
 // ─── 5. Character Spritesheet (programmatic fallback) ─────────────────────────
