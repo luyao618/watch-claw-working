@@ -103,37 +103,123 @@ export class RoomManager {
   }
 
   private createFallbackRooms(): void {
-    // 2F fallback rooms matching the tilemap layout
+    // All 9 rooms across 3 floors, matching the tilemap layout exactly.
+    // Room zones from Tiled: each room is 160×160px, arranged in a 3×3 grid.
+    //   3F (y=0):   warehouse | study   | balcony
+    //   2F (y=176): toolbox   | office  | bedroom
+    //   1F (y=352): basement  | server_room | trash
+    // Activity spots use the exact coordinates from Tiled activity_spots layer.
     const roomDefs = [
+      // 3F — Attic
       {
-        id: 'workshop',
-        floor: 2,
-        x: 0,
-        y: 160,
+        id: 'warehouse',
+        floor: 3,
+        x: 16,
+        y: 0,
         w: 160,
         h: 160,
+        spotX: 96,
+        spotY: 112,
         anim: 'type',
         dir: 'right' as const,
       },
       {
         id: 'study',
-        floor: 2,
-        x: 160,
-        y: 160,
+        floor: 3,
+        x: 176,
+        y: 0,
         w: 160,
         h: 160,
+        spotX: 256,
+        spotY: 112,
         anim: 'think',
+        dir: 'right' as const,
+      },
+      {
+        id: 'balcony',
+        floor: 3,
+        x: 336,
+        y: 0,
+        w: 160,
+        h: 160,
+        spotX: 416,
+        spotY: 112,
+        anim: 'think',
+        dir: 'right' as const,
+      },
+      // 2F — Main Floor
+      {
+        id: 'toolbox',
+        floor: 2,
+        x: 16,
+        y: 176,
+        w: 160,
+        h: 160,
+        spotX: 96,
+        spotY: 288,
+        anim: 'type',
+        dir: 'right' as const,
+      },
+      {
+        id: 'office',
+        floor: 2,
+        x: 176,
+        y: 176,
+        w: 160,
+        h: 160,
+        spotX: 256,
+        spotY: 288,
+        anim: 'type',
         dir: 'right' as const,
       },
       {
         id: 'bedroom',
         floor: 2,
-        x: 320,
-        y: 160,
+        x: 336,
+        y: 176,
         w: 160,
         h: 160,
+        spotX: 420,
+        spotY: 285,
         anim: 'sleep',
         dir: 'left' as const,
+      },
+      // 1F — Basement
+      {
+        id: 'basement',
+        floor: 1,
+        x: 16,
+        y: 352,
+        w: 160,
+        h: 160,
+        spotX: 96,
+        spotY: 464,
+        anim: 'think',
+        dir: 'right' as const,
+      },
+      {
+        id: 'server_room',
+        floor: 1,
+        x: 176,
+        y: 352,
+        w: 160,
+        h: 160,
+        spotX: 256,
+        spotY: 464,
+        anim: 'type',
+        dir: 'right' as const,
+      },
+      {
+        id: 'trash',
+        floor: 1,
+        x: 336,
+        y: 352,
+        w: 160,
+        h: 160,
+        spotX: 416,
+        spotY: 464,
+        anim: 'type',
+        dir: 'right' as const,
       },
     ]
     for (const rd of roomDefs) {
@@ -142,7 +228,7 @@ export class RoomManager {
         name: rd.id,
         floor: rd.floor,
         bounds: new Phaser.Geom.Rectangle(rd.x, rd.y, rd.w, rd.h),
-        activitySpot: { x: rd.x + rd.w / 2, y: rd.y + rd.h - 32 },
+        activitySpot: { x: rd.spotX, y: rd.spotY },
         activityAnim: rd.anim,
         activityDirection: rd.dir,
       })

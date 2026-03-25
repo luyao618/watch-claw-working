@@ -13,37 +13,37 @@
 
 ### 1.1 选型总结
 
-| 层             | 选择                                          | 理由                                                                                  |
-| -------------- | --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **语言**       | TypeScript 5.x（strict mode）                 | 为 game state、events 和协议提供类型安全                                              |
-| **游戏引擎**   | Phaser 3.80+                                  | 内置 Arcade Physics、Tilemap、Sprite 动画、Camera — 非常适合 2D 横版平台跳跃风格      |
-| **UI 框架**    | React 18                                      | 仅用于 overlay UI（dashboard、controls）；game state 在 Phaser Scene 内部             |
-| **构建工具**   | Vite 8                                        | 快速 HMR、原生 TS 支持、兼容 Phaser                                                  |
-| **地图编辑器** | Tiled（导出 JSON）                            | 可视化 tilemap 编辑，碰撞层，对象层（出生点）— Phaser 原生支持                        |
-| **通信**       | Session Log 文件监控 + WebSocket Bridge       | 监控 OpenClaw JSONL session logs，通过 Node.js bridge 推送到浏览器（与 v0.2 相同）    |
-| **渲染**       | Phaser WebGL / Canvas 2D（自动检测）          | GPU 加速 sprites、粒子、光照效果；Canvas 2D 作为 fallback                             |
-| **包管理器**   | pnpm                                          | 快速、磁盘高效、严格的依赖解析                                                        |
-| **Linting**    | ESLint + Prettier                             | 一致的代码风格、类型感知的 linting                                                    |
-| **测试**       | Vitest                                        | 快速单元测试、兼容 Vite                                                               |
-| **桌面端**     | Electron                                      | 独立桌面窗口、系统托盘、置顶选项                                                      |
+| 层             | 选择                                    | 理由                                                                               |
+| -------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| **语言**       | TypeScript 5.x（strict mode）           | 为 game state、events 和协议提供类型安全                                           |
+| **游戏引擎**   | Phaser 3.80+                            | 内置 Arcade Physics、Tilemap、Sprite 动画、Camera — 非常适合 2D 横版平台跳跃风格   |
+| **UI 框架**    | React 18                                | 仅用于 overlay UI（dashboard、controls）；game state 在 Phaser Scene 内部          |
+| **构建工具**   | Vite 8                                  | 快速 HMR、原生 TS 支持、兼容 Phaser                                                |
+| **地图编辑器** | Tiled（导出 JSON）                      | 可视化 tilemap 编辑，碰撞层，对象层（出生点）— Phaser 原生支持                     |
+| **通信**       | Session Log 文件监控 + WebSocket Bridge | 监控 OpenClaw JSONL session logs，通过 Node.js bridge 推送到浏览器（与 v0.2 相同） |
+| **渲染**       | Phaser WebGL / Canvas 2D（自动检测）    | GPU 加速 sprites、粒子、光照效果；Canvas 2D 作为 fallback                          |
+| **包管理器**   | pnpm                                    | 快速、磁盘高效、严格的依赖解析                                                     |
+| **Linting**    | ESLint + Prettier                       | 一致的代码风格、类型感知的 linting                                                 |
+| **测试**       | Vitest                                  | 快速单元测试、兼容 Vite                                                            |
+| **桌面端**     | Electron                                | 独立桌面窗口、系统托盘、置顶选项                                                   |
 
 ### 1.2 为什么选 Phaser（而不是 Canvas 2D / PixiJS）
 
-| 替代方案            | 我们为什么选择不同的                                                                                                                                                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Canvas 2D (v0.2)**| v0.2 的手写渲染器功能可用但视觉效果差（彩色矩形）。没有物理引擎、没有 tilemap、没有粒子系统。从零添加横版平台物理和特效需要巨大的工作量。                              |
-| **PixiJS**          | 优秀的渲染器，但**没有物理引擎**。我们的横版平台跳跃需要重力、跳跃、平台碰撞 — 需要手动集成 matter.js/planck.js，胶水代码很多。                                      |
-| **Phaser 3**        | **最适合横版平台跳跃**：Arcade Physics（重力、速度、弹跳、碰撞器）、原生 Tiled tilemap 支持、sprite 动画系统、相机跟随、粒子发射器 — 全部内置。~1MB 的 bundle 对于 Electron 桌面应用是可接受的。 |
+| 替代方案             | 我们为什么选择不同的                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Canvas 2D (v0.2)** | v0.2 的手写渲染器功能可用但视觉效果差（彩色矩形）。没有物理引擎、没有 tilemap、没有粒子系统。从零添加横版平台物理和特效需要巨大的工作量。                                                        |
+| **PixiJS**           | 优秀的渲染器，但**没有物理引擎**。我们的横版平台跳跃需要重力、跳跃、平台碰撞 — 需要手动集成 matter.js/planck.js，胶水代码很多。                                                                  |
+| **Phaser 3**         | **最适合横版平台跳跃**：Arcade Physics（重力、速度、弹跳、碰撞器）、原生 Tiled tilemap 支持、sprite 动画系统、相机跟随、粒子发射器 — 全部内置。~1MB 的 bundle 对于 Electron 桌面应用是可接受的。 |
 
 ### 1.3 为什么选横版平台跳跃（而不是 3/4 俯视角）
 
-| 3/4 俯视角 (v0.2)                        | 横版平台跳跃 (v1.0)                           |
-| ----------------------------------------- | ---------------------------------------------- |
-| 单层楼，房间水平排列                      | **三层楼垂直堆叠** — 更自然的房屋感            |
-| 没有垂直感，房间感觉平面                  | 重力 + 跳跃 → 令人满足的移动体验              |
-| BFS 寻路在 tile grid 上                   | 基于物理的移动：行走、跳跃、爬楼梯/梯子       |
-| Y-sort 深度排序（复杂）                   | 简单的左右 sprite 分层                         |
-| 与 Star Office UI（竞品）类似             | **独特的视觉身份** — 没有竞品这样做            |
+| 3/4 俯视角 (v0.2)             | 横版平台跳跃 (v1.0)                     |
+| ----------------------------- | --------------------------------------- |
+| 单层楼，房间水平排列          | **三层楼垂直堆叠** — 更自然的房屋感     |
+| 没有垂直感，房间感觉平面      | 重力 + 跳跃 → 令人满足的移动体验        |
+| BFS 寻路在 tile grid 上       | 基于物理的移动：行走、跳跃、爬楼梯/梯子 |
+| Y-sort 深度排序（复杂）       | 简单的左右 sprite 分层                  |
+| 与 Star Office UI（竞品）类似 | **独特的视觉身份** — 没有竞品这样做     |
 
 ---
 
@@ -170,32 +170,32 @@ watch-claw/
 
 ### 3.1 移除的文件（v0.2 → v1.0）
 
-| 移除的文件/目录                     | 原因                                             |
-| ----------------------------------- | ------------------------------------------------ |
-| `src/engine/gameLoop.ts`            | Phaser 提供自己的游戏循环                        |
-| `src/engine/renderer.ts`            | Phaser 通过 WebGL/Canvas 自动渲染                |
-| `src/engine/coordinates.ts`         | 不再需要等距坐标转换（正视图是 1:1 的）          |
-| `src/engine/camera.ts`              | Phaser 相机系统替代                               |
-| `src/engine/gameState.ts`           | Game state 现在在 Phaser Scene 中；connection 类型保留 |
-| `src/engine/pathfinding.ts`         | 被基于物理的移动替代（行走 + 跳跃）              |
-| `src/engine/pixelFurniture.ts`      | 被 Tiled tilemap + spritesheet 资源替代          |
-| `src/world/tileMap.ts`              | 被 Tiled JSON 导入替代                           |
-| `src/world/rooms.ts`               | 被 RoomManager 从 Tiled 对象层读取替代           |
-| `src/ui/CanvasView.tsx`             | 被 PhaserContainer.tsx 替代                      |
-| `src/ui/ZoomControls.tsx`           | Phaser 相机原生处理缩放                          |
+| 移除的文件/目录                | 原因                                                   |
+| ------------------------------ | ------------------------------------------------------ |
+| `src/engine/gameLoop.ts`       | Phaser 提供自己的游戏循环                              |
+| `src/engine/renderer.ts`       | Phaser 通过 WebGL/Canvas 自动渲染                      |
+| `src/engine/coordinates.ts`    | 不再需要等距坐标转换（正视图是 1:1 的）                |
+| `src/engine/camera.ts`         | Phaser 相机系统替代                                    |
+| `src/engine/gameState.ts`      | Game state 现在在 Phaser Scene 中；connection 类型保留 |
+| `src/engine/pathfinding.ts`    | 被基于物理的移动替代（行走 + 跳跃）                    |
+| `src/engine/pixelFurniture.ts` | 被 Tiled tilemap + spritesheet 资源替代                |
+| `src/world/tileMap.ts`         | 被 Tiled JSON 导入替代                                 |
+| `src/world/rooms.ts`           | 被 RoomManager 从 Tiled 对象层读取替代                 |
+| `src/ui/CanvasView.tsx`        | 被 PhaserContainer.tsx 替代                            |
+| `src/ui/ZoomControls.tsx`      | Phaser 相机原生处理缩放                                |
 
 ### 3.2 保留的文件（与 v0.2 完全相同）
 
-| 保留的文件/目录                         | 原因                                      |
-| --------------------------------------- | ----------------------------------------- |
-| `bridge/server.ts`                      | Session log 监控 → WS 推送（工作完美）    |
-| `src/connection/bridgeClient.ts`        | 带重连逻辑的 WebSocket 客户端            |
-| `src/connection/eventParser.ts`         | Session log 事件 → CharacterAction 映射  |
-| `src/connection/actionQueue.ts`         | 操作优先级队列                            |
-| `src/connection/connectionManager.ts`   | 协调连接和事件分发                        |
-| `src/connection/types.ts`              | 所有类型定义（扩展，不替换）              |
-| `src/utils/*`                           | 工具函数和常量                            |
-| `electron/*`                            | Electron 外壳                             |
+| 保留的文件/目录                       | 原因                                    |
+| ------------------------------------- | --------------------------------------- |
+| `bridge/server.ts`                    | Session log 监控 → WS 推送（工作完美）  |
+| `src/connection/bridgeClient.ts`      | 带重连逻辑的 WebSocket 客户端           |
+| `src/connection/eventParser.ts`       | Session log 事件 → CharacterAction 映射 |
+| `src/connection/actionQueue.ts`       | 操作优先级队列                          |
+| `src/connection/connectionManager.ts` | 协调连接和事件分发                      |
+| `src/connection/types.ts`             | 所有类型定义（扩展，不替换）            |
+| `src/utils/*`                         | 工具函数和常量                          |
+| `electron/*`                          | Electron 外壳                           |
 
 ---
 
@@ -222,7 +222,61 @@ watch-claw/
               ▲ 楼梯/梯子连接各楼层 ▲
 ```
 
-### 4.2 角色控制器状态机
+### 4.2 碰撞层布局
+
+> 碰撞层截图参见 [collision-layer-layout.jpg](./assets/collision-layer-layout.jpg)
+
+地图为 32×32 tiles（16px/tile = 512×512px）。碰撞层使用两种 tile 类型：
+
+| Tile ID | 用途      | 说明                                             |
+| ------- | --------- | ------------------------------------------------ |
+| **2**   | 墙壁      | 外围边框 + 房间间的竖直隔墙（col 1, 11, 21, 30） |
+| **7**   | 地板/天花 | 水平楼层分隔线，带通道口留空                     |
+
+#### 碰撞体分布图（col, row）
+
+```
+Row 0:  [1-30] = wall (2)              ← 顶部墙壁
+Row 1:  col 1,11,21,30 = wall (2)      ← 竖直隔墙
+        col 2-10,12-20,22-29 = floor (7) ← 3F 天花板/顶层地板
+Row 2-4:  col 1,11,21,30 = wall (2)    ← 竖直隔墙（含3F内墙 col 11 到 row 4）
+Row 5-8:  col 1,30 = wall (2)          ← 仅外墙
+Row 9:    col 1,30 = floor (7)         ← 过渡行
+
+Row 10-11: 3F 地板 / 2F 天花板 = floor (7)
+  col 1-8, 11-18, 21-30                ← 三段地板
+  ⚠️ 通道口留空: col 9-10 (左通道), col 19-20 (右通道)
+
+Row 12-15: col 1,11,21,30 = wall (2)   ← 2F 竖直隔墙（含内墙 col 11,21 到 row 15）
+Row 16-19: col 1,30 = wall (2)         ← 仅外墙
+
+Row 20: 2F 地板 / 1F 天花板 = floor (7)
+  col 1-18, 21-30                       ← 两段地板
+  ⚠️ 通道口留空: col 19-20 (右通道)
+
+Row 21: col 17-18 = floor (7)           ← 通道口旁小台阶
+         col 21 = floor (7)             ← 隔墙延续
+
+Row 22: 1F 补充地板 = floor (7)
+  col 1-18, 21-30
+  ⚠️ 通道口留空: col 19-20
+
+Row 23-26: col 1,11,21,30 = wall (2)   ← 1F 竖直隔墙
+Row 27-30: col 1,30 = wall (2)         ← 仅外墙
+Row 31: [1-30] = wall (2)              ← 底部墙壁（地面）
+```
+
+#### 楼层通道位置
+
+| 通道         | 位置（col, row）  | 像素坐标（X, Y）   | 方向  |
+| ------------ | ----------------- | ------------------ | ----- |
+| 3F↔2F 左通道 | col 9-10, row 10  | X: 144-175, Y: 160 | 上/下 |
+| 3F↔2F 右通道 | col 19-20, row 10 | X: 304-335, Y: 160 | 上/下 |
+| 2F↔1F 右通道 | col 19-20, row 20 | X: 304-335, Y: 320 | 上/下 |
+
+> **注意**：2F↔1F 只有右侧一个通道（col 19-20），没有左侧通道。角色从 1F 到 2F 或从 2F 到 1F 都必须走到右侧通道位置。
+
+### 4.3 角色控制器状态机
 
 ```
                               ┌──────────┐
@@ -243,13 +297,20 @@ watch-claw/
               GO_SLEEP (idle > 30s)
 ```
 
-### 4.3 自动导航
+### 4.4 自动导航
 
 当 `CharacterAction(GOTO_ROOM)` 到达时：
+
 1. 确定目标房间的楼层和活动区域
 2. 如果在同一楼层 → 水平行走到目标 X
-3. 如果在不同楼层 → 走到最近的楼梯 → 上/下楼 → 走到目标 X
+3. 如果在不同楼层 → 走到最近的通道口 → 跳跃上楼或下落下楼 → 到达后检查是否还需继续换层
 4. 到达活动区域 → 切换到目标动画状态
+
+**通道口选择逻辑：**
+
+- 3F↔2F：有两个通道口（左 X=144, 右 X=304），选最近的
+- 2F↔1F：只有一个通道口（右 X=304），角色必须走到右侧
+- 跨越多层（如 1F→3F）：逐层跳跃，每层到达后重新选择最近通道
 
 ---
 
@@ -284,9 +345,9 @@ EventBridge 分发到 HouseScene → LobsterCharacter 接收
 | 需求            | 目标                                                          |
 | --------------- | ------------------------------------------------------------- |
 | **帧率**        | 60fps（Phaser requestAnimationFrame）                         |
-| **Bundle 大小** | < 1.5MB gzipped（Phaser ~1MB + 应用代码 ~200KB + 资源懒加载）|
+| **Bundle 大小** | < 1.5MB gzipped（Phaser ~1MB + 应用代码 ~200KB + 资源懒加载） |
 | **平台**        | Electron 桌面应用（macOS 优先，Windows/Linux 后续）           |
 | **响应式**      | 最小 800×600，支持 4K，整数像素缩放                           |
 | **启动时间**    | < 3s 到首次有意义渲染（预加载期间显示加载条）                 |
 | **Bridge 重连** | 带指数退避的自动重连（1s–30s）— 不变                          |
-| **内存使用**    | < 150MB（Phaser + 纹理）                                     |
+| **内存使用**    | < 150MB（Phaser + 纹理）                                      |
