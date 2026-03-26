@@ -159,23 +159,14 @@ function startBridgeServer() {
       return
     }
   } else {
-    // Production: bridge/server.js should be pre-compiled
-    const bridgeScript = resolve(projectRoot, 'bridge', 'server.js')
+    // Production: use the precompiled bridge artifact bundled into the app.
+    const bridgeScript = resolve(projectRoot, 'build', 'bridge', 'server.cjs')
     if (!existsSync(bridgeScript)) {
-      console.warn('[electron] Compiled bridge/server.js not found, trying .ts with tsx')
-      // Fallback: try tsx anyway (for portable builds that include node_modules)
-      const tsxBin = resolve(projectRoot, 'node_modules', '.bin', 'tsx')
-      const tsScript = resolve(projectRoot, 'bridge', 'server.ts')
-      if (existsSync(tsxBin) && existsSync(tsScript)) {
-        bridgeProcess = fork(tsScript, [], {
-          execPath: tsxBin,
-          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-          cwd: projectRoot,
-        })
-      } else {
-        console.error('[electron] Cannot start Bridge Server in production')
-        return
-      }
+      console.error(
+        '[electron] Compiled bridge artifact not found:',
+        bridgeScript,
+      )
+      return
     } else {
       bridgeProcess = fork(bridgeScript, [], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
@@ -185,7 +176,6 @@ function startBridgeServer() {
   }
 
   if (bridgeProcess) {
-
     bridgeProcess.stdout.on('data', (data) => {
       process.stdout.write(`[bridge] ${data}`)
     })

@@ -166,9 +166,21 @@ pnpm preview        # Preview production build
 pnpm typecheck      # Type check
 pnpm lint           # Lint
 pnpm test           # Run tests
-pnpm dev:electron   # Run as Electron desktop app
-pnpm build:electron # Build Electron distributable
+pnpm dev:electron           # Run as Electron desktop app
+pnpm build:electron:mac    # Build a macOS release zip for local verification
+pnpm build:electron:mac:dmg # Build a macOS DMG release
 ```
+
+## Release
+
+- End users should receive the packaged Electron app, not the source code or a Node.js setup
+- `pnpm build:electron:mac` builds the web app, precompiles the Bridge Server for production, and creates a macOS `.zip` artifact in `release/` for reliable local verification
+- `pnpm build:electron:mac:dmg` creates the macOS DMG variant when you want the polished installer experience
+- `pnpm build:electron` remains as a compatibility alias to `pnpm build:electron:mac`
+- The builder config still contains Windows/Linux targets in `package.json`, but the verified release workflow in this repo is currently macOS-only
+- The production app starts the bundled bridge artifact directly, so users do not need `tsx`, `pnpm`, or TypeScript on their machine
+
+For the detailed release workflow, see [docs/RELEASE.md](./docs/RELEASE.md).
 
 ## Project Structure
 
@@ -232,6 +244,7 @@ watch-claw/
 - [Technical Design Document](./docs/TECHNICAL.md) ([中文](./docs/TECHNICAL_CN.md))
 - [Task Breakdown](./docs/TASKS.md) ([中文](./docs/TASKS_CN.md))
 - [Archived Tasks (v0.2)](./docs/TASKS_v0.2_ARCHIVED.md) ([中文](./docs/TASKS_v0.2_ARCHIVED_CN.md))
+- [Release Guide](./docs/RELEASE.md)
 
 ## Contributing
 
