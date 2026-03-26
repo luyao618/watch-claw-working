@@ -19,6 +19,23 @@ interface PhaserContainerProps {
   connectionManager?: ConnectionManager | null
 }
 
+/**
+ * Try to create an EventBridge between ConnectionManager and HouseScene.
+ * Returns the bridge if successful, null otherwise.
+ */
+function tryCreateBridge(
+  cm: ConnectionManager,
+  game: Phaser.Game,
+): EventBridge | null {
+  const houseScene = game.scene.getScene('HouseScene') as HouseScene | null
+  if (houseScene && houseScene.character) {
+    const bridge = new EventBridge(cm, houseScene)
+    bridge.connect()
+    return bridge
+  }
+  return null
+}
+
 export const PhaserContainer = forwardRef<
   PhaserContainerHandle,
   PhaserContainerProps
@@ -26,11 +43,33 @@ export const PhaserContainer = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Phaser.Game | null>(null)
   const bridgeRef = useRef<EventBridge | null>(null)
+  // Keep connectionManager in a ref so event callbacks always see the latest value,
+  // avoiding stale-closure bugs in the [] useEffect.
+  const connectionManagerRef = useRef(connectionManager)
+  connectionManagerRef.current = connectionManager
 
   useImperativeHandle(ref, () => ({
     getGame: () => gameRef.current,
   }))
 
+  /**
+   * Idempotent helper: if both scene and connectionManager are ready and no
+   * bridge exists yet, create one. Called from two paths:
+   *   1. scene-ready fires (scene became ready, connectionManager may already exist)
+   *   2. connectionManager useEffect (connectionManager arrived, scene may already be ready)
+   */
+  const ensureBridge = () => {
+    const cm = connectionManagerRef.current
+    const game = gameRef.current
+    if (!cm || !game || bridgeRef.current) return
+
+    const houseScene = game.scene.getScene('HouseScene') as HouseScene | null
+    if (houseScene?.isReady) {
+      bridgeRef.current = tryCreateBridge(cm, game)
+    }
+  }
+
+  // Mount Phaser game once — stable across connectionManager changes
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -44,28 +83,21 @@ export const PhaserContainer = forwardRef<
     })
     gameRef.current = game
 
-    // Wait for HouseScene to be ready, then create EventBridge
-    const setupBridge = () => {
-      if (!connectionManager) return
-
-      const houseScene = game.scene.getScene('HouseScene') as HouseScene | null
-      if (houseScene && houseScene.character) {
-        const bridge = new EventBridge(connectionManager, houseScene)
-        bridge.connect()
-        bridgeRef.current = bridge
-      } else {
-        // Scene not ready yet, try again on next frame
-        game.events.once('step', setupBridge)
-      }
-    }
-
-    // Start checking after game boots
+    // Listen for the scene-ready event emitted by HouseScene.create().
+    // Uses connectionManagerRef (not the prop) so the callback always reads
+    // the latest value, avoiding stale-closure bugs.
     game.events.once('ready', () => {
-      // Give scenes time to create
-      game.events.once('step', () => {
-        // Wait a few more frames for scene.create() to run
-        setTimeout(setupBridge, 100)
-      })
+      const houseScene = game.scene.getScene('HouseScene') as HouseScene | null
+      if (!houseScene) return
+
+      // If scene already finished create() before we registered, isReady is true
+      if (houseScene.isReady) {
+        ensureBridge()
+      } else {
+        houseScene.events.once('scene-ready', () => {
+          ensureBridge()
+        })
+      }
     })
 
     return () => {
@@ -82,7 +114,7 @@ export const PhaserContainer = forwardRef<
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When connectionManager changes after initial mount, set up bridge
+  // When connectionManager changes (or arrives late), set up / replace bridge
   useEffect(() => {
     if (!connectionManager || !gameRef.current) return
 
@@ -92,13 +124,9 @@ export const PhaserContainer = forwardRef<
       bridgeRef.current = null
     }
 
-    const game = gameRef.current
-    const houseScene = game.scene.getScene('HouseScene') as HouseScene | null
-    if (houseScene && houseScene.character) {
-      const bridge = new EventBridge(connectionManager, houseScene)
-      bridge.connect()
-      bridgeRef.current = bridge
-    }
+    // If scene is already ready, create bridge immediately;
+    // otherwise the scene-ready listener (registered above) will handle it.
+    ensureBridge()
   }, [connectionManager])
 
   return (

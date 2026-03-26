@@ -24,6 +24,7 @@ export function throttle<T extends (...args: any[]) => void>(
 ): (...args: Parameters<T>) => void {
   let lastCall = 0
   let timer: ReturnType<typeof setTimeout> | null = null
+  let pendingArgs: Parameters<T> | null = null
 
   return (...args: Parameters<T>) => {
     const now = Date.now()
@@ -33,15 +34,23 @@ export function throttle<T extends (...args: any[]) => void>(
       if (timer) {
         clearTimeout(timer)
         timer = null
+        pendingArgs = null
       }
       lastCall = now
       fn(...args)
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        lastCall = Date.now()
-        timer = null
-        fn(...args)
-      }, remaining)
+    } else {
+      // Always update pending args to the latest call (last-write-wins)
+      pendingArgs = args
+      if (!timer) {
+        timer = setTimeout(() => {
+          lastCall = Date.now()
+          timer = null
+          if (pendingArgs) {
+            fn(...pendingArgs)
+            pendingArgs = null
+          }
+        }, remaining)
+      }
     }
   }
 }

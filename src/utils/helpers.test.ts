@@ -116,12 +116,11 @@ describe('throttle', () => {
     const throttled = throttle(fn, 100)
     throttled(1) // immediate
     throttled(2) // scheduled trailing
-    throttled(3) // replaces trailing? no — current impl ignores if timer exists
+    throttled(3) // updates pending args to latest
 
     vi.advanceTimersByTime(100)
-    // The current implementation sets a timer on the first suppressed call
-    // and does not update it with subsequent calls, so trailing fires with
-    // the args from the first suppressed call.
+    // Trailing edge should fire with the latest args (3), not the first suppressed (2)
     expect(fn).toHaveBeenCalledTimes(2)
+    expect(fn).toHaveBeenLastCalledWith(3)
   })
 })
