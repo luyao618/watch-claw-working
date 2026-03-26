@@ -1407,7 +1407,8 @@ public/assets/
 
 - `package.json` — 添加 Electron 依赖（`electron`、`electron-builder`）、新 scripts：
   - `"dev:electron"` — 同时启动 Vite + Bridge Server + Electron
-  - `"build:electron"` — 打包为 macOS .app / .dmg
+  - `"build:electron:mac"` — 打包为 macOS 发布 zip 包
+  - `"build:electron:mac:dmg"` — 打包为 macOS DMG 安装包
   - `"pack"` — electron-builder 打包
 - `vite.config.ts` — 适配 Electron renderer 构建（base 路径等）
 - Bridge Server 集成 — Bridge Server 可选两种模式：
@@ -1428,7 +1429,7 @@ public/assets/
 - [x] 系统托盘图标可见，右键菜单有显示/隐藏/退出选项
 - [x] Always-on-top 可切换
 - [x] 关闭窗口后可通过托盘图标重新打开
-- [x] `pnpm build:electron` 生成可分发的 macOS 应用
+- [x] `pnpm build:electron:mac` 生成可分发的 macOS 应用
 
 ---
 

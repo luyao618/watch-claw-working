@@ -4,7 +4,13 @@
  * [T3.1] Wire ConnectionManager → EventBridge
  */
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from 'react'
 import Phaser from 'phaser'
 import { gameConfig } from '@/game'
 import { EventBridge } from '@/game/systems/EventBridge.ts'
@@ -43,10 +49,11 @@ export const PhaserContainer = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Phaser.Game | null>(null)
   const bridgeRef = useRef<EventBridge | null>(null)
-  // Keep connectionManager in a ref so event callbacks always see the latest value,
-  // avoiding stale-closure bugs in the [] useEffect.
   const connectionManagerRef = useRef(connectionManager)
-  connectionManagerRef.current = connectionManager
+
+  useEffect(() => {
+    connectionManagerRef.current = connectionManager
+  }, [connectionManager])
 
   useImperativeHandle(ref, () => ({
     getGame: () => gameRef.current,
@@ -58,7 +65,7 @@ export const PhaserContainer = forwardRef<
    *   1. scene-ready fires (scene became ready, connectionManager may already exist)
    *   2. connectionManager useEffect (connectionManager arrived, scene may already be ready)
    */
-  const ensureBridge = () => {
+  const ensureBridge = useCallback(() => {
     const cm = connectionManagerRef.current
     const game = gameRef.current
     if (!cm || !game || bridgeRef.current) return
@@ -67,7 +74,7 @@ export const PhaserContainer = forwardRef<
     if (houseScene?.isReady) {
       bridgeRef.current = tryCreateBridge(cm, game)
     }
-  }
+  }, [])
 
   // Mount Phaser game once — stable across connectionManager changes
   useEffect(() => {
@@ -112,7 +119,7 @@ export const PhaserContainer = forwardRef<
       }
       gameRef.current = null
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ensureBridge])
 
   // When connectionManager changes (or arrives late), set up / replace bridge
   useEffect(() => {
@@ -127,7 +134,7 @@ export const PhaserContainer = forwardRef<
     // If scene is already ready, create bridge immediately;
     // otherwise the scene-ready listener (registered above) will handle it.
     ensureBridge()
-  }, [connectionManager])
+  }, [connectionManager, ensureBridge])
 
   return (
     <div

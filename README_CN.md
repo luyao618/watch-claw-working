@@ -167,7 +167,8 @@ pnpm typecheck      # 类型检查
 pnpm lint           # 代码检查
 pnpm test           # 运行测试
 pnpm dev:electron   # 以 Electron 桌面应用运行
-pnpm build:electron # 构建 Electron 可分发包
+pnpm build:electron:mac # 构建 macOS 发布 zip 包（本地验证）
+pnpm build:electron:mac:dmg # 构建 macOS DMG 安装包
 ```
 
 ## 项目结构

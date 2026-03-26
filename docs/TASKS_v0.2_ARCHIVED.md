@@ -1407,7 +1407,8 @@ public/assets/
 
 - `package.json` — Add Electron dependencies (`electron`, `electron-builder`), new scripts:
   - `"dev:electron"` — Start Vite + Bridge Server + Electron concurrently
-  - `"build:electron"` — Package as macOS .app / .dmg
+  - `"build:electron:mac"` — Package as macOS release zip
+  - `"build:electron:mac:dmg"` — Package as macOS DMG
   - `"pack"` — electron-builder packaging
 - `vite.config.ts` — Adapt for Electron renderer build (base path etc.)
 - Bridge Server integration — Bridge Server can run in two modes:
@@ -1428,7 +1429,7 @@ public/assets/
 - [ ] System tray icon visible, right-click menu has show/hide/quit
 - [ ] Always-on-top toggleable
 - [ ] Window can be reopened via tray icon after closing
-- [ ] `pnpm build:electron` produces distributable macOS app
+- [ ] `pnpm build:electron:mac` produces distributable macOS app
 
 ---
 
