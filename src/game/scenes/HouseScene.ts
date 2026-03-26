@@ -35,6 +35,8 @@ export const gameEventBus = createEventBus<GameEvents>()
 export class HouseScene extends Phaser.Scene {
   public character!: LobsterCharacter
   public roomManager!: RoomManager
+  /** True after create() has completed and all systems are initialized. */
+  public isReady = false
 
   private map!: Phaser.Tilemaps.Tilemap
   private collisionLayer!: Phaser.Tilemaps.TilemapLayer
@@ -141,6 +143,10 @@ export class HouseScene extends Phaser.Scene {
 
     // --- Animated decorations (T5.4) ---
     this.setupAnimatedDecorations()
+
+    // --- Signal that scene is fully ready (character, rooms, systems all created) ---
+    this.isReady = true
+    this.events.emit('scene-ready')
   }
 
   update(time: number, delta: number) {

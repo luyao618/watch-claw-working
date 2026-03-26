@@ -20,8 +20,18 @@ import { homedir } from 'node:os'
 import { WebSocket, WebSocketServer } from 'ws'
 
 // ── Configuration ────────────────────────────────────────────────────────────
-const PORT = 18790
-const SESSIONS_DIR = resolve(homedir(), '.openclaw/agents/main/sessions')
+const PORT = (() => {
+  const raw = process.env.BRIDGE_PORT ?? '18790'
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 65535 || parsed !== Math.floor(parsed)) {
+    console.error(`[bridge] Invalid BRIDGE_PORT "${raw}", must be an integer 1–65535. Using default 18790.`)
+    return 18790
+  }
+  return parsed
+})()
+const SESSIONS_DIR = process.env.OPENCLAW_SESSIONS_DIR
+  ? resolve(process.env.OPENCLAW_SESSIONS_DIR)
+  : resolve(homedir(), '.openclaw/agents/main/sessions')
 const SESSIONS_INDEX = resolve(SESSIONS_DIR, 'sessions.json')
 const SESSION_CHECK_INTERVAL_MS = 2_000 // re-check sessions.json every 2s
 const WATCH_DEBOUNCE_MS = 50 // debounce fs.watch events (macOS may fire duplicates)
