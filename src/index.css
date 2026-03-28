@@ -30,6 +30,17 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Mobile: prevent browser gestures from interfering with Phaser */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+/* Safe area insets for iPhone notch / Dynamic Island */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #app {
