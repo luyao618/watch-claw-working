@@ -20,11 +20,19 @@ import { homedir } from 'node:os'
 import { WebSocket, WebSocketServer } from 'ws'
 
 // ── Configuration ────────────────────────────────────────────────────────────
+const HOST = process.env.BRIDGE_HOST ?? '127.0.0.1'
 const PORT = (() => {
   const raw = process.env.BRIDGE_PORT ?? '18790'
   const parsed = Number(raw)
-  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 65535 || parsed !== Math.floor(parsed)) {
-    console.error(`[bridge] Invalid BRIDGE_PORT "${raw}", must be an integer 1–65535. Using default 18790.`)
+  if (
+    !Number.isFinite(parsed) ||
+    parsed < 1 ||
+    parsed > 65535 ||
+    parsed !== Math.floor(parsed)
+  ) {
+    console.error(
+      `[bridge] Invalid BRIDGE_PORT "${raw}", must be an integer 1–65535. Using default 18790.`,
+    )
     return 18790
   }
   return parsed
@@ -87,7 +95,7 @@ function findLatestSession(): string | null {
 
 // ── WebSocket server ─────────────────────────────────────────────────────────
 
-const wss = new WebSocketServer({ port: PORT, host: '127.0.0.1' })
+const wss = new WebSocketServer({ port: PORT, host: HOST })
 
 function broadcast(data: string): void {
   for (const client of wss.clients) {
@@ -273,8 +281,9 @@ wss.on('connection', (ws) => {
 
 // ── Startup ──────────────────────────────────────────────────────────────────
 
-console.log(`[bridge] Bridge Server starting on ws://127.0.0.1:${PORT}`)
+console.log(`[bridge] Bridge Server starting on ws://${HOST}:${PORT}`)
 console.log(`[bridge] Sessions dir: ${SESSIONS_DIR}`)
+console.log(`[bridge] To allow LAN connections: BRIDGE_HOST=0.0.0.0 pnpm dev`)
 
 const initial = findLatestSession()
 if (initial) {

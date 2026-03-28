@@ -9,10 +9,10 @@
 
 ## Archive History
 
-| Version | Status | Archive Date | File |
-|---------|--------|--------------|------|
-| v0.2 | ✅ Completed | 2026-03-24 | [TASKS_v0.2_ARCHIVED.md](./TASKS_v0.2_ARCHIVED.md) |
-| v1.0 | ✅ Completed | 2026-03-27 | [TASKS_v1.0_ARCHIVED.md](./TASKS_v1.0_ARCHIVED.md) |
+| Version | Status       | Archive Date | File                                               |
+| ------- | ------------ | ------------ | -------------------------------------------------- |
+| v0.2    | ✅ Completed | 2026-03-24   | [TASKS_v0.2_ARCHIVED.md](./TASKS_v0.2_ARCHIVED.md) |
+| v1.0    | ✅ Completed | 2026-03-27   | [TASKS_v1.0_ARCHIVED.md](./TASKS_v1.0_ARCHIVED.md) |
 
 ---
 

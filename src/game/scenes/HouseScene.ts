@@ -46,6 +46,9 @@ export class HouseScene extends Phaser.Scene {
   private prevState: string = 'idle'
   private isFullHouseView = false
   private isDragging = false
+  private isPinching = false
+  private pinchStartDistance = 0
+  private pinchStartZoom = 1
   private oneWayPlatforms: Phaser.Physics.Arcade.StaticGroup | null = null
 
   constructor() {
@@ -181,6 +184,8 @@ export class HouseScene extends Phaser.Scene {
   // --- Mouse drag to pan camera ---
   private setupCameraDrag(): void {
     this.input.on('pointerdown', () => {
+      // Don't start camera drag if we're pinch-zooming
+      if (this.isPinching) return
       this.isDragging = true
       this.cameras.main.stopFollow()
     })
@@ -198,7 +203,7 @@ export class HouseScene extends Phaser.Scene {
 
   // Handle drag in update() for reliable tracking
   private updateCameraDrag(): void {
-    if (!this.isDragging) return
+    if (!this.isDragging || this.isPinching) return
 
     const pointer = this.input.activePointer
     if (!pointer.isDown) {
@@ -305,6 +310,68 @@ export class HouseScene extends Phaser.Scene {
         this.adjustZoom(deltaY < 0 ? 0.25 : -0.25)
       },
     )
+
+    // --- Pinch zoom (mobile touch) ---
+    this.setupPinchZoom()
+  }
+
+  /** Two-finger pinch zoom for touch devices. */
+  private setupPinchZoom(): void {
+    this.input.on('pointerdown', () => {
+      const pointer1 = this.input.pointer1
+      const pointer2 = this.input.pointer2
+
+      if (pointer1.isDown && pointer2.isDown) {
+        // Two fingers down — start pinch
+        this.isPinching = true
+        this.isDragging = false // cancel any single-finger drag
+        this.pinchStartDistance = Phaser.Math.Distance.Between(
+          pointer1.x,
+          pointer1.y,
+          pointer2.x,
+          pointer2.y,
+        )
+        this.pinchStartZoom = this.cameras.main.zoom
+        this.cameras.main.stopFollow()
+      }
+    })
+
+    this.input.on('pointermove', () => {
+      if (!this.isPinching) return
+
+      const pointer1 = this.input.pointer1
+      const pointer2 = this.input.pointer2
+
+      if (!pointer1.isDown || !pointer2.isDown) return
+
+      const currentDistance = Phaser.Math.Distance.Between(
+        pointer1.x,
+        pointer1.y,
+        pointer2.x,
+        pointer2.y,
+      )
+
+      if (this.pinchStartDistance > 0) {
+        const scale = currentDistance / this.pinchStartDistance
+        const newZoom = Phaser.Math.Clamp(this.pinchStartZoom * scale, 0.5, 5)
+        this.cameras.main.setZoom(newZoom)
+      }
+    })
+
+    this.input.on('pointerup', () => {
+      if (this.isPinching) {
+        const pointer1 = this.input.pointer1
+        const pointer2 = this.input.pointer2
+
+        // End pinch when both fingers are released
+        if (!pointer1.isDown && !pointer2.isDown) {
+          this.isPinching = false
+          if (!this.isFullHouseView) {
+            this.cameras.main.startFollow(this.character, true, 0.08, 0.08)
+          }
+        }
+      }
+    })
   }
 
   // --- Camera Zoom ---

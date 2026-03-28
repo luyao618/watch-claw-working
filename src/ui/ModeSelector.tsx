@@ -1,6 +1,8 @@
 /**
  * ModeSelector — Pixel-art style mode toggle buttons.
  * Three modes: Monitor (default), Game, Desktop Pet.
+ *
+ * On mobile: only Monitor mode is shown with larger touch targets (44px min).
  */
 
 import { useState } from 'react'
@@ -10,6 +12,7 @@ export type AppMode = 'monitor' | 'game' | 'pet'
 interface ModeSelectorProps {
   currentMode: AppMode
   onModeChange: (mode: AppMode) => void
+  isMobile?: boolean
 }
 
 interface ModeButton {
@@ -25,23 +28,33 @@ const MODES: ModeButton[] = [
 
 // Fixed width so all buttons are the same size
 const BUTTON_WIDTH = 88
+const BUTTON_WIDTH_MOBILE = 110
 
 export default function ModeSelector({
   currentMode,
   onModeChange,
+  isMobile = false,
 }: ModeSelectorProps) {
   const [hovered, setHovered] = useState<AppMode | null>(null)
+
+  // On mobile, only show Monitor mode (the only mode that makes sense
+  // for a remote viewer without local file system).
+  const visibleModes = isMobile
+    ? MODES.filter((m) => m.mode === 'monitor')
+    : MODES
+
+  const buttonWidth = isMobile ? BUTTON_WIDTH_MOBILE : BUTTON_WIDTH
 
   return (
     <div
       style={{
         display: 'flex',
         gap: '4px',
-        padding: '3px 6px',
+        padding: isMobile ? '4px 6px' : '3px 6px',
         opacity: 0.7,
       }}
     >
-      {MODES.map(({ mode, label }) => {
+      {visibleModes.map(({ mode, label }) => {
         const isActive = currentMode === mode
         const isHovered = hovered === mode && !isActive
 
@@ -53,12 +66,14 @@ export default function ModeSelector({
             onMouseLeave={() => setHovered(null)}
             style={{
               // Fixed width for uniform buttons
-              width: BUTTON_WIDTH,
+              width: buttonWidth,
+              // Mobile: ensure 44px minimum touch target
+              minHeight: isMobile ? '44px' : undefined,
               // Pixel-art button base
               fontFamily: '"Press Start 2P", "Courier New", monospace',
-              fontSize: '6px',
+              fontSize: isMobile ? '7px' : '6px',
               lineHeight: 1,
-              padding: '4px 0',
+              padding: isMobile ? '8px 0' : '4px 0',
               cursor: 'pointer',
               border: '1px solid',
               borderRadius: '0px',

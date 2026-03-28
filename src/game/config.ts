@@ -22,4 +22,16 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scene: [BootScene, HouseScene, UIScene],
+  // Enable touch input with multi-touch (for pinch zoom)
+  input: {
+    touch: {
+      capture: true,
+    },
+  },
+  // Phaser 3.80+ auto-unlocks AudioContext on first user gesture (iOS Safari).
+  // Setting audio.disableWebAudio to false (default) ensures WebAudio is used
+  // with the built-in unlock handler.
+  audio: {
+    disableWebAudio: false,
+  },
 }

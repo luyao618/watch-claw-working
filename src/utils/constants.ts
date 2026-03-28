@@ -7,9 +7,24 @@ export const TILE_HEIGHT = 32
 // custom port (set via BRIDGE_PORT in bridge/server.ts).
 // Note: backend and frontend use separate env vars, so both must be set
 // when changing the default port.
-export const BRIDGE_WS_URL: string =
+//
+// On mobile / remote clients the user can also override the URL via the
+// ServerConfig UI which persists to localStorage.
+const BRIDGE_WS_URL_DEFAULT: string =
   (import.meta.env?.VITE_BRIDGE_WS_URL as string | undefined) ||
   'ws://127.0.0.1:18790'
+
+function readBridgeUrl(): string {
+  try {
+    return (
+      localStorage.getItem('watchclaw_bridge_ws_url') || BRIDGE_WS_URL_DEFAULT
+    )
+  } catch {
+    return BRIDGE_WS_URL_DEFAULT
+  }
+}
+
+export const BRIDGE_WS_URL: string = readBridgeUrl()
 export const BRIDGE_RECONNECT_BASE_MS = 1000
 export const BRIDGE_RECONNECT_MAX_MS = 30_000
 

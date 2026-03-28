@@ -18,6 +18,7 @@
 You are working on **Watch Claw**, a Phaser 3 side-view pixel-art game that visualizes an OpenClaw AI agent's real-time working state. The game shows a three-floor house where a lobster-hat character moves between rooms based on the agent's activity.
 
 **Project structure you need to know:**
+
 - `src/connection/` — **DO NOT MODIFY**. This layer handles WebSocket connection to Bridge Server and produces `CharacterAction` objects. It is fully working.
 - `src/engine/` — **TO BE DELETED** after migration. Old Canvas 2D renderer.
 - `src/world/` — **TO BE DELETED** after migration. Old tilemap and room definitions.
@@ -28,6 +29,7 @@ You are working on **Watch Claw**, a Phaser 3 side-view pixel-art game that visu
 - `public/assets/` — Game assets. Human will provide art; you create placeholder programmatic assets.
 
 **Key types from `src/connection/types.ts` (DO NOT CHANGE yet — will be updated in T5.3):**
+
 ```typescript
 // v0.2 MVP rooms (current code). In T5.3 these will be renamed and expanded.
 // For now, reuse these IDs with new room meanings:
@@ -36,7 +38,13 @@ You are working on **Watch Claw**, a Phaser 3 side-view pixel-art game that visu
 //   'bedroom'  → Bedroom (2F, Rest)
 type RoomId = 'workshop' | 'study' | 'bedroom'
 type CharacterAction =
-  | { type: 'GOTO_ROOM'; room: RoomId; animation: AnimationId; emotion: EmotionId; speed?: 'fast' | 'slow' | 'normal' }
+  | {
+      type: 'GOTO_ROOM'
+      room: RoomId
+      animation: AnimationId
+      emotion: EmotionId
+      speed?: 'fast' | 'slow' | 'normal'
+    }
   | { type: 'WAKE_UP' }
   | { type: 'GO_SLEEP' }
   | { type: 'CELEBRATE' }
@@ -45,6 +53,7 @@ type CharacterAction =
 ```
 
 **The `ConnectionManager` class (in `src/connection/connectionManager.ts`) provides:**
+
 ```typescript
 cm.onAction((action: CharacterAction) => { ... })       // subscribe to character actions; returns unsubscribe function () => void
 cm.onStatusChange((status: ConnectionStatus) => { ... }) // returns unsubscribe function () => void
@@ -56,14 +65,14 @@ cm.session  // { model, provider, sessionId, totalTokens, totalCost }
 
 ## Phase Summary
 
-| Phase | Name                       | AI Tasks | Human Tasks | Scope                                           |
-| ----- | -------------------------- | -------- | ----------- | ----------------------------------------------- |
-| P0    | Phaser Bootstrap           | 3        | 0           | Install Phaser, game config, React mount        |
-| P1    | Tilemap & World            | 3        | 1           | Tiled import, collision, room detection         |
-| P2    | Character & Physics        | 3        | 1           | Sprite, FSM, physics, auto-navigation           |
-| P3    | Event Bridge & Integration | 3        | 1           | Wire connection layer, emotions, particles      |
-| P4    | UI & Polish                | 3        | 1           | Dashboard, scaling, sound, Electron             |
-| P5    | Three-Floor Expansion      | 3        | 1           | 9 rooms, ladders, full mapping, camera polish   |
+| Phase | Name                       | AI Tasks | Human Tasks | Scope                                         |
+| ----- | -------------------------- | -------- | ----------- | --------------------------------------------- |
+| P0    | Phaser Bootstrap           | 3        | 0           | Install Phaser, game config, React mount      |
+| P1    | Tilemap & World            | 3        | 1           | Tiled import, collision, room detection       |
+| P2    | Character & Physics        | 3        | 1           | Sprite, FSM, physics, auto-navigation         |
+| P3    | Event Bridge & Integration | 3        | 1           | Wire connection layer, emotions, particles    |
+| P4    | UI & Polish                | 3        | 1           | Dashboard, scaling, sound, Electron           |
+| P5    | Three-Floor Expansion      | 3        | 1           | 9 rooms, ladders, full mapping, camera polish |
 
 ---
 
@@ -78,6 +87,7 @@ cm.session  // { model, provider, sessionId, totalTokens, totalCost }
 1. Run `pnpm add phaser` to install Phaser 3.
 
 2. Create file `src/game/config.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
@@ -88,8 +98,8 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 480,
   height: 270,
-  zoom: 2,                 // 2x pixel scaling → 960×540 rendered (top-level, NOT inside scale)
-  pixelArt: true,          // disable anti-aliasing for pixel art
+  zoom: 2, // 2x pixel scaling → 960×540 rendered (top-level, NOT inside scale)
+  pixelArt: true, // disable anti-aliasing for pixel art
   roundPixels: true,
   scale: {
     mode: Phaser.Scale.FIT,
@@ -109,30 +119,37 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
 3. Create these stub scene files:
 
 `src/game/scenes/BootScene.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 
 export class BootScene extends Phaser.Scene {
-  constructor() { super({ key: 'BootScene' }) }
+  constructor() {
+    super({ key: 'BootScene' })
+  }
   preload() {
     // Asset loading will go here (T0.3)
   }
   create() {
     this.scene.start('HouseScene')
-    this.scene.launch('UIScene')  // parallel overlay scene
+    this.scene.launch('UIScene') // parallel overlay scene
   }
 }
 ```
 
 `src/game/scenes/HouseScene.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 
 export class HouseScene extends Phaser.Scene {
-  constructor() { super({ key: 'HouseScene' }) }
+  constructor() {
+    super({ key: 'HouseScene' })
+  }
   create() {
     this.add.text(100, 100, 'Watch Claw v1.0 — HouseScene', {
-      fontSize: '12px', color: '#ffffff'
+      fontSize: '12px',
+      color: '#ffffff',
     })
   }
   update(_time: number, _delta: number) {
@@ -142,11 +159,14 @@ export class HouseScene extends Phaser.Scene {
 ```
 
 `src/game/scenes/UIScene.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 
 export class UIScene extends Phaser.Scene {
-  constructor() { super({ key: 'UIScene' }) }
+  constructor() {
+    super({ key: 'UIScene' })
+  }
   create() {
     // HUD overlay will go here (T3.4)
   }
@@ -154,6 +174,7 @@ export class UIScene extends Phaser.Scene {
 ```
 
 4. Create `src/game/index.ts`:
+
 ```typescript
 export { gameConfig } from './config'
 export { BootScene } from './scenes/BootScene'
@@ -174,6 +195,7 @@ export { UIScene } from './scenes/UIScene'
 **Steps**:
 
 1. Create `src/ui/PhaserContainer.tsx`:
+
 ```typescript
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import Phaser from 'phaser'
@@ -243,6 +265,7 @@ export const PhaserContainer = forwardRef<PhaserContainerHandle>(
 **Steps**:
 
 1. Create a placeholder tileset programmatically. Add to `BootScene.preload()`:
+
 ```typescript
 preload() {
   // --- Generate placeholder tileset texture (16x16 per tile, 4 tiles in a row) ---
@@ -326,66 +349,67 @@ preload() {
 > **This task is for the human developer. You need to create art assets and a Tiled map file.**
 
 **What you need to install**:
+
 - [Tiled Map Editor](https://www.mapeditor.org/) (free, all platforms)
 
 **Tileset image to create — `public/assets/tilesets/interior.png`**:
 
-| Spec | Value |
-|------|-------|
-| **Tile size** | 16×16 pixels |
-| **Image format** | PNG with transparency |
-| **Art style** | Pixel art, side-view / cross-section (like a dollhouse cutaway). Warm color palette. Similar to games like "Tiny Room Stories" or "Sheltered" cross-section style. |
-| **Pixel density** | 1 pixel = 1 pixel (no anti-aliasing, no gradients, hard edges only) |
-| **Color palette** | Max 32 colors. Warm wood tones for floors (#8B7355, #6B5335), cool grays for walls (#4a4a5a), accent colors for special tiles. |
+| Spec              | Value                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Tile size**     | 16×16 pixels                                                                                                                                                       |
+| **Image format**  | PNG with transparency                                                                                                                                              |
+| **Art style**     | Pixel art, side-view / cross-section (like a dollhouse cutaway). Warm color palette. Similar to games like "Tiny Room Stories" or "Sheltered" cross-section style. |
+| **Pixel density** | 1 pixel = 1 pixel (no anti-aliasing, no gradients, hard edges only)                                                                                                |
+| **Color palette** | Max 32 colors. Warm wood tones for floors (#8B7355, #6B5335), cool grays for walls (#4a4a5a), accent colors for special tiles.                                     |
 
 **Tiles needed in the tileset** (minimum):
 
-| Tile # | Name | Description |
-|--------|------|-------------|
-| 0 | Empty | Fully transparent |
-| 1 | Wood floor | Warm brown planks, side-view showing thickness (~2px) |
-| 2 | Stone floor | Gray stone blocks, for basement |
-| 3 | Carpet floor | Soft blue/red carpet tile |
-| 4 | Interior wall (top) | Upper portion of wall with molding |
-| 5 | Interior wall (body) | Repeatable middle wall section |
-| 6 | Interior wall (base) | Wall baseboard |
-| 7 | Exterior wall | Dark brick/stone, house exterior |
-| 8 | Door frame (top) | Arched doorway top |
-| 9 | Door frame (side) | Doorway side pillar |
-| 10 | Window | Glass pane with frame (for exterior walls) |
-| 11 | Stairs (left) | Ascending left-to-right step |
-| 12 | Stairs (right) | Ascending right-to-left step |
-| 13 | Ladder | Vertical ladder rungs |
-| 14 | Railing | Safety railing for stairs |
-| 15 | Roof tile (left slope) | For the house top |
-| 16 | Roof tile (right slope) | For the house top |
+| Tile # | Name                    | Description                                           |
+| ------ | ----------------------- | ----------------------------------------------------- |
+| 0      | Empty                   | Fully transparent                                     |
+| 1      | Wood floor              | Warm brown planks, side-view showing thickness (~2px) |
+| 2      | Stone floor             | Gray stone blocks, for basement                       |
+| 3      | Carpet floor            | Soft blue/red carpet tile                             |
+| 4      | Interior wall (top)     | Upper portion of wall with molding                    |
+| 5      | Interior wall (body)    | Repeatable middle wall section                        |
+| 6      | Interior wall (base)    | Wall baseboard                                        |
+| 7      | Exterior wall           | Dark brick/stone, house exterior                      |
+| 8      | Door frame (top)        | Arched doorway top                                    |
+| 9      | Door frame (side)       | Doorway side pillar                                   |
+| 10     | Window                  | Glass pane with frame (for exterior walls)            |
+| 11     | Stairs (left)           | Ascending left-to-right step                          |
+| 12     | Stairs (right)          | Ascending right-to-left step                          |
+| 13     | Ladder                  | Vertical ladder rungs                                 |
+| 14     | Railing                 | Safety railing for stairs                             |
+| 15     | Roof tile (left slope)  | For the house top                                     |
+| 16     | Roof tile (right slope) | For the house top                                     |
 
 **Tilemap to create — `public/assets/tilemaps/house.json`**:
 
-| Spec | Value |
-|------|-------|
-| **Map size** | 30 tiles wide × 30 tiles tall (480×480 pixels) |
-| **Format** | Tiled JSON export |
-| **Orientation** | Orthogonal (standard 2D, NOT isometric) |
+| Spec            | Value                                          |
+| --------------- | ---------------------------------------------- |
+| **Map size**    | 30 tiles wide × 30 tiles tall (480×480 pixels) |
+| **Format**      | Tiled JSON export                              |
+| **Orientation** | Orthogonal (standard 2D, NOT isometric)        |
 
 **Tile layers needed**:
 
-| Layer name | Purpose | Notes |
-|------------|---------|-------|
-| `background` | Exterior walls, sky, house frame | Behind everything |
-| `floors` | All floor surfaces | One layer for all 3 floors |
-| `walls` | Interior walls, room dividers | Rendered behind character |
-| `collision` | Invisible solid tiles | Use tile #2 (any tile); set custom property `collides: true`. Mark all solid surfaces: floors, walls, ceilings. **This layer will be hidden at runtime.** |
-| `foreground` | Items in front of character | Desk fronts, table edges, etc. |
+| Layer name   | Purpose                          | Notes                                                                                                                                                     |
+| ------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `background` | Exterior walls, sky, house frame | Behind everything                                                                                                                                         |
+| `floors`     | All floor surfaces               | One layer for all 3 floors                                                                                                                                |
+| `walls`      | Interior walls, room dividers    | Rendered behind character                                                                                                                                 |
+| `collision`  | Invisible solid tiles            | Use tile #2 (any tile); set custom property `collides: true`. Mark all solid surfaces: floors, walls, ceilings. **This layer will be hidden at runtime.** |
+| `foreground` | Items in front of character      | Desk fronts, table edges, etc.                                                                                                                            |
 
 **Object layers needed**:
 
-| Layer name | Object type | What to place |
-|------------|-------------|---------------|
-| `spawn_points` | Point object | One point named `player_start` at the 2F Office area |
-| `room_zones` | Rectangle objects | One rectangle per room. Name = room ID (e.g., `toolbox`). Custom property: `floor` (integer: 1, 2, or 3) |
-| `activity_spots` | Point objects | One point per room where character performs activity. Name = room ID. Custom properties: `anim` (string, e.g. `type`), `direction` (string: `left` or `right`) |
-| `ladders` | Rectangle objects | Vertical zones where character can climb. Name = `ladder` |
+| Layer name       | Object type       | What to place                                                                                                                                                  |
+| ---------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spawn_points`   | Point object      | One point named `player_start` at the 2F Office area                                                                                                           |
+| `room_zones`     | Rectangle objects | One rectangle per room. Name = room ID (e.g., `toolbox`). Custom property: `floor` (integer: 1, 2, or 3)                                                       |
+| `activity_spots` | Point objects     | One point per room where character performs activity. Name = room ID. Custom properties: `anim` (string, e.g. `type`), `direction` (string: `left` or `right`) |
+| `ladders`        | Rectangle objects | Vertical zones where character can climb. Name = `ladder`                                                                                                      |
 
 **Floor layout** (MVP — start with 2F only, expand to 3 floors in T5.1):
 
@@ -402,11 +426,13 @@ preload() {
 ```
 
 **Important Tiled settings**:
+
 - In Tiled, name the tileset exactly **`interior`** (this name is used in code: `map.addTilesetImage('interior', ...)`)
 - Set "Tile Width" and "Tile Height" both to 16
 - For collision tiles, use `setCollisionByExclusion` — simply paint any non-empty tile in the collision layer; all non-empty tiles will be treated as solid
 
 **Deliverable**: Place these files in the project:
+
 - `public/assets/tilesets/interior.png`
 - `public/assets/tilemaps/house.json` (exported from Tiled)
 - `public/assets/tilemaps/house.tmx` (Tiled project file, for future editing)
@@ -422,6 +448,7 @@ preload() {
 **Steps**:
 
 1. Update `BootScene.preload()` to load the tilemap and tileset:
+
 ```typescript
 // If real assets exist:
 this.load.tilemapTiledJSON('house', 'assets/tilemaps/house.json')
@@ -429,6 +456,7 @@ this.load.image('interior-tiles', 'assets/tilesets/interior.png')
 ```
 
 2. Update `HouseScene.create()`:
+
 ```typescript
 create() {
   // Create tilemap
@@ -468,6 +496,7 @@ create() {
 **Steps**:
 
 1. In `HouseScene.create()`, after creating the tilemap layers:
+
 ```typescript
 // Create collision layer — use setCollisionByExclusion: all non-empty tiles are solid
 const collisionLayer = map.createLayer('collision', tileset)
@@ -484,6 +513,7 @@ this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
 2. Add `private collisionLayer!: Phaser.Tilemaps.TilemapLayer` to HouseScene.
 
 3. Create a temporary test sprite to verify physics:
+
 ```typescript
 // Temporary test — remove after T2.1
 const testSprite = this.physics.add.sprite(160, 0, 'placeholder-char')
@@ -500,7 +530,8 @@ this.events.on('update', () => {
   if (cursors.left.isDown) testSprite.setVelocityX(-100)
   else if (cursors.right.isDown) testSprite.setVelocityX(100)
   else testSprite.setVelocityX(0)
-  if (cursors.up.isDown && testSprite.body!.blocked.down) testSprite.setVelocityY(-300)
+  if (cursors.up.isDown && testSprite.body!.blocked.down)
+    testSprite.setVelocityY(-300)
 })
 ```
 
@@ -515,6 +546,7 @@ this.events.on('update', () => {
 **Steps**:
 
 1. Create `src/game/systems/RoomManager.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 
@@ -540,14 +572,27 @@ export class RoomManager {
 
   private parseRoomZones(map: Phaser.Tilemaps.Tilemap): void {
     const layer = map.getObjectLayer('room_zones')
-    if (!layer) { console.warn('[RoomManager] No room_zones layer found'); return }
+    if (!layer) {
+      console.warn('[RoomManager] No room_zones layer found')
+      return
+    }
     for (const obj of layer.objects) {
       this.rooms.push({
         id: obj.name,
         name: obj.name,
-        floor: (obj.properties?.find((p: any) => p.name === 'floor')?.value as number) ?? 2,
-        bounds: new Phaser.Geom.Rectangle(obj.x!, obj.y!, obj.width!, obj.height!),
-        activitySpot: { x: obj.x! + obj.width! / 2, y: obj.y! + obj.height! / 2 },
+        floor:
+          (obj.properties?.find((p: any) => p.name === 'floor')
+            ?.value as number) ?? 2,
+        bounds: new Phaser.Geom.Rectangle(
+          obj.x!,
+          obj.y!,
+          obj.width!,
+          obj.height!,
+        ),
+        activitySpot: {
+          x: obj.x! + obj.width! / 2,
+          y: obj.y! + obj.height! / 2,
+        },
         activityAnim: 'idle',
         activityDirection: 'right',
       })
@@ -558,11 +603,16 @@ export class RoomManager {
     const layer = map.getObjectLayer('activity_spots')
     if (!layer) return
     for (const obj of layer.objects) {
-      const room = this.rooms.find(r => r.id === obj.name)
+      const room = this.rooms.find((r) => r.id === obj.name)
       if (room) {
         room.activitySpot = { x: obj.x!, y: obj.y! }
-        room.activityAnim = (obj.properties?.find((p: any) => p.name === 'anim')?.value as string) ?? 'idle'
-        room.activityDirection = (obj.properties?.find((p: any) => p.name === 'direction')?.value as 'left' | 'right') ?? 'right'
+        room.activityAnim =
+          (obj.properties?.find((p: any) => p.name === 'anim')
+            ?.value as string) ?? 'idle'
+        room.activityDirection =
+          (obj.properties?.find((p: any) => p.name === 'direction')?.value as
+            | 'left'
+            | 'right') ?? 'right'
       }
     }
   }
@@ -570,16 +620,16 @@ export class RoomManager {
   private parseSpawnPoints(map: Phaser.Tilemaps.Tilemap): void {
     const layer = map.getObjectLayer('spawn_points')
     if (!layer) return
-    const sp = layer.objects.find(o => o.name === 'player_start')
+    const sp = layer.objects.find((o) => o.name === 'player_start')
     if (sp) this.spawnPoint = { x: sp.x!, y: sp.y! }
   }
 
   getCurrentRoom(x: number, y: number): RoomDef | null {
-    return this.rooms.find(r => r.bounds.contains(x, y)) ?? null
+    return this.rooms.find((r) => r.bounds.contains(x, y)) ?? null
   }
 
   getRoomById(id: string): RoomDef | null {
-    return this.rooms.find(r => r.id === id) ?? null
+    return this.rooms.find((r) => r.id === id) ?? null
   }
 
   getSpawnPoint(): { x: number; y: number } {
@@ -593,6 +643,7 @@ export class RoomManager {
 ```
 
 2. In `HouseScene.create()`, instantiate RoomManager after creating the tilemap:
+
 ```typescript
 this.roomManager = new RoomManager(map)
 ```
@@ -611,26 +662,26 @@ this.roomManager = new RoomManager(map)
 
 **Character spritesheet — `public/assets/character/lobster.png`**:
 
-| Spec | Value |
-|------|-------|
-| **Sprite size** | 32×32 pixels per frame |
-| **Image format** | PNG with transparency |
-| **Art style** | Pixel art, side-view. Chibi/cute proportions (large head ~40% of height). The character wears a distinctive red lobster-shaped hat (OpenClaw mascot). |
+| Spec              | Value                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sprite size**   | 32×32 pixels per frame                                                                                                                                             |
+| **Image format**  | PNG with transparency                                                                                                                                              |
+| **Art style**     | Pixel art, side-view. Chibi/cute proportions (large head ~40% of height). The character wears a distinctive red lobster-shaped hat (OpenClaw mascot).              |
 | **Color palette** | Max 16 colors for the character. Body: blue clothing (#4a7ab5). Head: warm skin (#f0d0a0). Hat: red (#e04040) with darker red claws (#c03030). Shoes: dark (#333). |
-| **Layout** | Horizontal strip. Each animation is a row. All frames in one PNG file. |
+| **Layout**        | Horizontal strip. Each animation is a row. All frames in one PNG file.                                                                                             |
 
 **Animations needed** (each row in the spritesheet):
 
-| Row | Animation | Frames | Frame rate | Loop | Description |
-|-----|-----------|--------|------------|------|-------------|
-| 0 | `idle` | 4 | 6 fps | yes | Slight breathing motion. Arms at sides. |
-| 1 | `walk` | 6 | 10 fps | yes | Walking cycle. Arms swing. Legs step. |
-| 2 | `jump` | 3 | 8 fps | no | Crouch → rise → airborne pose. |
-| 3 | `type` | 4 | 8 fps | yes | Seated, arms move over keyboard. |
-| 4 | `sleep` | 2 | 2 fps | yes | Lying down, gentle breathing. Eyes closed. |
-| 5 | `think` | 4 | 4 fps | yes | Standing, hand on chin, looking up. |
-| 6 | `celebrate` | 4 | 8 fps | yes | Jumping with arms up, happy face. |
-| 7 | `climb` | 4 | 8 fps | yes | Climbing motion on ladder. |
+| Row | Animation   | Frames | Frame rate | Loop | Description                                |
+| --- | ----------- | ------ | ---------- | ---- | ------------------------------------------ |
+| 0   | `idle`      | 4      | 6 fps      | yes  | Slight breathing motion. Arms at sides.    |
+| 1   | `walk`      | 6      | 10 fps     | yes  | Walking cycle. Arms swing. Legs step.      |
+| 2   | `jump`      | 3      | 8 fps      | no   | Crouch → rise → airborne pose.             |
+| 3   | `type`      | 4      | 8 fps      | yes  | Seated, arms move over keyboard.           |
+| 4   | `sleep`     | 2      | 2 fps      | yes  | Lying down, gentle breathing. Eyes closed. |
+| 5   | `think`     | 4      | 4 fps      | yes  | Standing, hand on chin, looking up.        |
+| 6   | `celebrate` | 4      | 8 fps      | yes  | Jumping with arms up, happy face.          |
+| 7   | `climb`     | 4      | 8 fps      | yes  | Climbing motion on ladder.                 |
 
 **Total spritesheet size**: 192×256 pixels (6 frames wide × 8 rows tall, each frame 32×32)
 
@@ -651,6 +702,7 @@ this.roomManager = new RoomManager(map)
 **Steps**:
 
 1. Update `BootScene.preload()` to load the character spritesheet:
+
 ```typescript
 if (/* real asset exists */) {
   this.load.spritesheet('lobster', 'assets/character/lobster.png', {
@@ -660,6 +712,7 @@ if (/* real asset exists */) {
 ```
 
 2. Create `src/game/characters/LobsterCharacter.ts`:
+
 ```typescript
 import Phaser from 'phaser'
 
@@ -671,7 +724,9 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Use real spritesheet if available, else placeholder
-    const textureKey = scene.textures.exists('lobster') ? 'lobster' : 'placeholder-char'
+    const textureKey = scene.textures.exists('lobster')
+      ? 'lobster'
+      : 'placeholder-char'
     super(scene, x, y, textureKey)
 
     scene.add.existing(this)
@@ -679,14 +734,14 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 
     // Physics body configuration
     const body = this.body as Phaser.Physics.Arcade.Body
-    body.setSize(14, 24)        // hitbox smaller than sprite
-    body.setOffset(9, 8)        // center the hitbox
+    body.setSize(14, 24) // hitbox smaller than sprite
+    body.setOffset(9, 8) // center the hitbox
     body.setMaxVelocity(160, 400)
     body.setDrag(800, 0)
     body.setBounce(0)
     body.setCollideWorldBounds(true)
 
-    this.setDepth(10)           // above floors/walls, below foreground
+    this.setDepth(10) // above floors/walls, below foreground
 
     // Create animations
     this.createAnimations()
@@ -704,15 +759,21 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
       return
     }
 
-    const anims: Array<{ key: string; row: number; frames: number; rate: number; loop: boolean }> = [
-      { key: 'idle',      row: 0, frames: 4, rate: 6,  loop: true },
-      { key: 'walk',      row: 1, frames: 6, rate: 10, loop: true },
-      { key: 'jump',      row: 2, frames: 3, rate: 8,  loop: false },
-      { key: 'type',      row: 3, frames: 4, rate: 8,  loop: true },
-      { key: 'sleep',     row: 4, frames: 2, rate: 2,  loop: true },
-      { key: 'think',     row: 5, frames: 4, rate: 4,  loop: true },
-      { key: 'celebrate', row: 6, frames: 4, rate: 8,  loop: true },
-      { key: 'climb',     row: 7, frames: 4, rate: 8,  loop: true },
+    const anims: Array<{
+      key: string
+      row: number
+      frames: number
+      rate: number
+      loop: boolean
+    }> = [
+      { key: 'idle', row: 0, frames: 4, rate: 6, loop: true },
+      { key: 'walk', row: 1, frames: 6, rate: 10, loop: true },
+      { key: 'jump', row: 2, frames: 3, rate: 8, loop: false },
+      { key: 'type', row: 3, frames: 4, rate: 8, loop: true },
+      { key: 'sleep', row: 4, frames: 2, rate: 2, loop: true },
+      { key: 'think', row: 5, frames: 4, rate: 4, loop: true },
+      { key: 'celebrate', row: 6, frames: 4, rate: 8, loop: true },
+      { key: 'climb', row: 7, frames: 4, rate: 8, loop: true },
     ]
 
     const cols = 6 // frames per row in spritesheet
@@ -811,6 +872,7 @@ export class LobsterCharacter extends Phaser.Physics.Arcade.Sprite {
 ```
 
 3. In `HouseScene.create()`, replace the test sprite with LobsterCharacter:
+
 ```typescript
 const spawn = this.roomManager.getSpawnPoint()
 this.character = new LobsterCharacter(this, spawn.x, spawn.y)
@@ -819,6 +881,7 @@ this.cameras.main.startFollow(this.character, true, 0.08, 0.08)
 ```
 
 4. In `HouseScene.update()`:
+
 ```typescript
 update(time: number, delta: number) {
   this.character.update(time, delta)
@@ -836,6 +899,7 @@ update(time: number, delta: number) {
 **Steps**:
 
 1. Add a `currentState` property and state machine to `LobsterCharacter`:
+
 ```typescript
 export type LobsterState =
   | 'idle' | 'walking' | 'jumping' | 'typing' | 'thinking'
@@ -867,6 +931,7 @@ setState(newState: LobsterState): void {
 ```
 
 2. Add `handleCharacterAction()` — this is the main entry point for the EventBridge:
+
 ```typescript
 handleCharacterAction(action: CharacterAction): void {
   switch (action.type) {
@@ -950,6 +1015,7 @@ handleCharacterAction(action: CharacterAction): void {
 **Steps**:
 
 1. Create `src/game/systems/EventBridge.ts`:
+
 ```typescript
 import type { ConnectionManager } from '@/connection/connectionManager'
 import type { CharacterAction } from '@/connection/types'
@@ -1069,31 +1135,31 @@ export class EventBridge {
 
 **Emotion bubble spritesheet — `public/assets/ui/emotions.png`**:
 
-| Spec | Value |
-|------|-------|
-| **Frame size** | 16×16 pixels |
-| **Layout** | Horizontal strip, 8 frames |
-| **Style** | White speech bubble background with colored icon inside |
-| **Art style** | Pixel art, 1-2px border, minimal detail |
+| Spec           | Value                                                   |
+| -------------- | ------------------------------------------------------- |
+| **Frame size** | 16×16 pixels                                            |
+| **Layout**     | Horizontal strip, 8 frames                              |
+| **Style**      | White speech bubble background with colored icon inside |
+| **Art style**  | Pixel art, 1-2px border, minimal detail                 |
 
-| Frame | Emotion | Icon | Color |
-|-------|---------|------|-------|
-| 0 | focused | Lightbulb | Yellow #FFD700 |
-| 1 | thinking | Question mark | Purple #A855F7 |
-| 2 | sleepy | Moon + Z | Gray #6B7280 |
-| 3 | happy | Star sparkle | Green #22C55E |
-| 4 | confused | Exclamation | Red #EF4444 |
-| 5 | curious | Magnifying glass | Orange #F59E0B |
-| 6 | serious | Lightning bolt | Dark red #DC2626 |
-| 7 | satisfied | Checkmark | Teal #10B981 |
+| Frame | Emotion   | Icon             | Color            |
+| ----- | --------- | ---------------- | ---------------- |
+| 0     | focused   | Lightbulb        | Yellow #FFD700   |
+| 1     | thinking  | Question mark    | Purple #A855F7   |
+| 2     | sleepy    | Moon + Z         | Gray #6B7280     |
+| 3     | happy     | Star sparkle     | Green #22C55E    |
+| 4     | confused  | Exclamation      | Red #EF4444      |
+| 5     | curious   | Magnifying glass | Orange #F59E0B   |
+| 6     | serious   | Lightning bolt   | Dark red #DC2626 |
+| 7     | satisfied | Checkmark        | Teal #10B981     |
 
 **Particle sprites — `public/assets/effects/`**:
 
-| File | Size | Description |
-|------|------|-------------|
-| `confetti.png` | 4×4 pixels, 5 colored squares in a row (20×4) | Red, yellow, green, blue, pink squares |
-| `zzz.png` | 8×8 pixels | White pixel letter "Z" on transparent background |
-| `spark.png` | 4×4 pixels | Single bright orange/red dot with 1px glow |
+| File           | Size                                          | Description                                      |
+| -------------- | --------------------------------------------- | ------------------------------------------------ |
+| `confetti.png` | 4×4 pixels, 5 colored squares in a row (20×4) | Red, yellow, green, blue, pink squares           |
+| `zzz.png`      | 8×8 pixels                                    | White pixel letter "Z" on transparent background |
+| `spark.png`    | 4×4 pixels                                    | Single bright orange/red dot with 1px glow       |
 
 **Deliverable**: Place files in `public/assets/ui/` and `public/assets/effects/`.
 
@@ -1130,11 +1196,13 @@ export class EventBridge {
 1. The game config from T0.1 already has `pixelArt: true` and `scale.mode: FIT`. Verify these work.
 
 2. Add Electron minimum window size in `electron/main.cjs`:
+
 ```javascript
 mainWindow = new BrowserWindow({ width: 960, height: 600, minWidth: 800, minHeight: 600, ... })
 ```
 
 3. Test that pixels are sharp (no blurring) at 1x and 2x DPI. If blurry, add:
+
 ```typescript
 canvas.style.imageRendering = 'pixelated'
 ```
@@ -1149,14 +1217,14 @@ canvas.style.imageRendering = 'pixelated'
 
 **Sound effects needed — place in `public/assets/audio/`**:
 
-| File | Format | Duration | Description | Where to find |
-|------|--------|----------|-------------|---------------|
-| `footstep.ogg` | OGG Vorbis | 0.1-0.2s | Soft step on wood floor | [freesound.org](https://freesound.org/search/?q=footstep+wood) |
-| `typing.ogg` | OGG Vorbis | 0.3-0.5s | Mechanical keyboard keypress (2-3 keys) | [freesound.org](https://freesound.org/search/?q=keyboard+typing+mechanical) |
-| `snore.ogg` | OGG Vorbis | 1-2s | Gentle breathing / light snore | [freesound.org](https://freesound.org/search/?q=snore+gentle) |
-| `jump.ogg` | OGG Vorbis | 0.2s | Soft whoosh / hop sound | [freesound.org](https://freesound.org/search/?q=jump+small) |
-| `celebrate.ogg` | OGG Vorbis | 0.5-1s | Short happy chime / fanfare | [freesound.org](https://freesound.org/search/?q=success+chime+8bit) |
-| `error.ogg` | OGG Vorbis | 0.3s | Soft alert buzz (not alarming) | [freesound.org](https://freesound.org/search/?q=error+buzz+soft) |
+| File            | Format     | Duration | Description                             | Where to find                                                               |
+| --------------- | ---------- | -------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| `footstep.ogg`  | OGG Vorbis | 0.1-0.2s | Soft step on wood floor                 | [freesound.org](https://freesound.org/search/?q=footstep+wood)              |
+| `typing.ogg`    | OGG Vorbis | 0.3-0.5s | Mechanical keyboard keypress (2-3 keys) | [freesound.org](https://freesound.org/search/?q=keyboard+typing+mechanical) |
+| `snore.ogg`     | OGG Vorbis | 1-2s     | Gentle breathing / light snore          | [freesound.org](https://freesound.org/search/?q=snore+gentle)               |
+| `jump.ogg`      | OGG Vorbis | 0.2s     | Soft whoosh / hop sound                 | [freesound.org](https://freesound.org/search/?q=jump+small)                 |
+| `celebrate.ogg` | OGG Vorbis | 0.5-1s   | Short happy chime / fanfare             | [freesound.org](https://freesound.org/search/?q=success+chime+8bit)         |
+| `error.ogg`     | OGG Vorbis | 0.3s     | Soft alert buzz (not alarming)          | [freesound.org](https://freesound.org/search/?q=error+buzz+soft)            |
 
 > **License**: Only use sounds with **CC0** or **CC-BY** license. OGG Vorbis format preferred (Phaser loads it natively). MP3 also works as fallback.
 
@@ -1171,6 +1239,7 @@ canvas.style.imageRendering = 'pixelated'
 **Steps**:
 
 1. In `BootScene.preload()`, load all audio files:
+
 ```typescript
 this.load.audio('footstep', 'assets/audio/footstep.ogg')
 this.load.audio('typing', 'assets/audio/typing.ogg')
@@ -1214,43 +1283,45 @@ this.load.audio('typing', 'assets/audio/typing.ogg')
 **New map size**: 30 tiles wide × 34 tiles tall (each floor ~10 tiles + 2 tiles for floor/ceiling structure)
 
 **Add these elements in Tiled**:
+
 - Ladders or staircases connecting 1F↔2F and 2F↔3F (place in `ladders` object layer as rectangles)
 - `room_zones` rectangles for all 9 rooms
 - `activity_spots` points for all 9 rooms
 
 **Furniture spritesheet — `public/assets/tilesets/furniture.png`**:
 
-| Spec | Value |
-|------|-------|
-| **Tile size** | 16×16 pixels |
-| **Style** | Same pixel art style as interior.png. Side-view cross-section. |
+| Spec          | Value                                                          |
+| ------------- | -------------------------------------------------------------- |
+| **Tile size** | 16×16 pixels                                                   |
+| **Style**     | Same pixel art style as interior.png. Side-view cross-section. |
 
 **Furniture tiles needed**:
 
-| Tile # | Name | Room | Description |
-|--------|------|------|-------------|
-| 0 | Desk | Office, Study | Wooden desk surface with legs |
-| 1 | Computer monitor | Office, Server Room | Screen with blue/green glow |
-| 2 | Office chair | Office | Swivel chair, side view |
-| 3 | Bed (left half) | Bedroom | Pillow + blanket left portion |
-| 4 | Bed (right half) | Bedroom | Blanket + footboard right portion |
-| 5 | Nightstand | Bedroom | Small table with lamp |
-| 6 | Bookshelf (full) | Study | Packed with colored book spines |
-| 7 | Bookshelf (half) | Study | Partially filled shelf |
-| 8 | Couch (left) | Study | Soft couch left arm |
-| 9 | Couch (right) | Study | Soft couch right arm |
-| 10 | Server rack | Server Room | Tall rack with blinking LEDs |
-| 11 | Workbench | Toolbox | Sturdy table with tools on it |
-| 12 | Tool wall | Toolbox | Wall-mounted tool pegboard |
-| 13 | Crate/box | Warehouse | Wooden crate for downloads |
-| 14 | Shelf with boxes | Warehouse | Storage shelf |
-| 15 | Trash bin | Trash | Open-top bin with items sticking out |
-| 16 | Railing/fence | Balcony | Outdoor railing |
-| 17 | Potted plant | Balcony | Outdoor plant |
-| 18 | Old computer | Basement | Retro CRT monitor |
-| 19 | Cable mess | Basement | Tangled cables on floor |
+| Tile # | Name             | Room                | Description                          |
+| ------ | ---------------- | ------------------- | ------------------------------------ |
+| 0      | Desk             | Office, Study       | Wooden desk surface with legs        |
+| 1      | Computer monitor | Office, Server Room | Screen with blue/green glow          |
+| 2      | Office chair     | Office              | Swivel chair, side view              |
+| 3      | Bed (left half)  | Bedroom             | Pillow + blanket left portion        |
+| 4      | Bed (right half) | Bedroom             | Blanket + footboard right portion    |
+| 5      | Nightstand       | Bedroom             | Small table with lamp                |
+| 6      | Bookshelf (full) | Study               | Packed with colored book spines      |
+| 7      | Bookshelf (half) | Study               | Partially filled shelf               |
+| 8      | Couch (left)     | Study               | Soft couch left arm                  |
+| 9      | Couch (right)    | Study               | Soft couch right arm                 |
+| 10     | Server rack      | Server Room         | Tall rack with blinking LEDs         |
+| 11     | Workbench        | Toolbox             | Sturdy table with tools on it        |
+| 12     | Tool wall        | Toolbox             | Wall-mounted tool pegboard           |
+| 13     | Crate/box        | Warehouse           | Wooden crate for downloads           |
+| 14     | Shelf with boxes | Warehouse           | Storage shelf                        |
+| 15     | Trash bin        | Trash               | Open-top bin with items sticking out |
+| 16     | Railing/fence    | Balcony             | Outdoor railing                      |
+| 17     | Potted plant     | Balcony             | Outdoor plant                        |
+| 18     | Old computer     | Basement            | Retro CRT monitor                    |
+| 19     | Cable mess       | Basement            | Tangled cables on floor              |
 
 **Deliverable**:
+
 - Updated `public/assets/tilemaps/house.json` (re-export from Tiled)
 - `public/assets/tilesets/furniture.png`
 
@@ -1263,14 +1334,21 @@ this.load.audio('typing', 'assets/audio/typing.ogg')
 **Steps**:
 
 1. Parse `ladders` object layer from tilemap in RoomManager:
+
 ```typescript
 getLadderZones(): Phaser.Geom.Rectangle[] { ... }
 ```
 
 2. In HouseScene, create invisible overlap zones for each ladder:
+
 ```typescript
 for (const zone of this.roomManager.getLadderZones()) {
-  const ladderZone = this.add.zone(zone.x + zone.width/2, zone.y + zone.height/2, zone.width, zone.height)
+  const ladderZone = this.add.zone(
+    zone.x + zone.width / 2,
+    zone.y + zone.height / 2,
+    zone.width,
+    zone.height,
+  )
   this.physics.add.existing(ladderZone, true) // static body
   this.physics.add.overlap(this.character, ladderZone, () => {
     this.character.setInLadderZone(true)
@@ -1286,6 +1364,7 @@ for (const zone of this.roomManager.getLadderZones()) {
    - Auto-navigation: if target is on different floor, walk to nearest ladder → climb → walk to target
 
 4. Update auto-navigation to handle multi-floor paths:
+
 ```typescript
 // Determine if target is on a different floor
 // If yes: navigate to ladder X position → climb to correct Y → navigate to target X
@@ -1302,31 +1381,39 @@ for (const zone of this.roomManager.getLadderZones()) {
 **Steps**:
 
 1. Update `src/connection/types.ts` — extend `RoomId`:
+
 ```typescript
 export type RoomId =
-  | 'warehouse' | 'study' | 'balcony'       // 3F
-  | 'toolbox' | 'office' | 'bedroom'         // 2F
-  | 'basement' | 'server_room' | 'trash'     // 1F
+  | 'warehouse'
+  | 'study'
+  | 'balcony' // 3F
+  | 'toolbox'
+  | 'office'
+  | 'bedroom' // 2F
+  | 'basement'
+  | 'server_room'
+  | 'trash' // 1F
 ```
 
 2. Update `src/connection/eventParser.ts` — update `TOOL_ROOM_MAP`:
+
 ```typescript
 const TOOL_ROOM_MAP: Record<string, ToolMapping> = {
   // 1F — Basement
-  write:   { room: 'server_room', animation: 'type', emotion: 'focused' },
-  edit:    { room: 'server_room', animation: 'type', emotion: 'focused' },
-  process: { room: 'basement',    animation: 'type', emotion: 'serious' },
-  task:    { room: 'basement',    animation: 'think', emotion: 'thinking' },
+  write: { room: 'server_room', animation: 'type', emotion: 'focused' },
+  edit: { room: 'server_room', animation: 'type', emotion: 'focused' },
+  process: { room: 'basement', animation: 'type', emotion: 'serious' },
+  task: { room: 'basement', animation: 'think', emotion: 'thinking' },
   sessions_spawn: { room: 'basement', animation: 'think', emotion: 'thinking' },
 
   // 2F — Main Floor
-  exec:    { room: 'toolbox',  animation: 'type', emotion: 'serious' },
+  exec: { room: 'toolbox', animation: 'type', emotion: 'serious' },
   todowrite: { room: 'office', animation: 'type', emotion: 'focused' },
 
   // 3F — Attic
-  read:    { room: 'study',     animation: 'think', emotion: 'curious' },
-  grep:    { room: 'study',     animation: 'think', emotion: 'curious' },
-  glob:    { room: 'warehouse', animation: 'type',  emotion: 'busy' },
+  read: { room: 'study', animation: 'think', emotion: 'curious' },
+  grep: { room: 'study', animation: 'think', emotion: 'curious' },
+  glob: { room: 'warehouse', animation: 'type', emotion: 'busy' },
   web_search: { room: 'balcony', animation: 'think', emotion: 'curious' },
 }
 ```
@@ -1406,14 +1493,14 @@ T0.1 → T0.2 → T0.3
 
 ## Estimated Timeline
 
-| Phase | AI Work | Human Work | Calendar |
-| ----- | ------- | ---------- | -------- |
-| P0    | 1.5 days | —         | Day 1–2  |
-| P1    | 1.5 days | 1–2 days (tileset + tilemap) | Day 2–4 |
-| P2    | 2 days   | 1–2 days (character spritesheet) | Day 4–7 |
-| P3    | 2 days   | 0.5 day (emotion + particle sprites) | Day 7–9 |
-| P4    | 1.5 days | 0.5 day (sound effects) | Day 9–11 |
-| P5    | 1.5 days | 1–2 days (3-floor tilemap + furniture) | Day 11–13 |
-| **Total** | **~10 days** | **~5 days** | **~2.5 weeks** |
+| Phase     | AI Work      | Human Work                             | Calendar       |
+| --------- | ------------ | -------------------------------------- | -------------- |
+| P0        | 1.5 days     | —                                      | Day 1–2        |
+| P1        | 1.5 days     | 1–2 days (tileset + tilemap)           | Day 2–4        |
+| P2        | 2 days       | 1–2 days (character spritesheet)       | Day 4–7        |
+| P3        | 2 days       | 0.5 day (emotion + particle sprites)   | Day 7–9        |
+| P4        | 1.5 days     | 0.5 day (sound effects)                | Day 9–11       |
+| P5        | 1.5 days     | 1–2 days (3-floor tilemap + furniture) | Day 11–13      |
+| **Total** | **~10 days** | **~5 days**                            | **~2.5 weeks** |
 
 > Human art tasks can be done **in parallel** with AI coding tasks. The AI uses programmatic placeholders until real assets are delivered.

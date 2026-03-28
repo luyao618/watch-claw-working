@@ -1,5 +1,8 @@
 /**
  * Dashboard — side panel showing connection status, agent state, token usage, and activity log.
+ *
+ * On desktop: fixed 280px side panel (original behaviour).
+ * On mobile:  full-screen translucent overlay with close button.
  */
 
 import { useEffect, useRef } from 'react'
@@ -23,6 +26,10 @@ interface DashboardProps {
   characterState?: string
   currentRoom?: string
   currentEmotion?: string
+  // Mobile support
+  isMobile?: boolean
+  onClose?: () => void
+  onOpenServerConfig?: () => void
 }
 
 // ── Helper to format event for log ──────────────────────────────────────────
@@ -108,8 +115,11 @@ export default function Dashboard({
   fps,
   visible,
   characterState = 'idle',
-  currentRoom = '—',
-  currentEmotion = '—',
+  currentRoom = '\u2014',
+  currentEmotion = '\u2014',
+  isMobile = false,
+  onClose,
+  onOpenServerConfig,
 }: DashboardProps) {
   const logRef = useRef<HTMLDivElement>(null)
 
@@ -124,6 +134,191 @@ export default function Dashboard({
 
   const recentEvents = events.slice(-30)
 
+  // Mobile: full-screen overlay with backdrop
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: 'rgba(30, 30, 58, 0.95)',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          color: '#c0c0d0',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header with close button */}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #3a3a5a',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+            Dashboard
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ConnectionBadge status={connectionStatus} />
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: '1px solid #3a3a5a',
+                color: '#888',
+                fontSize: '16px',
+                cursor: 'pointer',
+                padding: '4px',
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+              }}
+              aria-label="Close dashboard"
+            >
+              x
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable content area */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+          {/* Agent Status */}
+          <Section title="Agent Status">
+            <Row label="State">
+              <span style={{ color: getStateColor(characterState) }}>
+                {getStateLabel(characterState)}
+              </span>
+            </Row>
+            <Row label="Room">{currentRoom}</Row>
+            <Row label="Emotion">{currentEmotion}</Row>
+            <Row label="FPS">{fps || '\u2014'}</Row>
+          </Section>
+
+          {/* Session Info */}
+          <Section title="Session">
+            <Row label="Model">{sessionInfo.model ?? '\u2014'}</Row>
+            <Row label="Provider">{sessionInfo.provider ?? '\u2014'}</Row>
+            <Row label="Session">
+              {sessionInfo.sessionId?.slice(0, 8) ?? '\u2014'}
+            </Row>
+          </Section>
+
+          {/* Token Usage */}
+          <Section title="Token Usage">
+            <Row label="Total Tokens">
+              {sessionInfo.totalTokens.toLocaleString()}
+            </Row>
+            <Row label="Total Cost">${sessionInfo.totalCost.toFixed(4)}</Row>
+            <div
+              style={{
+                marginTop: '4px',
+                height: '4px',
+                backgroundColor: '#2a2a4a',
+                borderRadius: '2px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, (sessionInfo.totalTokens / 100000) * 100)}%`,
+                  backgroundColor: '#4a9eff',
+                  borderRadius: '2px',
+                  transition: 'width 0.3s',
+                }}
+              />
+            </div>
+          </Section>
+
+          {/* Server Config shortcut */}
+          {onOpenServerConfig && (
+            <div
+              style={{
+                padding: '8px 16px',
+                borderBottom: '1px solid #2a2a4a',
+              }}
+            >
+              <button
+                onClick={onOpenServerConfig}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  backgroundColor: 'rgba(30, 30, 50, 0.5)',
+                  color: '#888',
+                  border: '1px solid #3a3a5a',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  minHeight: '44px',
+                }}
+              >
+                Server Settings
+              </button>
+            </div>
+          )}
+
+          {/* Activity Log */}
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+            }}
+          >
+            <div
+              style={{
+                padding: '8px 16px 4px',
+                fontSize: '10px',
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Activity Log
+            </div>
+            <div
+              ref={logRef}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '0 16px 8px',
+                fontSize: '11px',
+                lineHeight: '1.6',
+              }}
+            >
+              {recentEvents.map((event, i) => (
+                <div
+                  key={`${event.id}-${i}`}
+                  style={{ color: '#9090a0', whiteSpace: 'nowrap' }}
+                >
+                  {formatEvent(event)}
+                </div>
+              ))}
+              {recentEvents.length === 0 && (
+                <div style={{ color: '#555', fontStyle: 'italic' }}>
+                  No events yet...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop: original side panel
   return (
     <div
       style={{
@@ -163,14 +358,16 @@ export default function Dashboard({
         </Row>
         <Row label="Room">{currentRoom}</Row>
         <Row label="Emotion">{currentEmotion}</Row>
-        <Row label="FPS">{fps || '—'}</Row>
+        <Row label="FPS">{fps || '\u2014'}</Row>
       </Section>
 
       {/* Session Info */}
       <Section title="Session">
-        <Row label="Model">{sessionInfo.model ?? '—'}</Row>
-        <Row label="Provider">{sessionInfo.provider ?? '—'}</Row>
-        <Row label="Session">{sessionInfo.sessionId?.slice(0, 8) ?? '—'}</Row>
+        <Row label="Model">{sessionInfo.model ?? '\u2014'}</Row>
+        <Row label="Provider">{sessionInfo.provider ?? '\u2014'}</Row>
+        <Row label="Session">
+          {sessionInfo.sessionId?.slice(0, 8) ?? '\u2014'}
+        </Row>
       </Section>
 
       {/* Token Usage */}
@@ -199,6 +396,33 @@ export default function Dashboard({
           />
         </div>
       </Section>
+
+      {/* Server Config shortcut (desktop) */}
+      {onOpenServerConfig && (
+        <div
+          style={{
+            padding: '8px 12px',
+            borderBottom: '1px solid #2a2a4a',
+          }}
+        >
+          <button
+            onClick={onOpenServerConfig}
+            style={{
+              width: '100%',
+              padding: '6px',
+              fontSize: '10px',
+              fontFamily: 'monospace',
+              backgroundColor: 'transparent',
+              color: '#666',
+              border: '1px solid #2a2a4a',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Server Settings
+          </button>
+        </div>
+      )}
 
       {/* Activity Log */}
       <div

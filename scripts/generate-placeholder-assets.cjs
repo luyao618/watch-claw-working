@@ -42,7 +42,7 @@ function generateConfetti() {
       `-fill '#22C55E' -draw 'rectangle 8,0 11,3' ` +
       `-fill '#4488FF' -draw 'rectangle 12,0 15,3' ` +
       `-fill '#FF69B4' -draw 'rectangle 16,0 19,3' ` +
-      `"${out}"`
+      `"${out}"`,
   )
 }
 
@@ -56,7 +56,7 @@ function generateZzz() {
       `-draw 'point 3,3' ` +
       `-draw 'point 2,4' ` +
       `-draw 'rectangle 1,5 5,5' ` +
-      `"${out}"`
+      `"${out}"`,
   )
 }
 
@@ -69,7 +69,7 @@ function generateSpark() {
       `-fill '#FF8800' -draw 'rectangle 1,0 2,3' ` +
       `-fill '#FF8800' -draw 'rectangle 0,1 3,2' ` +
       `-fill '#FFDD00' -draw 'rectangle 1,1 2,2' ` +
-      `"${out}"`
+      `"${out}"`,
   )
 }
 
@@ -84,14 +84,84 @@ function generateEmotions() {
   // Each frame: white bubble background + colored icon
   // rects: [x1, y1, x2, y2] relative to frame origin
   const emotions = [
-    { color: '#FFD700', rects: [[6,4,9,7],[7,3,8,4],[7,8,8,11]] },               // focused: lightbulb
-    { color: '#A855F7', rects: [[6,3,9,4],[8,4,9,6],[6,6,9,7],[6,7,7,9],[7,10,8,11]] }, // thinking: ?
-    { color: '#6B7280', rects: [[4,5,8,9],[5,4,7,5],[5,9,7,10],[10,3,12,5],[11,5,12,6]] }, // sleepy: moon+z
-    { color: '#22C55E', rects: [[7,3,8,12],[3,7,12,8],[5,5,6,6],[9,5,10,6],[5,9,6,10],[9,9,10,10]] }, // happy: star
-    { color: '#EF4444', rects: [[7,3,8,9],[7,11,8,12]] },                         // confused: !
-    { color: '#F59E0B', rects: [[5,4,10,9],[6,3,9,4],[6,9,9,10],[10,9,12,10]] },  // curious: magnifier
-    { color: '#DC2626', rects: [[7,3,8,4],[6,4,7,6],[7,6,8,7],[8,7,9,9],[7,9,8,10],[7,11,8,12]] }, // serious: lightning
-    { color: '#10B981', rects: [[4,7,5,8],[5,8,6,9],[6,9,7,10],[7,8,8,9],[8,7,9,8],[9,6,10,7],[10,5,11,6]] }, // satisfied: check
+    {
+      color: '#FFD700',
+      rects: [
+        [6, 4, 9, 7],
+        [7, 3, 8, 4],
+        [7, 8, 8, 11],
+      ],
+    }, // focused: lightbulb
+    {
+      color: '#A855F7',
+      rects: [
+        [6, 3, 9, 4],
+        [8, 4, 9, 6],
+        [6, 6, 9, 7],
+        [6, 7, 7, 9],
+        [7, 10, 8, 11],
+      ],
+    }, // thinking: ?
+    {
+      color: '#6B7280',
+      rects: [
+        [4, 5, 8, 9],
+        [5, 4, 7, 5],
+        [5, 9, 7, 10],
+        [10, 3, 12, 5],
+        [11, 5, 12, 6],
+      ],
+    }, // sleepy: moon+z
+    {
+      color: '#22C55E',
+      rects: [
+        [7, 3, 8, 12],
+        [3, 7, 12, 8],
+        [5, 5, 6, 6],
+        [9, 5, 10, 6],
+        [5, 9, 6, 10],
+        [9, 9, 10, 10],
+      ],
+    }, // happy: star
+    {
+      color: '#EF4444',
+      rects: [
+        [7, 3, 8, 9],
+        [7, 11, 8, 12],
+      ],
+    }, // confused: !
+    {
+      color: '#F59E0B',
+      rects: [
+        [5, 4, 10, 9],
+        [6, 3, 9, 4],
+        [6, 9, 9, 10],
+        [10, 9, 12, 10],
+      ],
+    }, // curious: magnifier
+    {
+      color: '#DC2626',
+      rects: [
+        [7, 3, 8, 4],
+        [6, 4, 7, 6],
+        [7, 6, 8, 7],
+        [8, 7, 9, 9],
+        [7, 9, 8, 10],
+        [7, 11, 8, 12],
+      ],
+    }, // serious: lightning
+    {
+      color: '#10B981',
+      rects: [
+        [4, 7, 5, 8],
+        [5, 8, 6, 9],
+        [6, 9, 7, 10],
+        [7, 8, 8, 9],
+        [8, 7, 9, 8],
+        [9, 6, 10, 7],
+        [10, 5, 11, 6],
+      ],
+    }, // satisfied: check
   ]
 
   let cmd = `magick -size 128x16 xc:none`
@@ -121,26 +191,101 @@ function generateFurniture() {
 
   // 20 furniture tiles, each 16×16, in a horizontal strip
   const tiles = [
-    { name: 'desk', bg: '#8B7355', detail: '#6B5335', detailRect: '2,12 13,13' },
-    { name: 'monitor', bg: '#333333', detail: '#44AAFF', detailRect: '3,2 12,9' },
-    { name: 'chair', bg: '#4a7ab5', detail: '#3a6a95', detailRect: '4,3 11,10' },
+    {
+      name: 'desk',
+      bg: '#8B7355',
+      detail: '#6B5335',
+      detailRect: '2,12 13,13',
+    },
+    {
+      name: 'monitor',
+      bg: '#333333',
+      detail: '#44AAFF',
+      detailRect: '3,2 12,9',
+    },
+    {
+      name: 'chair',
+      bg: '#4a7ab5',
+      detail: '#3a6a95',
+      detailRect: '4,3 11,10',
+    },
     { name: 'bed-l', bg: '#6688AA', detail: '#FFFFFF', detailRect: '1,3 6,7' },
-    { name: 'bed-r', bg: '#6688AA', detail: '#8899BB', detailRect: '3,3 14,12' },
-    { name: 'nightstand', bg: '#8B7355', detail: '#FFD700', detailRect: '5,2 10,5' },
-    { name: 'bookshelf-full', bg: '#6B5335', detail: '#CC4444', detailRect: '2,2 5,6' },
-    { name: 'bookshelf-half', bg: '#6B5335', detail: '#4488CC', detailRect: '2,2 5,6' },
-    { name: 'couch-l', bg: '#AA6644', detail: '#CC8866', detailRect: '1,4 7,12' },
-    { name: 'couch-r', bg: '#AA6644', detail: '#CC8866', detailRect: '8,4 14,12' },
+    {
+      name: 'bed-r',
+      bg: '#6688AA',
+      detail: '#8899BB',
+      detailRect: '3,3 14,12',
+    },
+    {
+      name: 'nightstand',
+      bg: '#8B7355',
+      detail: '#FFD700',
+      detailRect: '5,2 10,5',
+    },
+    {
+      name: 'bookshelf-full',
+      bg: '#6B5335',
+      detail: '#CC4444',
+      detailRect: '2,2 5,6',
+    },
+    {
+      name: 'bookshelf-half',
+      bg: '#6B5335',
+      detail: '#4488CC',
+      detailRect: '2,2 5,6',
+    },
+    {
+      name: 'couch-l',
+      bg: '#AA6644',
+      detail: '#CC8866',
+      detailRect: '1,4 7,12',
+    },
+    {
+      name: 'couch-r',
+      bg: '#AA6644',
+      detail: '#CC8866',
+      detailRect: '8,4 14,12',
+    },
     { name: 'server', bg: '#555555', detail: '#44FF44', detailRect: '6,2 7,3' },
-    { name: 'workbench', bg: '#8B7355', detail: '#888888', detailRect: '2,2 13,5' },
-    { name: 'toolwall', bg: '#555555', detail: '#AAAAAA', detailRect: '3,2 12,12' },
-    { name: 'crate', bg: '#AA8855', detail: '#886633', detailRect: '1,1 14,14' },
+    {
+      name: 'workbench',
+      bg: '#8B7355',
+      detail: '#888888',
+      detailRect: '2,2 13,5',
+    },
+    {
+      name: 'toolwall',
+      bg: '#555555',
+      detail: '#AAAAAA',
+      detailRect: '3,2 12,12',
+    },
+    {
+      name: 'crate',
+      bg: '#AA8855',
+      detail: '#886633',
+      detailRect: '1,1 14,14',
+    },
     { name: 'shelf', bg: '#8B7355', detail: '#AA8855', detailRect: '1,3 14,5' },
-    { name: 'trashbin', bg: '#666666', detail: '#888888', detailRect: '3,1 12,14' },
-    { name: 'railing', bg: '#AAAAAA', detail: '#888888', detailRect: '7,0 8,15' },
+    {
+      name: 'trashbin',
+      bg: '#666666',
+      detail: '#888888',
+      detailRect: '3,1 12,14',
+    },
+    {
+      name: 'railing',
+      bg: '#AAAAAA',
+      detail: '#888888',
+      detailRect: '7,0 8,15',
+    },
     { name: 'plant', bg: '#22AA44', detail: '#885533', detailRect: '6,8 9,14' },
     { name: 'oldpc', bg: '#777766', detail: '#44AA44', detailRect: '3,2 12,8' },
-    { name: 'cables', bg: '#333333', detail: '#CC4444', detailRect: '2,6 13,8' },
+    {
+      name: 'cables',
+      bg: '#333333',
+      detail: '#CC4444',
+      detailRect: '2,6 13,8',
+    },
   ]
 
   let cmd = `magick -size 320x16 xc:none`
@@ -161,20 +306,23 @@ function generateFurniture() {
 function generateTilemap() {
   const out = path.join(ASSETS, 'tilemaps/house.json')
   const outTmx = path.join(ASSETS, 'tilemaps/house.tmx')
-  console.log('\n[6/8] Generating house.json + house.tmx (30×34 three-floor Tiled format) ...')
+  console.log(
+    '\n[6/8] Generating house.json + house.tmx (30×34 three-floor Tiled format) ...',
+  )
   ensureDir(path.dirname(out))
 
   // 30 wide × 34 tall: each floor ~10 rows + 2 rows structure between floors
   // Layout:  rows 0-1 = roof, rows 2-11 = 3F, rows 12-13 = floor/ceiling,
   //          rows 14-23 = 2F, rows 24-25 = floor/ceiling, rows 26-33 = 1F + foundation
-  const W = 30, H = 34
+  const W = 30,
+    H = 34
   const TILE = 16 // px per tile
   const empty = () => new Array(W * H).fill(0)
 
   // Floor boundaries (row ranges for each floor's interior)
-  const F3 = { top: 2, bottom: 11, floor: 11 }   // 3F: rows 2-11, floor at row 11
-  const F2 = { top: 13, bottom: 22, floor: 22 }   // 2F: rows 13-22, floor at row 22
-  const F1 = { top: 24, bottom: 33, floor: 33 }   // 1F: rows 24-33, floor at row 33
+  const F3 = { top: 2, bottom: 11, floor: 11 } // 3F: rows 2-11, floor at row 11
+  const F2 = { top: 13, bottom: 22, floor: 22 } // 2F: rows 13-22, floor at row 22
+  const F1 = { top: 24, bottom: 33, floor: 33 } // 1F: rows 24-33, floor at row 33
 
   const allFloors = [F3, F2, F1]
 
@@ -239,26 +387,117 @@ function generateTilemap() {
   // Each room: 10 tiles wide, ~10 tiles tall
   const rooms = [
     // 3F
-    { id: 'warehouse', floor: 3, col: 0,  row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'type',  dir: 'right' },
-    { id: 'study',     floor: 3, col: 10, row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'think', dir: 'right' },
-    { id: 'balcony',   floor: 3, col: 20, row: F3.top, w: 10, h: F3.bottom - F3.top + 1, anim: 'think', dir: 'right' },
+    {
+      id: 'warehouse',
+      floor: 3,
+      col: 0,
+      row: F3.top,
+      w: 10,
+      h: F3.bottom - F3.top + 1,
+      anim: 'type',
+      dir: 'right',
+    },
+    {
+      id: 'study',
+      floor: 3,
+      col: 10,
+      row: F3.top,
+      w: 10,
+      h: F3.bottom - F3.top + 1,
+      anim: 'think',
+      dir: 'right',
+    },
+    {
+      id: 'balcony',
+      floor: 3,
+      col: 20,
+      row: F3.top,
+      w: 10,
+      h: F3.bottom - F3.top + 1,
+      anim: 'think',
+      dir: 'right',
+    },
     // 2F
-    { id: 'toolbox',   floor: 2, col: 0,  row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'type',  dir: 'right' },
-    { id: 'office',    floor: 2, col: 10, row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'type',  dir: 'right' },
-    { id: 'bedroom',   floor: 2, col: 20, row: F2.top, w: 10, h: F2.bottom - F2.top + 1, anim: 'sleep', dir: 'left'  },
+    {
+      id: 'toolbox',
+      floor: 2,
+      col: 0,
+      row: F2.top,
+      w: 10,
+      h: F2.bottom - F2.top + 1,
+      anim: 'type',
+      dir: 'right',
+    },
+    {
+      id: 'office',
+      floor: 2,
+      col: 10,
+      row: F2.top,
+      w: 10,
+      h: F2.bottom - F2.top + 1,
+      anim: 'type',
+      dir: 'right',
+    },
+    {
+      id: 'bedroom',
+      floor: 2,
+      col: 20,
+      row: F2.top,
+      w: 10,
+      h: F2.bottom - F2.top + 1,
+      anim: 'sleep',
+      dir: 'left',
+    },
     // 1F
-    { id: 'basement',    floor: 1, col: 0,  row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'think', dir: 'right' },
-    { id: 'server_room', floor: 1, col: 10, row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'type',  dir: 'right' },
-    { id: 'trash',        floor: 1, col: 20, row: F1.top, w: 10, h: F1.bottom - F1.top + 1, anim: 'type',  dir: 'right' },
+    {
+      id: 'basement',
+      floor: 1,
+      col: 0,
+      row: F1.top,
+      w: 10,
+      h: F1.bottom - F1.top + 1,
+      anim: 'think',
+      dir: 'right',
+    },
+    {
+      id: 'server_room',
+      floor: 1,
+      col: 10,
+      row: F1.top,
+      w: 10,
+      h: F1.bottom - F1.top + 1,
+      anim: 'type',
+      dir: 'right',
+    },
+    {
+      id: 'trash',
+      floor: 1,
+      col: 20,
+      row: F1.top,
+      w: 10,
+      h: F1.bottom - F1.top + 1,
+      anim: 'type',
+      dir: 'right',
+    },
   ]
 
   // --- Ladder zones (connecting floors, at col 5 between each pair) ---
   const ladderCol = 5
   const ladders = [
     // 1F→2F ladder — spans from inside 2F down to inside 1F
-    { x: ladderCol * TILE, y: (F2.top + 2) * TILE, w: 2 * TILE, h: (F1.floor - F2.top - 3) * TILE },
+    {
+      x: ladderCol * TILE,
+      y: (F2.top + 2) * TILE,
+      w: 2 * TILE,
+      h: (F1.floor - F2.top - 3) * TILE,
+    },
     // 2F→3F ladder — spans from inside 3F down to inside 2F
-    { x: ladderCol * TILE, y: (F3.top + 2) * TILE, w: 2 * TILE, h: (F2.floor - F3.top - 3) * TILE },
+    {
+      x: ladderCol * TILE,
+      y: (F3.top + 2) * TILE,
+      w: 2 * TILE,
+      h: (F2.floor - F3.top - 3) * TILE,
+    },
   ]
 
   const tilemap = {
@@ -266,40 +505,160 @@ function generateTilemap() {
     height: H,
     infinite: false,
     layers: [
-      { data: background, height: H, id: 1, name: 'background', opacity: 1, type: 'tilelayer', visible: true, width: W, x: 0, y: 0 },
-      { data: floors, height: H, id: 2, name: 'floors', opacity: 1, type: 'tilelayer', visible: true, width: W, x: 0, y: 0 },
-      { data: walls, height: H, id: 3, name: 'walls', opacity: 1, type: 'tilelayer', visible: true, width: W, x: 0, y: 0 },
-      { data: collision, height: H, id: 4, name: 'collision', opacity: 1, type: 'tilelayer', visible: true, width: W, x: 0, y: 0 },
-      { data: empty(), height: H, id: 5, name: 'foreground', opacity: 1, type: 'tilelayer', visible: true, width: W, x: 0, y: 0 },
+      {
+        data: background,
+        height: H,
+        id: 1,
+        name: 'background',
+        opacity: 1,
+        type: 'tilelayer',
+        visible: true,
+        width: W,
+        x: 0,
+        y: 0,
+      },
+      {
+        data: floors,
+        height: H,
+        id: 2,
+        name: 'floors',
+        opacity: 1,
+        type: 'tilelayer',
+        visible: true,
+        width: W,
+        x: 0,
+        y: 0,
+      },
+      {
+        data: walls,
+        height: H,
+        id: 3,
+        name: 'walls',
+        opacity: 1,
+        type: 'tilelayer',
+        visible: true,
+        width: W,
+        x: 0,
+        y: 0,
+      },
+      {
+        data: collision,
+        height: H,
+        id: 4,
+        name: 'collision',
+        opacity: 1,
+        type: 'tilelayer',
+        visible: true,
+        width: W,
+        x: 0,
+        y: 0,
+      },
+      {
+        data: empty(),
+        height: H,
+        id: 5,
+        name: 'foreground',
+        opacity: 1,
+        type: 'tilelayer',
+        visible: true,
+        width: W,
+        x: 0,
+        y: 0,
+      },
       // Object layers
       {
-        draworder: 'topdown', id: 6, name: 'spawn_points', objects: [
-          { height: 0, id: 1, name: 'player_start', point: true, rotation: 0, type: '', visible: true, width: 0, x: 240, y: F2.floor * TILE - TILE, properties: [] },
-        ], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        draworder: 'topdown',
+        id: 6,
+        name: 'spawn_points',
+        objects: [
+          {
+            height: 0,
+            id: 1,
+            name: 'player_start',
+            point: true,
+            rotation: 0,
+            type: '',
+            visible: true,
+            width: 0,
+            x: 240,
+            y: F2.floor * TILE - TILE,
+            properties: [],
+          },
+        ],
+        opacity: 1,
+        type: 'objectgroup',
+        visible: true,
+        x: 0,
+        y: 0,
       },
       {
-        draworder: 'topdown', id: 7, name: 'room_zones', objects: rooms.map((r, i) => ({
-          height: r.h * TILE, id: i + 2, name: r.id, rotation: 0, type: '', visible: true,
-          width: r.w * TILE, x: r.col * TILE, y: r.row * TILE,
+        draworder: 'topdown',
+        id: 7,
+        name: 'room_zones',
+        objects: rooms.map((r, i) => ({
+          height: r.h * TILE,
+          id: i + 2,
+          name: r.id,
+          rotation: 0,
+          type: '',
+          visible: true,
+          width: r.w * TILE,
+          x: r.col * TILE,
+          y: r.row * TILE,
           properties: [{ name: 'floor', type: 'int', value: r.floor }],
-        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        })),
+        opacity: 1,
+        type: 'objectgroup',
+        visible: true,
+        x: 0,
+        y: 0,
       },
       {
-        draworder: 'topdown', id: 8, name: 'activity_spots', objects: rooms.map((r, i) => ({
-          height: 0, id: i + 20, name: r.id, point: true, rotation: 0, type: '', visible: true, width: 0,
+        draworder: 'topdown',
+        id: 8,
+        name: 'activity_spots',
+        objects: rooms.map((r, i) => ({
+          height: 0,
+          id: i + 20,
+          name: r.id,
+          point: true,
+          rotation: 0,
+          type: '',
+          visible: true,
+          width: 0,
           x: (r.col + r.w / 2) * TILE,
           y: (r.row + r.h - 2) * TILE, // one tile above floor
           properties: [
             { name: 'anim', type: 'string', value: r.anim },
             { name: 'direction', type: 'string', value: r.dir },
           ],
-        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        })),
+        opacity: 1,
+        type: 'objectgroup',
+        visible: true,
+        x: 0,
+        y: 0,
       },
       {
-        draworder: 'topdown', id: 9, name: 'ladders', objects: ladders.map((l, i) => ({
-          height: l.h, id: i + 30, name: 'ladder', rotation: 0, type: '', visible: true,
-          width: l.w, x: l.x, y: l.y,
-        })), opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0,
+        draworder: 'topdown',
+        id: 9,
+        name: 'ladders',
+        objects: ladders.map((l, i) => ({
+          height: l.h,
+          id: i + 30,
+          name: 'ladder',
+          rotation: 0,
+          type: '',
+          visible: true,
+          width: l.w,
+          x: l.x,
+          y: l.y,
+        })),
+        opacity: 1,
+        type: 'objectgroup',
+        visible: true,
+        x: 0,
+        y: 0,
       },
     ],
     nextlayerid: 10,
@@ -360,16 +719,23 @@ ${layer.data.reduce((acc, v, i) => {
   </layer>`
     }
     if (layer.type === 'objectgroup') {
-      const objs = layer.objects.map(o => {
-        const props = (o.properties || []).map(p =>
-          `        <property name="${p.name}" type="${p.type}" value="${p.value}"/>`
-        ).join('\n')
-        const propsBlock = props ? `\n      <properties>\n${props}\n      </properties>` : ''
-        if (o.point) {
-          return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}">${propsBlock}\n      <point/>\n    </object>`
-        }
-        return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}" width="${o.width}" height="${o.height}">${propsBlock}\n    </object>`
-      }).join('\n')
+      const objs = layer.objects
+        .map((o) => {
+          const props = (o.properties || [])
+            .map(
+              (p) =>
+                `        <property name="${p.name}" type="${p.type}" value="${p.value}"/>`,
+            )
+            .join('\n')
+          const propsBlock = props
+            ? `\n      <properties>\n${props}\n      </properties>`
+            : ''
+          if (o.point) {
+            return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}">${propsBlock}\n      <point/>\n    </object>`
+          }
+          return `    <object id="${o.id}" name="${o.name}" x="${o.x}" y="${o.y}" width="${o.width}" height="${o.height}">${propsBlock}\n    </object>`
+        })
+        .join('\n')
       return `  <objectgroup id="${layer.id}" name="${layer.name}">
 ${objs}
   </objectgroup>`
@@ -398,17 +764,23 @@ ${tilemap.layers.map(layerToXml).join('\n')}
 function generateCharacterSpritesheet() {
   const out = path.join(ASSETS, 'character/lobster.png')
   if (fs.existsSync(out)) {
-    console.log('\n[7/8] lobster.png already exists, skipping (delete to regenerate)')
+    console.log(
+      '\n[7/8] lobster.png already exists, skipping (delete to regenerate)',
+    )
     return
   }
-  console.log('\n[7/8] Generating lobster.png (192×256, 6×8 frames of 32×32) ...')
+  console.log(
+    '\n[7/8] Generating lobster.png (192×256, 6×8 frames of 32×32) ...',
+  )
   ensureDir(path.dirname(out))
 
   // Generate a 192×256 spritesheet with simple colored rectangles per frame
   // Each row = one animation, each col = one frame
   // We draw a simple character in slightly different poses per row
-  const frameW = 32, frameH = 32
-  const cols = 6, rows = 8
+  const frameW = 32,
+    frameH = 32
+  const cols = 6,
+    rows = 8
   const totalW = frameW * cols // 192
   const totalH = frameH * rows // 256
 
@@ -446,7 +818,9 @@ function generateCharacterSpritesheet() {
 function generateInteriorTileset() {
   const out = path.join(ASSETS, 'tilesets/interior.png')
   if (fs.existsSync(out)) {
-    console.log('\n[8/8] interior.png already exists, skipping (delete to regenerate)')
+    console.log(
+      '\n[8/8] interior.png already exists, skipping (delete to regenerate)',
+    )
     return
   }
   console.log('\n[8/8] Generating interior.png (272×16, 17 tiles of 16×16) ...')
@@ -582,7 +956,7 @@ function generateAudio() {
     }
     try {
       run(
-        `ffmpeg -y -f lavfi -i "sine=frequency=${s.freq}:duration=${s.dur}" -c:a libopus "${out}" 2>/dev/null`
+        `ffmpeg -y -f lavfi -i "sine=frequency=${s.freq}:duration=${s.dur}" -c:a libopus "${out}" 2>/dev/null`,
       )
     } catch {
       console.log(`  ⚠ Skipped ${s.name}.ogg (ffmpeg failed)`)
